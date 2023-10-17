@@ -54,11 +54,11 @@ func ParseMaxSpeed(maxspeed string) float64 {
 	}
 
 	if splitSpeed[1] == "kph" || splitSpeed[1] == "km/h" || splitSpeed[1] == "kmh" {
-		return float64(numeric)
+		return 0.277778 * float64(numeric)
 	} else if splitSpeed[1] == "mph" {
-		return 1.609 * float64(numeric)
+		return 0.44704 * float64(numeric)
 	} else if splitSpeed[1] == "knots" {
-		return 1.852 * float64(numeric)
+		return 0.514444 * float64(numeric)
 	}
 
 	return 0
