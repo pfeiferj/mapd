@@ -224,6 +224,7 @@ func main() {
 		if !querying && d > 0.7*QUERY_RADIUS {
 			queryLat = pos.Latitude
 			queryLon = pos.Longitude
+			querying = true
 			go AsyncFetchRoadsAroundLocation(resChannel, errChannel, pos.Latitude, pos.Longitude, QUERY_RADIUS)
 		}
 		way, err := GetCurrentWay(cache.Result, pos.Latitude, pos.Longitude)
