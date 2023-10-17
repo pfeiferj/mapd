@@ -11,14 +11,17 @@ import (
 	"time"
 )
 
-var R = 6373000.0                // approximate radius of earth in meters
-var LANE_WIDTH = 3.7             // meters
-var QUERY_RADIUS = float64(3000) // meters
+var R = 6373000.0                      // approximate radius of earth in meters
+var LANE_WIDTH = 3.7                   // meters
+var QUERY_RADIUS = float64(3000)       // meters
+var PADDING = 10 / R * (180 / math.Pi) // 10 meters in degrees
 
 type Cache struct {
-	Result overpass.Result
-	Lat    float64
-	Lon    float64
+	Result       overpass.Result
+	Way          *overpass.Way
+	MatchingWays []*overpass.Way
+	Lat          float64
+	Lon          float64
 }
 
 type Position struct {
@@ -94,6 +97,10 @@ func Bounds(nodes []*overpass.Node) Box {
 		}
 	}
 
+	box.MaxLat = box.MaxLat + PADDING
+	box.MaxLon = box.MaxLon + PADDING
+	box.MinLat = box.MinLat - PADDING
+	box.MinLon = box.MinLon - PADDING
 	return box
 }
 
@@ -150,30 +157,78 @@ func DistanceToWay(lat float64, lon float64, way *overpass.Way) float64 {
 	return minDistance
 }
 
-func GetCurrentWay(r overpass.Result, lat float64, lon float64) (*overpass.Way, error) {
-	for _, way := range r.Ways {
-		box := Bounds(way.Nodes)
+func GetCurrentWay(cache *Cache, lat float64, lon float64) (*overpass.Way, error) {
+	// check current way first
+	if cache.Way != nil {
+		if OnWay(cache.Way, lat, lon) {
+			return cache.Way, nil
+		}
+	}
 
-		if lat < box.MaxLat && lat > box.MinLat && lon < box.MaxLon && lon > box.MinLon {
-			lanes := float64(2)
-			if lanesStr, ok := way.Tags["lanes"]; ok {
-				parsedLanes, err := strconv.ParseUint(lanesStr, 10, 64)
-				if err == nil {
-					lanes = float64(parsedLanes)
-				}
-			}
+	// check ways that have the same name/ref
+	for _, way := range cache.MatchingWays {
+		if OnWay(way, lat, lon) {
+			return way, nil
+		}
+	}
 
-			d := DistanceToWay(lat, lon, way)
-			road_width_estimate := lanes * LANE_WIDTH
-			max_dist := 5 + road_width_estimate
-
-			if d < max_dist {
-				return way, nil
-			}
+	// finally check all other ways
+	for _, way := range cache.Result.Ways {
+		if OnWay(way, lat, lon) {
+			return way, nil
 		}
 	}
 
 	return nil, errors.New("Could not find way")
+}
+
+func MatchingWays(way *overpass.Way, ways map[int64]*overpass.Way) []*overpass.Way {
+	matchingWays := []*overpass.Way{}
+	if way == nil {
+		return matchingWays
+	}
+	name, ok := way.Meta.Tags["name"]
+	if ok {
+		for _, w := range ways {
+			n, k := w.Meta.Tags["name"]
+			if k && n == name {
+				matchingWays = append(matchingWays, w)
+			}
+		}
+	}
+	ref, ok := way.Meta.Tags["ref"]
+	if ok {
+		for _, w := range ways {
+			r, k := w.Meta.Tags["ref"]
+			if k && r == ref {
+				matchingWays = append(matchingWays, w)
+			}
+		}
+	}
+	return matchingWays
+}
+
+func OnWay(way *overpass.Way, lat float64, lon float64) bool {
+	box := Bounds(way.Nodes)
+
+	if lat < box.MaxLat && lat > box.MinLat && lon < box.MaxLon && lon > box.MinLon {
+		lanes := float64(2)
+		if lanesStr, ok := way.Tags["lanes"]; ok {
+			parsedLanes, err := strconv.ParseUint(lanesStr, 10, 64)
+			if err == nil {
+				lanes = float64(parsedLanes)
+			}
+		}
+
+		d := DistanceToWay(lat, lon, way)
+		road_width_estimate := lanes * LANE_WIDTH
+		max_dist := 5 + road_width_estimate
+
+		if d < max_dist {
+			return true
+		}
+	}
+	return false
 }
 
 func AsyncFetchRoadsAroundLocation(resChannel chan overpass.Result, errChannel chan error, lat float64, lon float64, radius float64) {
@@ -227,11 +282,18 @@ func main() {
 			querying = true
 			go AsyncFetchRoadsAroundLocation(resChannel, errChannel, pos.Latitude, pos.Longitude, QUERY_RADIUS)
 		}
-		way, err := GetCurrentWay(cache.Result, pos.Latitude, pos.Longitude)
+		way, err := GetCurrentWay(&cache, pos.Latitude, pos.Longitude)
+		if way != cache.Way {
+			cache.Way = way
+			cache.MatchingWays = MatchingWays(way, cache.Result.Ways)
+		}
 
 		if err == nil {
 			speedLimit = ParseMaxSpeed(way.Tags["maxspeed"])
+		} else {
+			speedLimit = 0
 		}
+
 		if speedLimit != lastSpeedLimit {
 			lastSpeedLimit = speedLimit
 			err := PutParam(ParamPath("MapSpeedLimit", true), []byte(fmt.Sprintf("%f", speedLimit)))
