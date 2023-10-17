@@ -1,0 +1,6 @@
+github.com/gofrs/flock v0.8.1 h1:+gYjHKf32LDeiEEFhQaotPbLuUXjY5ZqxKgXy7n59aw=
+github.com/gofrs/flock v0.8.1/go.mod h1:F1TvTiK9OcQqauNUHlbJvyl9Qa1QvF/gOUDKA14jxHU=
+github.com/serjvanilla/go-overpass v0.0.0-20220918094045-58606372f808 h1:0AObvHxEbYubS79jKxIvnHmjdgNpGXRWibS6omxz37A=
+github.com/serjvanilla/go-overpass v0.0.0-20220918094045-58606372f808/go.mod h1:W2WcJBoB8P+XjAtc6TrLPK9+HG67xkz84vw0ghbV0qU=
+golang.org/x/sys v0.13.0 h1:Af8nKPmuFypiUBjVoU9V20FiaFXOcuZI21p0ycVYYGE=
+golang.org/x/sys v0.13.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
