@@ -145,7 +145,7 @@ func DistanceToWay(lat float64, lon float64, way *overpass.Way) float64 {
 
 	latRad := lat * math.Pi / 180
 	lonRad := lon * math.Pi / 180
-	for i := 0; i < len(way.Nodes)-2; i++ {
+	for i := 0; i < len(way.Nodes)-1; i++ {
 		nodeStart := way.Nodes[i]
 		nodeEnd := way.Nodes[i+1]
 		lineLat, lineLon := PointOnLine(nodeStart.Lat, nodeStart.Lon, nodeEnd.Lat, nodeEnd.Lon, lat, lon)
@@ -301,6 +301,6 @@ func main() {
 				fmt.Println(err)
 			}
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
