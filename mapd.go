@@ -30,8 +30,6 @@ func main() {
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
 	speedLimit := float64(0)
-	lastRoadName := ""
-	roadName := ""
 	cache := Cache{}
 
 	var pos Position
