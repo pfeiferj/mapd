@@ -100,3 +100,18 @@ func MatchingWays(way *overpass.Way, ways map[int64]*overpass.Way) []*overpass.W
 	}
 	return matchingWays
 }
+
+func RoadName(way *overpass.Way) string {
+	if way == nil {
+		return ""
+	}
+	name, ok := way.Meta.Tags["name"]
+	if ok {
+		return name
+	}
+	ref, ok := way.Meta.Tags["ref"]
+	if ok {
+		return ref
+	}
+	return ""
+}

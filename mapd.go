@@ -30,7 +30,10 @@ func main() {
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
 	speedLimit := float64(0)
+	lastRoadName := ""
+	roadName := ""
 	cache := Cache{}
+
 	var pos Position
 
 	resChannel := make(chan overpass.Result)
@@ -72,6 +75,11 @@ func main() {
 		if way != cache.Way {
 			cache.Way = way
 			cache.MatchingWays = MatchingWays(way, cache.Result.Ways)
+			err := PutParam(ParamPath("RoadName", true), []byte(fmt.Sprintf("%s", RoadName(way))))
+			if err != nil {
+				fmt.Println(err)
+			}
+
 		}
 
 		if err == nil {
