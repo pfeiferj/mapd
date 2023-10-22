@@ -4,6 +4,9 @@ import (
 	"math"
 )
 
+var TO_RADIANS = math.Pi / 180
+var TO_DEGREES = 180 / math.Pi
+
 func Dot(ax float64, ay float64, bx float64, by float64) float64 {
 	return (ax * bx) + (ay * by)
 }
@@ -35,4 +38,16 @@ func DistanceToPoint(ax float64, ay float64, bx float64, by float64) float64 {
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
 	return R * c // in metres
+}
+
+func Vector(latA float64, lonA float64, latB float64, lonB float64) (float64, float64) {
+	dlon := lonB - lonA
+	x := math.Sin(dlon) * math.Cos(latB)
+	y := math.Cos(latA)*math.Sin(latB) - (math.Sin(latA) * math.Cos(latB) * math.Cos(dlon))
+	return x, y
+}
+
+func Bearing(latA float64, lonA float64, latB float64, lonB float64) float64 {
+	x, y := Vector(latA, lonA, latB, lonB)
+	return math.Atan2(x, y)
 }

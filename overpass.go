@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/serjvanilla/go-overpass"
-	"math"
 )
 
 func AsyncFetchRoadsAroundLocation(resChannel chan overpass.Result, errChannel chan error, lat float64, lon float64, radius float64) {
@@ -17,7 +16,7 @@ func AsyncFetchRoadsAroundLocation(resChannel chan overpass.Result, errChannel c
 
 func FetchRoadsAroundLocation(lat float64, lon float64, radius float64) (overpass.Result, error) {
 	client := overpass.New()
-	bbox_angle := (radius / R) * (180 / math.Pi)
+	bbox_angle := (radius / R) * TO_DEGREES
 	bbox_str := fmt.Sprintf("%f,%f,%f,%f", lat-bbox_angle, lon-bbox_angle, lat+bbox_angle, lon+bbox_angle)
 	query_fmt := "[out:json];way(%s)\n" +
 		"[highway]\n" +

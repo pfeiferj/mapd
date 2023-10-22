@@ -13,6 +13,13 @@ var ParamsPath string = "/data/params/d"
 var MemParamsPath string = "/dev/shm/params/d"
 var BasePath string = GetBasePath()
 
+// Params
+var ROAD_NAME = ParamPath("RoadName", true)
+var MAP_SPEED_LIMIT = ParamPath("MapSpeedLimit", true)
+var NEXT_MAP_SPEED_LIMIT = ParamPath("NextMapSpeedLimit", true)
+var LAST_GPS_POSITION = ParamPath("LastGPSPosition", true)
+var LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
+
 // exists returns whether the given file or directory exists
 func Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
