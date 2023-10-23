@@ -17,6 +17,7 @@ type State struct {
 	Way          CurrentWay
 	NextWay      *overpass.Way
 	MatchingWays []*overpass.Way
+	MatchNode    *overpass.Node
 	Position     Position
 	Lat          float64
 	Lon          float64
@@ -40,6 +41,7 @@ type NextSpeedLimit struct {
 func main() {
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
+	lastNextSpeedLimit := float64(0)
 	speedLimit := float64(0)
 	state := State{}
 
@@ -86,7 +88,7 @@ func main() {
 		state.Way.EndNode = way.EndNode
 		if way.Way != state.Way.Way {
 			state.Way = way
-			state.MatchingWays = MatchingWays(way.Way, state.Result.Ways)
+			state.MatchingWays, state.MatchNode = MatchingWays(&state)
 			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
 			if err != nil {
 				fmt.Println(err)
@@ -99,16 +101,16 @@ func main() {
 			speedLimit = 0
 		}
 
-		if state.Way.Way != nil {
-			nextWay, nextWayNode := NextWay(&state)
-			state.NextWay = nextWay
+		if state.Way.Way != nil && len(state.MatchingWays) > 0 {
+			state.NextWay = state.MatchingWays[0]
 			if state.NextWay != nil {
-				nextWaySpeedLimit := ParseMaxSpeed(state.NextWay.Tags["maxspeed"])
-				if speedLimit != nextWaySpeedLimit {
+				nextSpeedLimit := ParseMaxSpeed(state.NextWay.Tags["maxspeed"])
+				if nextSpeedLimit != lastNextSpeedLimit {
+					lastNextSpeedLimit = nextSpeedLimit
 					data, _ := json.Marshal(NextSpeedLimit{
-						Latitude:   nextWayNode.Lat,
-						Longitude:  nextWayNode.Lon,
-						Speedlimit: nextWaySpeedLimit,
+						Latitude:   state.MatchNode.Lat,
+						Longitude:  state.MatchNode.Lon,
+						Speedlimit: nextSpeedLimit,
 					})
 					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
 					if err != nil {
