@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -20,11 +19,6 @@ type State struct {
 	MatchingWays []Way
 	MatchNode    Coordinates
 	Position     Position
-	Lat          float64
-	Lon          float64
-	PendingLat   float64
-	PendingLon   float64
-	Querying     bool
 }
 
 type Position struct {
@@ -63,38 +57,31 @@ func main() {
 
 	coordinates, _ := GetParam(LAST_GPS_POSITION_PERSIST)
 	err := json.Unmarshal(coordinates, &pos)
-	if err != nil {
-		log.Printf("%e", err)
-	}
-	state.PendingLat = pos.Latitude
-	state.PendingLon = pos.Longitude
-	state.Result, state.ResultArea = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+	loge(err)
+	state.Result, state.ResultArea, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+	loge(err)
 
 	for {
 		coordinates, err := GetParam(LAST_GPS_POSITION)
-		if err != nil {
-			log.Printf("%e", err)
-		}
+		loge(err)
 		err = json.Unmarshal(coordinates, &pos)
-		if err != nil {
-			log.Printf("%e", err)
-		}
+		loge(err)
 
 		state.Position = pos
 
 		if !PointInBox(pos.Latitude, pos.Longitude, state.ResultArea.MinLat, state.ResultArea.MinLon, state.ResultArea.MaxLat, state.ResultArea.MaxLon) {
-			state.Result, state.ResultArea = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+			state.Result, state.ResultArea, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+			loge(err)
 		}
 		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)
 		state.Way.StartNode = way.StartNode
 		state.Way.EndNode = way.EndNode
 		if way.Way != state.Way.Way {
 			state.Way = way
-			state.MatchingWays, state.MatchNode = MatchingWays(&state)
+			state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
+			loge(err)
 			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
-			if err != nil {
-				fmt.Println(err)
-			}
+			loge(err)
 		}
 
 		if err == nil {
@@ -115,9 +102,7 @@ func main() {
 						Speedlimit: nextSpeedLimit,
 					})
 					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-					if err != nil {
-						fmt.Println(err)
-					}
+					loge(err)
 				}
 			}
 		}
@@ -125,9 +110,7 @@ func main() {
 		if speedLimit != lastSpeedLimit {
 			lastSpeedLimit = speedLimit
 			err := PutParam(MAP_SPEED_LIMIT, []byte(fmt.Sprintf("%f", speedLimit)))
-			if err != nil {
-				fmt.Println(err)
-			}
+			loge(err)
 		}
 		time.Sleep(1 * time.Second)
 	}

@@ -42,16 +42,11 @@ func GetBasePath() string {
 	}
 }
 
-func check(e error) {
-	if e != nil {
-		log.Println(e)
-		panic(e)
-	}
-}
-
 func EnsureParamDirectories() {
-	os.MkdirAll(ParamsPath, 0775)
-	os.MkdirAll(MemParamsPath, 0775)
+	err := os.MkdirAll(ParamsPath, 0775)
+	loge(err)
+	err = os.MkdirAll(MemParamsPath, 0775)
+	loge(err)
 }
 
 func IsString(data []byte) bool {

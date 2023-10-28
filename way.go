@@ -7,30 +7,34 @@ import (
 	"slices"
 )
 
-func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates) {
+func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates, error) {
 
 	if lat < way.MaxLat()+PADDING && lat > way.MinLat()-PADDING && lon < way.MaxLon()+PADDING && lon > way.MinLon()-PADDING {
-		d, nodeStart, nodeEnd := DistanceToWay(lat, lon, way)
+		d, nodeStart, nodeEnd, err := DistanceToWay(lat, lon, way)
+		if err != nil {
+			return false, nodeStart, nodeEnd, err
+		}
 		road_width_estimate := 4 * LANE_WIDTH
 		max_dist := 5 + road_width_estimate
 
 		if d < max_dist {
-			return true, nodeStart, nodeEnd
+			return true, nodeStart, nodeEnd, nil
 		}
 	}
-	return false, Coordinates{}, Coordinates{}
+	return false, Coordinates{}, Coordinates{}, nil
 }
 
-func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coordinates) {
-	minDistance := math.MaxFloat64
-	nodes, err := way.Nodes()
-	check(err)
-	if nodes.Len() < 2 {
-		return minDistance, Coordinates{}, Coordinates{}
-	}
-
+func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coordinates, error) {
 	var minNodeStart Coordinates
 	var minNodeEnd Coordinates
+	minDistance := math.MaxFloat64
+	nodes, err := way.Nodes()
+	if err != nil {
+		return minDistance, minNodeStart, minNodeEnd, err
+	}
+	if nodes.Len() < 2 {
+		return minDistance, minNodeStart, minNodeEnd, nil
+	}
 
 	latRad := lat * TO_RADIANS
 	lonRad := lon * TO_RADIANS
@@ -45,7 +49,7 @@ func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coo
 			minNodeEnd = nodeEnd
 		}
 	}
-	return minDistance, minNodeStart, minNodeEnd
+	return minDistance, minNodeStart, minNodeEnd, nil
 }
 
 type CurrentWay struct {
@@ -56,7 +60,8 @@ type CurrentWay struct {
 
 func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 	if state.Way.Way.HasNodes() {
-		onWay, nodeStart, nodeEnd := OnWay(state.Way.Way, lat, lon)
+		onWay, nodeStart, nodeEnd, err := OnWay(state.Way.Way, lat, lon)
+		loge(err)
 		if onWay {
 			return CurrentWay{
 				Way:       state.Way.Way,
@@ -68,7 +73,8 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 
 	// check ways that have the same name/ref
 	for _, way := range state.MatchingWays {
-		onWay, nodeStart, nodeEnd := OnWay(way, lat, lon)
+		onWay, nodeStart, nodeEnd, err := OnWay(way, lat, lon)
+		loge(err)
 		if onWay {
 			return CurrentWay{
 				Way:       way,
@@ -80,10 +86,13 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 
 	// finally check all other ways
 	ways, err := state.Result.Ways()
-	check(err)
+	if err != nil {
+		return CurrentWay{}, err
+	}
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
-		onWay, nodeStart, nodeEnd := OnWay(way, lat, lon)
+		onWay, nodeStart, nodeEnd, err := OnWay(way, lat, lon)
+		loge(err)
 		if onWay {
 			return CurrentWay{
 				Way:       way,
@@ -96,12 +105,14 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 	return CurrentWay{}, errors.New("Could not find way")
 }
 
-func MatchingWays(state *State) ([]Way, Coordinates) {
+func MatchingWays(state *State) ([]Way, Coordinates, error) {
 	matchingWays := []Way{}
 	nodes, err := state.Way.Way.Nodes()
-	check(err)
+	if err != nil {
+		return matchingWays, Coordinates{}, err
+	}
 	if !state.Way.Way.HasNodes() || nodes.Len() == 0 {
-		return matchingWays, Coordinates{}
+		return matchingWays, Coordinates{}, nil
 	}
 
 	wayBearing := Bearing(state.Way.StartNode.Latitude(), state.Way.StartNode.Longitude(), state.Way.EndNode.Latitude(), state.Way.EndNode.Longitude())
@@ -110,20 +121,23 @@ func MatchingWays(state *State) ([]Way, Coordinates) {
 	var matchNode Coordinates
 	if isForward {
 		matchNode = nodes.At(nodes.Len() - 1)
-		check(err)
 	} else {
 		matchNode = nodes.At(0)
 	}
 
 	ways, err := state.Result.Ways()
-	check(err)
+	if err != nil {
+		return matchingWays, matchNode, err
+	}
 	for i := 0; i < ways.Len(); i++ {
 		w := ways.At(i)
 		if !w.HasNodes() {
 			continue
 		}
 		wNodes, err := w.Nodes()
-		check(err)
+		if err != nil {
+			return matchingWays, matchNode, err
+		}
 		fNode := wNodes.At(0)
 		lNode := wNodes.At(wNodes.Len() - 1)
 		if fNode == matchNode || lNode == matchNode {
@@ -157,7 +171,9 @@ func MatchingWays(state *State) ([]Way, Coordinates) {
 		} else {
 			var aBearingNode Coordinates
 			aNodes, err := a.Nodes()
-			check(err)
+			if err != nil {
+				return cmp.Compare(aVal, bVal)
+			}
 			if matchNode == aNodes.At(0) {
 				aBearingNode = aNodes.At(1)
 			} else {
@@ -168,7 +184,9 @@ func MatchingWays(state *State) ([]Way, Coordinates) {
 
 			var bBearingNode Coordinates
 			bNodes, err := b.Nodes()
-			check(err)
+			if err != nil {
+				return cmp.Compare(aVal, bVal)
+			}
 			if matchNode == bNodes.At(0) {
 				bBearingNode = bNodes.At(1)
 			} else {
@@ -181,5 +199,5 @@ func MatchingWays(state *State) ([]Way, Coordinates) {
 		return cmp.Compare(aVal, bVal)
 	}
 	slices.SortFunc(matchingWays, sortMatchingWays)
-	return matchingWays, matchNode
+	return matchingWays, matchNode, nil
 }

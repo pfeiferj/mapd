@@ -54,7 +54,7 @@ var BOUNDS_DIR = fmt.Sprintf("%s/offline", GetBaseOpPath())
 
 func EnsureOfflineMapsDirectories() {
 	err := os.MkdirAll(BOUNDS_DIR, 0775)
-	check(err)
+	loge(err)
 }
 
 // Creates a file for a specific bounding box
@@ -232,20 +232,28 @@ func PointInBox(ax float64, ay float64, bxMin float64, byMin float64, bxMax floa
 	return ax > bxMin && ax < bxMax && ay > byMin && ay < byMax
 }
 
-func FindWaysAroundLocation(lat float64, lon float64) (Offline, Area) {
+func FindWaysAroundLocation(lat float64, lon float64) (Offline, Area, error) {
 	areas := GenerateAreas()
+	offline := Offline{}
+	area := Area{}
 	for _, area := range areas {
 		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 			data, err := os.ReadFile(boundsName)
-			check(err)
+			if err != nil {
+				return offline, area, err
+			}
 			msg, err := capnp.UnmarshalPacked(data)
-			check(err)
+			if err != nil {
+				return offline, area, err
+			}
 			offline, err := ReadRootOffline(msg)
-			check(err)
-			return offline, area
+			if err != nil {
+				return offline, area, err
+			}
+			return offline, area, nil
 		}
 	}
-	return Offline{}, Area{}
+	return offline, area, nil
 }
