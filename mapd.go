@@ -7,11 +7,6 @@ import (
 	"time"
 )
 
-var R = 6373000.0                 // approximate radius of earth in meters
-var LANE_WIDTH = 3.7              // meters
-var QUERY_RADIUS = float64(3000)  // meters
-var PADDING = 10 / R * TO_DEGREES // 10 meters in degrees
-
 type State struct {
 	Result       Offline
 	ResultArea   Area
