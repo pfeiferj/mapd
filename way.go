@@ -125,7 +125,7 @@ func MatchingWays(state *State) ([]Way, Coordinates) {
 		wNodes, err := w.Nodes()
 		check(err)
 		fNode := wNodes.At(0)
-		lNode := wNodes.At(nodes.Len() - 1)
+		lNode := wNodes.At(wNodes.Len() - 1)
 		if fNode == matchNode || lNode == matchNode {
 			matchingWays = append(matchingWays, w)
 		}
