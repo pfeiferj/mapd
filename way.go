@@ -9,7 +9,7 @@ import (
 
 func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates) {
 
-	if lat < way.MaxLat() && lat > way.MinLat() && lon < way.MaxLon() && lon > way.MinLon() {
+	if lat < way.MaxLat()+PADDING && lat > way.MinLat()-PADDING && lon < way.MaxLon()+PADDING && lon > way.MinLon()-PADDING {
 		d, nodeStart, nodeEnd := DistanceToWay(lat, lon, way)
 		road_width_estimate := 4 * LANE_WIDTH
 		max_dist := 5 + road_width_estimate

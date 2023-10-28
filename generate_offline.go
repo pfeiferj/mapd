@@ -40,7 +40,17 @@ var GROUP_AREA_BOX_DEGREES = 2
 var AREA_BOX_DEGREES = 1.0 / 3 // Must be 1.0 divided by an integer number
 var WAYS_PER_FILE = 2000
 
-var BOUNDS_DIR = "offline"
+func GetBaseOpPath() string {
+	exists, err := Exists("/data/openpilot")
+	check(err)
+	if exists {
+		return "/data/openpilot"
+	} else {
+		return "."
+	}
+}
+
+var BOUNDS_DIR = fmt.Sprintf("%s/offline", GetBaseOpPath())
 
 func EnsureOfflineMapsDirectories() {
 	err := os.MkdirAll(BOUNDS_DIR, 0775)
@@ -88,7 +98,7 @@ func GenerateAreas() []Area {
 func GenerateOffline() {
 	fmt.Println("Generating Offline Map")
 	EnsureOfflineMapsDirectories()
-	file, err := os.Open("./pacific.osm.pbf")
+	file, err := os.Open("./mid.osm.pbf")
 	check(err)
 	defer file.Close()
 
