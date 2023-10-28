@@ -98,7 +98,7 @@ func GenerateAreas() []Area {
 func GenerateOffline() {
 	fmt.Println("Generating Offline Map")
 	EnsureOfflineMapsDirectories()
-	file, err := os.Open("./mid.osm.pbf")
+	file, err := os.Open("./map.osm.pbf")
 	check(err)
 	defer file.Close()
 

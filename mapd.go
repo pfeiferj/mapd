@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"time"
 )
@@ -46,7 +47,12 @@ func RoadName(way Way) string {
 }
 
 func main() {
-	//GenerateOffline()
+	generatePtr := flag.Bool("generate", false, "Triggers a generation of map data from 'map.osm.pbf'")
+	flag.Parse()
+	if *generatePtr {
+		GenerateOffline()
+		return
+	}
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
 	lastNextSpeedLimit := float64(0)
@@ -65,7 +71,7 @@ func main() {
 	}
 
 	for {
-		err := TriggeredDownloadRegion()
+		err := DownloadIfTriggered()
 		loge(err)
 		coordinates, err := GetParam(LAST_GPS_POSITION)
 		loge(err)
