@@ -59,9 +59,14 @@ func main() {
 	err := json.Unmarshal(coordinates, &pos)
 	loge(err)
 	state.Result, state.ResultArea, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
-	loge(err)
+	if err != nil {
+		state.ResultArea = Area{}
+		loge(err)
+	}
 
 	for {
+		err := TriggeredDownloadRegion()
+		loge(err)
 		coordinates, err := GetParam(LAST_GPS_POSITION)
 		loge(err)
 		err = json.Unmarshal(coordinates, &pos)
