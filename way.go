@@ -5,49 +5,39 @@ import (
 	"errors"
 	"math"
 	"slices"
-	"strconv"
-
-	"github.com/serjvanilla/go-overpass"
 )
 
-func OnWay(way *overpass.Way, lat float64, lon float64) (bool, *overpass.Node, *overpass.Node) {
-	box := Bounds(way.Nodes)
+func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates) {
 
-	if lat < box.MaxLat && lat > box.MinLat && lon < box.MaxLon && lon > box.MinLon {
-		lanes := float64(2)
-		if lanesStr, ok := way.Tags["lanes"]; ok {
-			parsedLanes, err := strconv.ParseUint(lanesStr, 10, 64)
-			if err == nil {
-				lanes = float64(parsedLanes)
-			}
-		}
-
+	if lat < way.MaxLat() && lat > way.MinLat() && lon < way.MaxLon() && lon > way.MinLon() {
 		d, nodeStart, nodeEnd := DistanceToWay(lat, lon, way)
-		road_width_estimate := lanes * LANE_WIDTH
+		road_width_estimate := 4 * LANE_WIDTH
 		max_dist := 5 + road_width_estimate
 
 		if d < max_dist {
 			return true, nodeStart, nodeEnd
 		}
 	}
-	return false, nil, nil
+	return false, Coordinates{}, Coordinates{}
 }
 
-func DistanceToWay(lat float64, lon float64, way *overpass.Way) (float64, *overpass.Node, *overpass.Node) {
+func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coordinates) {
 	minDistance := math.MaxFloat64
-	if len(way.Nodes) < 2 {
-		return minDistance, nil, nil
+	nodes, err := way.Nodes()
+	check(err)
+	if nodes.Len() < 2 {
+		return minDistance, Coordinates{}, Coordinates{}
 	}
 
-	var minNodeStart *overpass.Node
-	var minNodeEnd *overpass.Node
+	var minNodeStart Coordinates
+	var minNodeEnd Coordinates
 
 	latRad := lat * TO_RADIANS
 	lonRad := lon * TO_RADIANS
-	for i := 0; i < len(way.Nodes)-1; i++ {
-		nodeStart := way.Nodes[i]
-		nodeEnd := way.Nodes[i+1]
-		lineLat, lineLon := PointOnLine(nodeStart.Lat, nodeStart.Lon, nodeEnd.Lat, nodeEnd.Lon, lat, lon)
+	for i := 0; i < nodes.Len()-1; i++ {
+		nodeStart := nodes.At(i)
+		nodeEnd := nodes.At(i + 1)
+		lineLat, lineLon := PointOnLine(nodeStart.Latitude(), nodeStart.Longitude(), nodeEnd.Latitude(), nodeEnd.Longitude(), lat, lon)
 		distance := DistanceToPoint(latRad, lonRad, lineLat*TO_RADIANS, lineLon*TO_RADIANS)
 		if distance < minDistance {
 			minDistance = distance
@@ -59,14 +49,13 @@ func DistanceToWay(lat float64, lon float64, way *overpass.Way) (float64, *overp
 }
 
 type CurrentWay struct {
-	Way       *overpass.Way
-	StartNode *overpass.Node
-	EndNode   *overpass.Node
+	Way       Way
+	StartNode Coordinates
+	EndNode   Coordinates
 }
 
 func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
-	// check current way first
-	if state.Way.Way != nil {
+	if state.Way.Way.HasNodes() {
 		onWay, nodeStart, nodeEnd := OnWay(state.Way.Way, lat, lon)
 		if onWay {
 			return CurrentWay{
@@ -90,7 +79,10 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 	}
 
 	// finally check all other ways
-	for _, way := range state.Result.Ways {
+	ways, err := state.Result.Ways()
+	check(err)
+	for i := 0; i < ways.Len(); i++ {
+		way := ways.At(i)
 		onWay, nodeStart, nodeEnd := OnWay(way, lat, lon)
 		if onWay {
 			return CurrentWay{
@@ -104,50 +96,58 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 	return CurrentWay{}, errors.New("Could not find way")
 }
 
-func MatchingWays(state *State) ([]*overpass.Way, *overpass.Node) {
-	matchingWays := []*overpass.Way{}
-	if state.Way.Way == nil || len(state.Way.Way.Nodes) == 0 {
-		return matchingWays, nil
+func MatchingWays(state *State) ([]Way, Coordinates) {
+	matchingWays := []Way{}
+	nodes, err := state.Way.Way.Nodes()
+	check(err)
+	if !state.Way.Way.HasNodes() || nodes.Len() == 0 {
+		return matchingWays, Coordinates{}
 	}
 
-	wayBearing := Bearing(state.Way.StartNode.Lat, state.Way.StartNode.Lon, state.Way.EndNode.Lat, state.Way.EndNode.Lon)
+	wayBearing := Bearing(state.Way.StartNode.Latitude(), state.Way.StartNode.Longitude(), state.Way.EndNode.Latitude(), state.Way.EndNode.Longitude())
 	bearingDelta := math.Abs((state.Position.Bearing * TO_RADIANS) - wayBearing)
 	isForward := math.Cos(bearingDelta) >= 0
-	var matchNode *overpass.Node
+	var matchNode Coordinates
 	if isForward {
-		matchNode = state.Way.Way.Nodes[len(state.Way.Way.Nodes)-1]
+		matchNode = nodes.At(nodes.Len() - 1)
+		check(err)
 	} else {
-		matchNode = state.Way.Way.Nodes[0]
+		matchNode = nodes.At(0)
 	}
 
-	for _, w := range state.Result.Ways {
-		if len(w.Nodes) == 0 {
+	ways, err := state.Result.Ways()
+	check(err)
+	for i := 0; i < ways.Len(); i++ {
+		w := ways.At(i)
+		if !w.HasNodes() {
 			continue
 		}
-		fNode := w.Nodes[0]
-		lNode := w.Nodes[len(w.Nodes)-1]
+		wNodes, err := w.Nodes()
+		check(err)
+		fNode := wNodes.At(0)
+		lNode := wNodes.At(nodes.Len() - 1)
 		if fNode == matchNode || lNode == matchNode {
 			matchingWays = append(matchingWays, w)
 		}
 	}
 
-	name, nameOk := state.Way.Way.Meta.Tags["name"]
-	ref, refOk := state.Way.Way.Meta.Tags["ref"]
-	sortMatchingWays := func(a, b *overpass.Way) int {
+	name, _ := state.Way.Way.Name()
+	ref, _ := state.Way.Way.Ref()
+	sortMatchingWays := func(a, b Way) int {
 		aVal := float64(1000)
 		bVal := float64(1000)
-		if nameOk {
-			an := a.Tags["name"]
-			bn := b.Tags["name"]
+		if len(name) > 0 {
+			an, _ := a.Name()
+			bn, _ := b.Name()
 			if an == name {
 				aVal = -1000
 			}
 			if bn == name {
 				bVal = -1000
 			}
-		} else if refOk {
-			ar := a.Tags["ref"]
-			br := b.Tags["ref"]
+		} else if len(ref) > 0 {
+			ar, _ := a.Ref()
+			br, _ := b.Ref()
 			if ar == ref {
 				aVal = -1000
 			}
@@ -155,22 +155,26 @@ func MatchingWays(state *State) ([]*overpass.Way, *overpass.Node) {
 				bVal = -1000
 			}
 		} else {
-			var aBearingNode *overpass.Node
-			if matchNode == a.Nodes[0] {
-				aBearingNode = a.Nodes[1]
+			var aBearingNode Coordinates
+			aNodes, err := a.Nodes()
+			check(err)
+			if matchNode == aNodes.At(0) {
+				aBearingNode = aNodes.At(1)
 			} else {
-				aBearingNode = a.Nodes[len(a.Nodes)-2]
+				aBearingNode = aNodes.At(aNodes.Len() - 2)
 			}
-			aBearing := Bearing(matchNode.Lat, matchNode.Lon, aBearingNode.Lat, aBearingNode.Lon)
+			aBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), aBearingNode.Latitude(), aBearingNode.Longitude())
 			aVal = math.Abs((state.Position.Bearing * TO_RADIANS) - aBearing)
 
-			var bBearingNode *overpass.Node
-			if matchNode == b.Nodes[0] {
-				bBearingNode = b.Nodes[1]
+			var bBearingNode Coordinates
+			bNodes, err := b.Nodes()
+			check(err)
+			if matchNode == bNodes.At(0) {
+				bBearingNode = bNodes.At(1)
 			} else {
-				bBearingNode = b.Nodes[len(b.Nodes)-2]
+				bBearingNode = bNodes.At(bNodes.Len() - 2)
 			}
-			bBearing := Bearing(matchNode.Lat, matchNode.Lon, bBearingNode.Lat, bBearingNode.Lon)
+			bBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), bBearingNode.Latitude(), bBearingNode.Longitude())
 			bVal = math.Abs((state.Position.Bearing * TO_RADIANS) - bBearing)
 		}
 
@@ -178,19 +182,4 @@ func MatchingWays(state *State) ([]*overpass.Way, *overpass.Node) {
 	}
 	slices.SortFunc(matchingWays, sortMatchingWays)
 	return matchingWays, matchNode
-}
-
-func RoadName(way *overpass.Way) string {
-	if way == nil {
-		return ""
-	}
-	name, ok := way.Meta.Tags["name"]
-	if ok {
-		return name
-	}
-	ref, ok := way.Meta.Tags["ref"]
-	if ok {
-		return ref
-	}
-	return ""
 }

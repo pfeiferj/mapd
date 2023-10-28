@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/serjvanilla/go-overpass"
+	"log"
 	"time"
 )
 
@@ -13,11 +13,12 @@ var QUERY_RADIUS = float64(3000)  // meters
 var PADDING = 10 / R * TO_DEGREES // 10 meters in degrees
 
 type State struct {
-	Result       overpass.Result
+	Result       Offline
+	ResultArea   Area
 	Way          CurrentWay
-	NextWay      *overpass.Way
-	MatchingWays []*overpass.Way
-	MatchNode    *overpass.Node
+	NextWay      Way
+	MatchingWays []Way
+	MatchNode    Coordinates
 	Position     Position
 	Lat          float64
 	Lon          float64
@@ -38,7 +39,20 @@ type NextSpeedLimit struct {
 	Speedlimit float64 `json:"speedlimit"`
 }
 
+func RoadName(way Way) string {
+	name, _ := way.Name()
+	if len(name) > 0 {
+		return name
+	}
+	ref, _ := way.Ref()
+	if len(ref) > 0 {
+		return ref
+	}
+	return ""
+}
+
 func main() {
+	//GenerateOffline()
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
 	lastNextSpeedLimit := float64(0)
@@ -47,41 +61,29 @@ func main() {
 
 	var pos Position
 
-	resChannel := make(chan overpass.Result)
-	errChannel := make(chan error)
-
 	coordinates, _ := GetParam(LAST_GPS_POSITION_PERSIST)
-	json.Unmarshal(coordinates, &pos)
+	err := json.Unmarshal(coordinates, &pos)
+	if err != nil {
+		log.Printf("%e", err)
+	}
 	state.PendingLat = pos.Latitude
 	state.PendingLon = pos.Longitude
+	state.Result, state.ResultArea = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 
-	go AsyncFetchRoadsAroundLocation(resChannel, errChannel, pos.Latitude, pos.Longitude, QUERY_RADIUS)
-	state.Querying = true
 	for {
-		coordinates, _ := GetParam(LAST_GPS_POSITION)
-		json.Unmarshal(coordinates, &pos)
-		state.Position = pos
-
-		select {
-		case res := <-resChannel:
-			state.Querying = false
-			state.Result = res
-			state.Lat = state.PendingLat * TO_RADIANS
-			state.Lon = state.PendingLon * TO_RADIANS
-		case err := <-errChannel:
-			fmt.Println(err)
-			state.PendingLat = pos.Latitude
-			state.PendingLon = pos.Longitude
-			go AsyncFetchRoadsAroundLocation(resChannel, errChannel, pos.Latitude, pos.Longitude, QUERY_RADIUS)
-		default:
+		coordinates, err := GetParam(LAST_GPS_POSITION)
+		if err != nil {
+			log.Printf("%e", err)
+		}
+		err = json.Unmarshal(coordinates, &pos)
+		if err != nil {
+			log.Printf("%e", err)
 		}
 
-		d := DistanceToPoint(pos.Latitude*TO_RADIANS, pos.Longitude*TO_RADIANS, state.Lat, state.Lon)
-		if !state.Querying && d > 0.7*QUERY_RADIUS {
-			state.PendingLat = pos.Latitude
-			state.PendingLon = pos.Longitude
-			state.Querying = true
-			go AsyncFetchRoadsAroundLocation(resChannel, errChannel, pos.Latitude, pos.Longitude, QUERY_RADIUS)
+		state.Position = pos
+
+		if !PointInBox(pos.Latitude, pos.Longitude, state.ResultArea.MinLat, state.ResultArea.MinLon, state.ResultArea.MaxLat, state.ResultArea.MaxLon) {
+			state.Result, state.ResultArea = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 		}
 		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)
 		state.Way.StartNode = way.StartNode
@@ -96,20 +98,20 @@ func main() {
 		}
 
 		if err == nil {
-			speedLimit = ParseMaxSpeed(way.Way.Tags["maxspeed"])
+			speedLimit = way.Way.MaxSpeed()
 		} else {
 			speedLimit = 0
 		}
 
-		if state.Way.Way != nil && len(state.MatchingWays) > 0 {
+		if state.Way.Way != (Way{}) && len(state.MatchingWays) > 0 {
 			state.NextWay = state.MatchingWays[0]
-			if state.NextWay != nil {
-				nextSpeedLimit := ParseMaxSpeed(state.NextWay.Tags["maxspeed"])
+			if state.NextWay != (Way{}) {
+				nextSpeedLimit := state.NextWay.MaxSpeed()
 				if nextSpeedLimit != lastNextSpeedLimit {
 					lastNextSpeedLimit = nextSpeedLimit
 					data, _ := json.Marshal(NextSpeedLimit{
-						Latitude:   state.MatchNode.Lat,
-						Longitude:  state.MatchNode.Lon,
+						Latitude:   state.MatchNode.Latitude(),
+						Longitude:  state.MatchNode.Longitude(),
 						Speedlimit: nextSpeedLimit,
 					})
 					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
