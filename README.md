@@ -2,6 +2,13 @@
 Provides openpilot with data from mapd
 
 ## Using
+### Integrating With Openpilot
+Each release will have a pre-compiled static binary attached for use with
+openpilot on a comma device. Without any additional code the binary will not run
+or change openpilot behavior. A reference implementation for managing downloads
+of the binary and using data output from this daemon is located in
+[pfeifer-openpilot-patches](https://github.com/pfeiferj/openpilot/tree/pfeifer-openpilot-patches/mapd).
+
 ### Download Maps
 Maps can be downloaded in one of two ways, by arbitrary bounding box or by
 pre-defined locations.
