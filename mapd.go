@@ -74,24 +74,27 @@ func main() {
 		state.Position = pos
 
 		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
-			state.Result, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+			res, err := FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
+			if err != nil {
+				state.Result = res
+			}
 		}
 		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)
-		state.Way.StartNode = way.StartNode
-		state.Way.EndNode = way.EndNode
-		if way.Way != state.Way.Way {
-			state.Way = way
-			state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
-			loge(err)
-			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
-			loge(err)
-		}
-
 		if err == nil {
+			state.Way.StartNode = way.StartNode
+			state.Way.EndNode = way.EndNode
+			if way.Way != state.Way.Way {
+				state.Way = way
+				state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
+				loge(err)
+				err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
+				loge(err)
+			}
 			speedLimit = way.Way.MaxSpeed()
 		} else {
 			speedLimit = 0
+			lastSpeedLimit = 0
 		}
 
 		if state.Way.Way != (Way{}) && len(state.MatchingWays) > 0 {
