@@ -34,7 +34,7 @@ func Exists(path string) (bool, error) {
 
 func GetBasePath() string {
 	exists, err := Exists("/data/media/0/realdata")
-	check(err)
+	loge(err)
 	if exists {
 		return "/data/media/0/realdata/"
 	} else {

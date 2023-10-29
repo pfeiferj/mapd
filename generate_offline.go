@@ -42,7 +42,7 @@ var WAYS_PER_FILE = 2000
 
 func GetBaseOpPath() string {
 	exists, err := Exists("/data/media/0/realdata")
-	check(err)
+	loge(err)
 	if exists {
 		return "/data/media/0/realdata"
 	} else {
@@ -62,9 +62,16 @@ func GenerateBoundsFileName(minLat float64, minLon float64, maxLat float64, maxL
 	group_lat_directory := int(math.Floor(minLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	group_lon_directory := int(math.Floor(minLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	dir := fmt.Sprintf("%s/%d/%d", BOUNDS_DIR, group_lat_directory, group_lon_directory)
-	err := os.MkdirAll(dir, 0775)
-	check(err)
 	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, minLat, minLon, maxLat, maxLon)
+}
+
+// Creates a file for a specific bounding box
+func CreateBoundsDir(minLat float64, minLon float64, maxLat float64, maxLon float64) error {
+	group_lat_directory := int(math.Floor(minLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+	group_lon_directory := int(math.Floor(minLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+	dir := fmt.Sprintf("%s/%d/%d", BOUNDS_DIR, group_lat_directory, group_lon_directory)
+	err := os.MkdirAll(dir, 0775)
+	return err
 }
 
 // Checks if two bounding boxes intersect
@@ -223,6 +230,8 @@ func GenerateOffline() {
 		}
 
 		data, err := msg.MarshalPacked()
+		check(err)
+		err = CreateBoundsDir(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		check(err)
 		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0644)
 		check(err)
