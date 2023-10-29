@@ -198,6 +198,10 @@ func GenerateOffline() {
 		println("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
 		check(err)
+		rootOffline.SetMinLat(area.MinLat)
+		rootOffline.SetMinLon(area.MinLon)
+		rootOffline.SetMaxLat(area.MaxLat)
+		rootOffline.SetMaxLon(area.MaxLon)
 		for i, way := range area.Ways {
 			w := ways.At(i)
 			w.SetMinLat(way.MinLat)
@@ -232,28 +236,28 @@ func PointInBox(ax float64, ay float64, bxMin float64, byMin float64, bxMax floa
 	return ax > bxMin && ax < bxMax && ay > byMin && ay < byMax
 }
 
-func FindWaysAroundLocation(lat float64, lon float64) (Offline, Area, error) {
-	areas := GenerateAreas()
+var AREAS = GenerateAreas()
+
+func FindWaysAroundLocation(lat float64, lon float64) (Offline, error) {
 	offline := Offline{}
-	area := Area{}
-	for _, area := range areas {
+	for _, area := range AREAS {
 		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 			data, err := os.ReadFile(boundsName)
 			if err != nil {
-				return offline, area, err
+				return offline, err
 			}
 			msg, err := capnp.UnmarshalPacked(data)
 			if err != nil {
-				return offline, area, err
+				return offline, err
 			}
 			offline, err := ReadRootOffline(msg)
 			if err != nil {
-				return offline, area, err
+				return offline, err
 			}
-			return offline, area, nil
+			return offline, nil
 		}
 	}
-	return offline, area, nil
+	return offline, nil
 }

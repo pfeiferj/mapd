@@ -9,7 +9,6 @@ import (
 
 type State struct {
 	Result       Offline
-	ResultArea   Area
 	Way          CurrentWay
 	NextWay      Way
 	MatchingWays []Way
@@ -59,9 +58,8 @@ func main() {
 	coordinates, _ := GetParam(LAST_GPS_POSITION_PERSIST)
 	err := json.Unmarshal(coordinates, &pos)
 	loge(err)
-	state.Result, state.ResultArea, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+	state.Result, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 	if err != nil {
-		state.ResultArea = Area{}
 		loge(err)
 	}
 
@@ -75,8 +73,8 @@ func main() {
 
 		state.Position = pos
 
-		if !PointInBox(pos.Latitude, pos.Longitude, state.ResultArea.MinLat, state.ResultArea.MinLon, state.ResultArea.MaxLat, state.ResultArea.MaxLon) {
-			state.Result, state.ResultArea, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
+			state.Result, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
 		}
 		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)

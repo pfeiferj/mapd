@@ -53,6 +53,9 @@ func DownloadIfTriggered() (err error) {
 	if err != nil {
 		return err
 	}
+	if len(b) == 0 {
+		return
+	}
 
 	var bounds Bounds
 	err = json.Unmarshal(b, &bounds)
