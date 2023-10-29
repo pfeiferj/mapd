@@ -19,6 +19,7 @@ var NEXT_MAP_SPEED_LIMIT = ParamPath("NextMapSpeedLimit", true)
 var LAST_GPS_POSITION = ParamPath("LastGPSPosition", true)
 var LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
 var DOWNLOAD_BOUNDS = ParamPath("OSMDownloadBounds", true)
+var DOWNLOAD_LOCATIONS = ParamPath("OSMDownloadLocations", true)
 
 // exists returns whether the given file or directory exists
 func Exists(path string) (bool, error) {

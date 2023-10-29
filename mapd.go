@@ -64,7 +64,7 @@ func main() {
 	}
 
 	for {
-		err := DownloadIfTriggered()
+		DownloadIfTriggered()
 		loge(err)
 		coordinates, err := GetParam(LAST_GPS_POSITION)
 		loge(err)
