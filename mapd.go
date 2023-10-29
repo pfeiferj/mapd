@@ -65,7 +65,6 @@ func main() {
 
 	for {
 		DownloadIfTriggered()
-		loge(err)
 		coordinates, err := GetParam(LAST_GPS_POSITION)
 		loge(err)
 		err = json.Unmarshal(coordinates, &pos)

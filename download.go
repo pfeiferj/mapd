@@ -14,8 +14,8 @@ import (
 )
 
 type LocationData struct {
-	BoundingBox Bounds
-	FullName    string
+	BoundingBox Bounds `json:"bounding_box"`
+	FullName    string `json:"full_name"`
 }
 
 //go:embed nation_bounding_boxes.json
@@ -77,19 +77,19 @@ type DownloadLocations struct {
 func DownloadIfTriggered() {
 	b, err := GetParam(DOWNLOAD_LOCATIONS)
 	loge(err)
-	anyLocationsErr := false
-	if err == nil && len(b) == 0 {
+	if err == nil && len(b) != 0 {
 		var locations DownloadLocations
 		err = json.Unmarshal(b, &locations)
 		loge(err)
 
 		if err == nil {
 			for _, location := range locations.Nations {
+				fmt.Println(location)
 				lData, ok := NATION_BOXES[location]
+				fmt.Println(ok)
 				if ok {
 					err = DownloadBounds(lData.BoundingBox)
 					if err != nil {
-						anyLocationsErr = true
 						loge(err)
 					}
 				}
@@ -99,23 +99,18 @@ func DownloadIfTriggered() {
 				if ok {
 					err = DownloadBounds(lData.BoundingBox)
 					if err != nil {
-						anyLocationsErr = true
 						loge(err)
 					}
 				}
 			}
 		}
-	} else {
-		anyLocationsErr = true
 	}
-	if !anyLocationsErr {
-		err = PutParam(DOWNLOAD_LOCATIONS, []byte{})
-		loge(err)
-	}
+	err = PutParam(DOWNLOAD_LOCATIONS, []byte{})
+	loge(err)
 
 	b, err = GetParam(DOWNLOAD_BOUNDS)
 	loge(err)
-	if err == nil && len(b) == 0 {
+	if err == nil && len(b) != 0 {
 		var bounds Bounds
 		err = json.Unmarshal(b, &bounds)
 		loge(err)
