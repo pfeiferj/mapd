@@ -41,10 +41,10 @@ var AREA_BOX_DEGREES = 1.0 / 3 // Must be 1.0 divided by an integer number
 var WAYS_PER_FILE = 2000
 
 func GetBaseOpPath() string {
-	exists, err := Exists("/data/openpilot")
+	exists, err := Exists("/data/media/0/realdata")
 	check(err)
 	if exists {
-		return "/data/openpilot"
+		return "/data/media/0/realdata"
 	} else {
 		return "."
 	}

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -34,6 +35,10 @@ func DownloadFile(url string, filepath string) (err error) {
 
 	// Writer the body to file
 	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+	err = out.Sync()
 	if err != nil {
 		return err
 	}
@@ -99,10 +104,51 @@ func DownloadBounds(bounds Bounds) (err error) {
 				fmt.Print(err)
 				continue
 			}
-			cmd := exec.Command("tar", "-xf", outputName)
-			cmd.Dir = filepath.Dir(GetBaseOpPath())
-			err = cmd.Run()
+			file, err := os.Open(outputName)
 			loge(err)
+			defer file.Close()
+			reader, err := gzip.NewReader(file)
+			loge(err)
+			defer reader.Close()
+			tr := tar.NewReader(reader)
+			for {
+				header, err := tr.Next()
+				if err != nil {
+					break
+				}
+
+				// if the header is nil, just skip it (not sure how this happens)
+				if header == nil {
+					continue
+				}
+				// the target location where the dir/file should be created
+				target := filepath.Join(GetBaseOpPath(), header.Name)
+				// check the file type
+				switch header.Typeflag {
+
+				// if its a dir and it doesn't exist create it
+				case tar.TypeDir:
+					if _, err := os.Stat(target); err != nil {
+						err := os.MkdirAll(target, 0755)
+						loge(err)
+					}
+
+				// if it's a file create it
+				case tar.TypeReg:
+					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+					loge(err)
+
+					_, err = io.Copy(f, tr)
+					loge(err)
+
+					// manually close here after each file operation; defering would cause each file close
+					// to wait until all operations have completed.
+					err = f.Sync()
+					loge(err)
+					f.Close()
+				}
+			}
+
 			os.Remove(outputName)
 		}
 	}
