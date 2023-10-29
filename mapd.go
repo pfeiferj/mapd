@@ -75,7 +75,7 @@ func main() {
 		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
 			res, err := FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
-			if err != nil {
+			if err == nil {
 				state.Result = res
 			}
 		}
@@ -93,7 +93,6 @@ func main() {
 			speedLimit = way.Way.MaxSpeed()
 		} else {
 			speedLimit = 0
-			lastSpeedLimit = 0
 		}
 
 		if state.Way.Way != (Way{}) && len(state.MatchingWays) > 0 {
