@@ -4,9 +4,9 @@ MIN_LAT=-90
 MAX_LON=180
 MAX_LAT=90
 
-for (( i=$MIN_LON; i <= $MAX_LON; i+=20 )) 
+for (( i = $MIN_LON; i <= $MAX_LON; i += 20 )) 
 do
-  for (( j=$MIN_LAT; j <= $MAX_LAT; j += 20 )) 
+  for (( j = $MIN_LAT; j <= $MAX_LAT; j += 20 )) 
   do
     max_lon=$(($i+20))
     max_lat=$(($j+20))
