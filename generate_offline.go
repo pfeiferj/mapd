@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"runtime"
+	"strconv"
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/paulmach/osm"
@@ -17,15 +18,16 @@ type TmpNode struct {
 	Longitude float64
 }
 type TmpWay struct {
-	Name     string
-	Ref      string
-	MaxSpeed float64
-	Index    int32
-	MinLat   float64
-	MinLon   float64
-	MaxLat   float64
-	MaxLon   float64
-	Nodes    []TmpNode
+	Name             string
+	Ref              string
+	MaxSpeed         float64
+	MaxSpeedAdvisory float64
+	Lanes            uint8
+	MinLat           float64
+	MinLon           float64
+	MaxLat           float64
+	MaxLon           float64
+	Nodes            []TmpNode
 }
 
 type Area struct {
@@ -37,7 +39,7 @@ type Area struct {
 }
 
 var GROUP_AREA_BOX_DEGREES = 2
-var AREA_BOX_DEGREES = 1.0 / 3 // Must be 1.0 divided by an integer number
+var AREA_BOX_DEGREES = float64(1.0 / 4) // Must be 1.0 divided by an integer number
 var WAYS_PER_FILE = 2000
 
 func GetBaseOpPath() string {
@@ -133,12 +135,14 @@ func GenerateOffline() {
 		}
 		if way != nil && len(way.Nodes) > 1 {
 			tags := way.TagMap()
+			lanes, _ := strconv.ParseUint(tags["lanes"], 10, 8)
 			tmpWay := TmpWay{
-				Nodes:    make([]TmpNode, len(way.Nodes)),
-				Name:     tags["name"],
-				Ref:      tags["ref"],
-				Index:    int32(index),
-				MaxSpeed: ParseMaxSpeed(tags["maxspeed"]),
+				Nodes:            make([]TmpNode, len(way.Nodes)),
+				Name:             tags["name"],
+				Ref:              tags["ref"],
+				MaxSpeed:         ParseMaxSpeed(tags["maxspeed"]),
+				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
+				Lanes:            uint8(lanes),
 			}
 			index++
 
@@ -253,6 +257,7 @@ func FindWaysAroundLocation(lat float64, lon float64) (Offline, error) {
 		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+			fmt.Println(boundsName)
 			data, err := os.ReadFile(boundsName)
 			if err != nil {
 				return offline, err

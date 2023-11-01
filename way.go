@@ -9,12 +9,16 @@ import (
 
 func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates, error) {
 
-	if lat < way.MaxLat()+PADDING && lat > way.MinLat()-PADDING && lon < way.MaxLon()+PADDING && lon > way.MinLon()-PADDING {
+	if lat < float64(way.MaxLat())+PADDING && lat > float64(way.MinLat())-PADDING && lon < float64(way.MaxLon())+PADDING && lon > float64(way.MinLon())-PADDING {
 		d, nodeStart, nodeEnd, err := DistanceToWay(lat, lon, way)
 		if err != nil {
 			return false, nodeStart, nodeEnd, err
 		}
-		road_width_estimate := 4 * LANE_WIDTH
+		lanes := way.Lanes()
+		if lanes == 0 {
+			lanes = 2
+		}
+		road_width_estimate := float64(lanes) * LANE_WIDTH
 		max_dist := 5 + road_width_estimate
 
 		if d < max_dist {
@@ -41,7 +45,7 @@ func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coo
 	for i := 0; i < nodes.Len()-1; i++ {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
-		lineLat, lineLon := PointOnLine(nodeStart.Latitude(), nodeStart.Longitude(), nodeEnd.Latitude(), nodeEnd.Longitude(), lat, lon)
+		lineLat, lineLon := PointOnLine(float64(nodeStart.Latitude()), float64(nodeStart.Longitude()), float64(nodeEnd.Latitude()), float64(nodeEnd.Longitude()), lat, lon)
 		distance := DistanceToPoint(latRad, lonRad, lineLat*TO_RADIANS, lineLon*TO_RADIANS)
 		if distance < minDistance {
 			minDistance = distance
@@ -115,7 +119,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 		return matchingWays, Coordinates{}, nil
 	}
 
-	wayBearing := Bearing(state.Way.StartNode.Latitude(), state.Way.StartNode.Longitude(), state.Way.EndNode.Latitude(), state.Way.EndNode.Longitude())
+	wayBearing := Bearing(float64(state.Way.StartNode.Latitude()), float64(state.Way.StartNode.Longitude()), float64(state.Way.EndNode.Latitude()), float64(state.Way.EndNode.Longitude()))
 	bearingDelta := math.Abs((state.Position.Bearing * TO_RADIANS) - wayBearing)
 	isForward := math.Cos(bearingDelta) >= 0
 	var matchNode Coordinates
@@ -179,7 +183,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 			} else {
 				aBearingNode = aNodes.At(aNodes.Len() - 2)
 			}
-			aBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), aBearingNode.Latitude(), aBearingNode.Longitude())
+			aBearing := Bearing(float64(matchNode.Latitude()), float64(matchNode.Longitude()), float64(aBearingNode.Latitude()), float64(aBearingNode.Longitude()))
 			aVal = math.Abs((state.Position.Bearing * TO_RADIANS) - aBearing)
 
 			var bBearingNode Coordinates
@@ -192,7 +196,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 			} else {
 				bBearingNode = bNodes.At(bNodes.Len() - 2)
 			}
-			bBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), bBearingNode.Latitude(), bBearingNode.Longitude())
+			bBearing := Bearing(float64(matchNode.Latitude()), float64(matchNode.Longitude()), float64(bBearingNode.Latitude()), float64(bBearingNode.Longitude()))
 			bVal = math.Abs((state.Position.Bearing * TO_RADIANS) - bBearing)
 		}
 

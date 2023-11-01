@@ -49,8 +49,10 @@ func main() {
 	}
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
+	lastAdvisoryLimit := float64(0)
 	lastNextSpeedLimit := float64(0)
 	speedLimit := float64(0)
+	advisoryLimit := float64(0)
 	state := State{}
 
 	var pos Position
@@ -72,7 +74,7 @@ func main() {
 
 		state.Position = pos
 
-		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
+		if !PointInBox(pos.Latitude, pos.Longitude, float64(state.Result.MinLat()), float64(state.Result.MinLon()), float64(state.Result.MaxLat()), float64(state.Result.MaxLon())) {
 			res, err := FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
 			if err == nil {
@@ -83,7 +85,7 @@ func main() {
 		if err == nil {
 			state.Way.StartNode = way.StartNode
 			state.Way.EndNode = way.EndNode
-			if way.Way != state.Way.Way {
+			if way.Way.MinLat() != state.Way.Way.MinLat() && way.Way.MinLon() != state.Way.Way.MinLon() && way.Way.MaxLat() != state.Way.Way.MaxLat() && way.Way.MaxLon() != state.Way.Way.MaxLon() {
 				state.Way = way
 				state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
 				loge(err)
@@ -91,8 +93,10 @@ func main() {
 				loge(err)
 			}
 			speedLimit = way.Way.MaxSpeed()
+			advisoryLimit = way.Way.AdvisorySpeed()
 		} else {
 			speedLimit = 0
+			advisoryLimit = 0
 		}
 
 		if state.Way.Way != (Way{}) && len(state.MatchingWays) > 0 {
@@ -107,7 +111,10 @@ func main() {
 						Speedlimit: nextSpeedLimit,
 					})
 					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-					loge(err)
+					if err != nil {
+						lastSpeedLimit = 0
+						loge(err)
+					}
 				}
 			}
 		}
@@ -115,7 +122,19 @@ func main() {
 		if speedLimit != lastSpeedLimit {
 			lastSpeedLimit = speedLimit
 			err := PutParam(MAP_SPEED_LIMIT, []byte(fmt.Sprintf("%f", speedLimit)))
-			loge(err)
+			if err != nil {
+				lastSpeedLimit = 0
+				loge(err)
+			}
+		}
+		if advisoryLimit != lastAdvisoryLimit {
+			lastAdvisoryLimit = advisoryLimit
+			err := PutParam(MAP_ADVISORY_LIMIT, []byte(fmt.Sprintf("%f", advisoryLimit)))
+			if err != nil {
+				lastAdvisoryLimit = 0
+				loge(err)
+
+			}
 		}
 		time.Sleep(1 * time.Second)
 	}

@@ -12,6 +12,8 @@ struct Way {
   maxLat @5 :Float64;
   maxLon @6 :Float64;
   nodes @7 :List(Coordinates);
+  lanes @8 :UInt8;
+  advisorySpeed @9 :Float64;
 }
 
 struct Coordinates {

@@ -15,6 +15,7 @@ var BasePath string = GetBasePath()
 // Params
 var ROAD_NAME = ParamPath("RoadName", true)
 var MAP_SPEED_LIMIT = ParamPath("MapSpeedLimit", true)
+var MAP_ADVISORY_LIMIT = ParamPath("MapAdvisoryLimit", true)
 var NEXT_MAP_SPEED_LIMIT = ParamPath("NextMapSpeedLimit", true)
 var LAST_GPS_POSITION = ParamPath("LastGPSPosition", true)
 var LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
@@ -151,7 +152,8 @@ func PutParam(path string, data []byte) error {
 
 func RemoveParam(path string) error {
 	dir := filepath.Dir(path)
-	fileLock := flock.New(filepath.Join(dir, ".lock"))
+	lock_dir := filepath.Dir(dir)
+	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
 
 	err := fileLock.Lock()
 	if err != nil {
