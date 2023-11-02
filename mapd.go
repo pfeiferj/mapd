@@ -75,6 +75,10 @@ func main() {
 		state.Position = pos
 
 		if !PointInBox(pos.Latitude, pos.Longitude, float64(state.Result.MinLat()), float64(state.Result.MinLon()), float64(state.Result.MaxLat()), float64(state.Result.MaxLon())) {
+			state.MatchingWays = []Way{}
+			state.MatchNode = Coordinates{}
+			state.Way = CurrentWay{}
+			state.Result = Offline{}
 			res, err := FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
 			if err == nil {

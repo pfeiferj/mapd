@@ -142,6 +142,9 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 		if err != nil {
 			return matchingWays, matchNode, err
 		}
+		if wNodes.Len() < 2 {
+			continue
+		}
 		fNode := wNodes.At(0)
 		lNode := wNodes.At(wNodes.Len() - 1)
 		if fNode == matchNode || lNode == matchNode {
