@@ -29,13 +29,17 @@ type NextSpeedLimit struct {
 }
 
 func RoadName(way Way) string {
-	name, _ := way.Name()
-	if len(name) > 0 {
-		return name
+	name, err := way.Name()
+	if err == nil {
+		if len(name) > 0 {
+			return name
+		}
 	}
-	ref, _ := way.Ref()
-	if len(ref) > 0 {
-		return ref
+	ref, err := way.Ref()
+	if err == nil {
+		if len(ref) > 0 {
+			return ref
+		}
 	}
 	return ""
 }
@@ -61,24 +65,29 @@ func main() {
 	err := json.Unmarshal(coordinates, &pos)
 	loge(err)
 	state.Result, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
-	if err != nil {
-		loge(err)
-	}
+	loge(err)
 
 	for {
 		DownloadIfTriggered()
 		coordinates, err := GetParam(LAST_GPS_POSITION)
-		loge(err)
+		if err != nil {
+			loge(err)
+			continue
+		}
 		err = json.Unmarshal(coordinates, &pos)
-		loge(err)
+		if err != nil {
+			loge(err)
+			continue
+		}
 
 		state.Position = pos
 
-		if !PointInBox(pos.Latitude, pos.Longitude, float64(state.Result.MinLat()), float64(state.Result.MinLon()), float64(state.Result.MaxLat()), float64(state.Result.MaxLon())) {
+		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
 			state.MatchingWays = []Way{}
 			state.MatchNode = Coordinates{}
 			state.Way = CurrentWay{}
 			state.Result = Offline{}
+			state.NextWay = Way{}
 			res, err := FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
 			if err == nil {
@@ -89,13 +98,11 @@ func main() {
 		if err == nil {
 			state.Way.StartNode = way.StartNode
 			state.Way.EndNode = way.EndNode
-			if way.Way.MinLat() != state.Way.Way.MinLat() && way.Way.MinLon() != state.Way.Way.MinLon() && way.Way.MaxLat() != state.Way.Way.MaxLat() && way.Way.MaxLon() != state.Way.Way.MaxLon() {
-				state.Way = way
-				state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
-				loge(err)
-				err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
-				loge(err)
-			}
+			state.Way = way
+			state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
+			loge(err)
+			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
+			loge(err)
 			speedLimit = way.Way.MaxSpeed()
 			advisoryLimit = way.Way.AdvisorySpeed()
 		} else {
@@ -103,21 +110,24 @@ func main() {
 			advisoryLimit = 0
 		}
 
-		if state.Way.Way != (Way{}) && len(state.MatchingWays) > 0 {
+		if len(state.MatchingWays) > 0 {
 			state.NextWay = state.MatchingWays[0]
-			if state.NextWay != (Way{}) {
+			if state.NextWay.HasNodes() {
 				nextSpeedLimit := state.NextWay.MaxSpeed()
 				if nextSpeedLimit != lastNextSpeedLimit {
 					lastNextSpeedLimit = nextSpeedLimit
-					data, _ := json.Marshal(NextSpeedLimit{
+					data, err := json.Marshal(NextSpeedLimit{
 						Latitude:   state.MatchNode.Latitude(),
 						Longitude:  state.MatchNode.Longitude(),
 						Speedlimit: nextSpeedLimit,
 					})
-					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-					if err != nil {
-						lastSpeedLimit = 0
-						loge(err)
+					loge(err)
+					if err == nil {
+						err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
+						if err != nil {
+							lastNextSpeedLimit = 0
+							loge(err)
+						}
 					}
 				}
 			}

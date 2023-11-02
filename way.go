@@ -9,7 +9,7 @@ import (
 
 func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates, error) {
 
-	if lat < float64(way.MaxLat())+PADDING && lat > float64(way.MinLat())-PADDING && lon < float64(way.MaxLon())+PADDING && lon > float64(way.MinLon())-PADDING {
+	if lat < way.MaxLat()+PADDING && lat > way.MinLat()-PADDING && lon < way.MaxLon()+PADDING && lon > way.MinLon()-PADDING {
 		d, nodeStart, nodeEnd, err := DistanceToWay(lat, lon, way)
 		if err != nil {
 			return false, nodeStart, nodeEnd, err
@@ -119,8 +119,8 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 		return matchingWays, Coordinates{}, nil
 	}
 
-	wayBearing := Bearing(float64(state.Way.StartNode.Latitude()), float64(state.Way.StartNode.Longitude()), float64(state.Way.EndNode.Latitude()), float64(state.Way.EndNode.Longitude()))
-	bearingDelta := math.Abs((state.Position.Bearing * TO_RADIANS) - wayBearing)
+	wayBearing := Bearing(state.Way.StartNode.Latitude(), state.Way.StartNode.Longitude(), state.Way.EndNode.Latitude(), state.Way.EndNode.Longitude())
+	bearingDelta := math.Abs(state.Position.Bearing*TO_RADIANS - wayBearing)
 	isForward := math.Cos(bearingDelta) >= 0
 	var matchNode Coordinates
 	if isForward {
@@ -138,6 +138,9 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 		if !w.HasNodes() {
 			continue
 		}
+		if w.MinLat() == state.Way.Way.MinLat() && w.MaxLat() == state.Way.Way.MaxLat() && w.MinLon() == state.Way.Way.MinLon() && w.MaxLon() == state.Way.Way.MaxLon() {
+			continue
+		}
 		wNodes, err := w.Nodes()
 		if err != nil {
 			return matchingWays, matchNode, err
@@ -147,7 +150,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 		}
 		fNode := wNodes.At(0)
 		lNode := wNodes.At(wNodes.Len() - 1)
-		if fNode == matchNode || lNode == matchNode {
+		if (fNode.Latitude() == matchNode.Latitude() && fNode.Longitude() == matchNode.Longitude()) || (lNode.Latitude() == matchNode.Latitude() && lNode.Longitude() == matchNode.Longitude()) {
 			matchingWays = append(matchingWays, w)
 		}
 	}
@@ -187,7 +190,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 				aBearingNode = aNodes.At(aNodes.Len() - 2)
 			}
 			aBearing := Bearing(float64(matchNode.Latitude()), float64(matchNode.Longitude()), float64(aBearingNode.Latitude()), float64(aBearingNode.Longitude()))
-			aVal = math.Abs((state.Position.Bearing * TO_RADIANS) - aBearing)
+			aVal = math.Abs(math.Abs(state.Position.Bearing*TO_RADIANS) - math.Abs(aBearing))
 
 			var bBearingNode Coordinates
 			bNodes, err := b.Nodes()
@@ -200,7 +203,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 				bBearingNode = bNodes.At(bNodes.Len() - 2)
 			}
 			bBearing := Bearing(float64(matchNode.Latitude()), float64(matchNode.Longitude()), float64(bBearingNode.Latitude()), float64(bBearingNode.Longitude()))
-			bVal = math.Abs((state.Position.Bearing * TO_RADIANS) - bBearing)
+			bVal = math.Abs(math.Abs(state.Position.Bearing*TO_RADIANS) - math.Abs(bBearing))
 		}
 
 		return cmp.Compare(aVal, bVal)

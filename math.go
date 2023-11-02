@@ -52,6 +52,10 @@ func Vector(latA float64, lonA float64, latB float64, lonB float64) (float64, fl
 }
 
 func Bearing(latA float64, lonA float64, latB float64, lonB float64) float64 {
+	latA = latA * TO_RADIANS
+	latB = latB * TO_RADIANS
+	lonA = lonA * TO_RADIANS
+	lonB = lonB * TO_RADIANS
 	x, y := Vector(latA, lonA, latB, lonB)
 	return math.Atan2(x, y)
 }
