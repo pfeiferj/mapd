@@ -251,27 +251,15 @@ func PointInBox(ax float64, ay float64, bxMin float64, byMin float64, bxMax floa
 
 var AREAS = GenerateAreas()
 
-func FindWaysAroundLocation(lat float64, lon float64) (Offline, error) {
-	offline := Offline{}
+func FindWaysAroundLocation(lat float64, lon float64) ([]byte, error) {
 	for _, area := range AREAS {
 		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 			fmt.Println(boundsName)
 			data, err := os.ReadFile(boundsName)
-			if err != nil {
-				return offline, err
-			}
-			msg, err := capnp.UnmarshalPacked(data)
-			if err != nil {
-				return offline, err
-			}
-			offline, err := ReadRootOffline(msg)
-			if err != nil {
-				return offline, err
-			}
-			return offline, nil
+			return data, err
 		}
 	}
-	return offline, nil
+	return []uint8{}, nil
 }

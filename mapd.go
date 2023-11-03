@@ -1,6 +1,7 @@
 package main
 
 import (
+	"capnproto.org/go/capnp/v3"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 )
 
 type State struct {
+	Data         []uint8
 	Result       Offline
 	Way          CurrentWay
 	NextWay      Way
@@ -64,11 +66,19 @@ func main() {
 	coordinates, _ := GetParam(LAST_GPS_POSITION_PERSIST)
 	err := json.Unmarshal(coordinates, &pos)
 	loge(err)
-	state.Result, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+	state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 	loge(err)
 
 	for {
 		DownloadIfTriggered()
+
+		msg, err := capnp.UnmarshalPacked(state.Data)
+		loge(err)
+		if err == nil {
+			offline, err := ReadRootOffline(msg)
+			loge(err)
+			state.Result = offline
+		}
 		coordinates, err := GetParam(LAST_GPS_POSITION)
 		if err != nil {
 			loge(err)
@@ -79,7 +89,6 @@ func main() {
 			loge(err)
 			continue
 		}
-
 		state.Position = pos
 
 		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
@@ -88,11 +97,8 @@ func main() {
 			state.Way = CurrentWay{}
 			state.Result = Offline{}
 			state.NextWay = Way{}
-			res, err := FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+			state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
-			if err == nil {
-				state.Result = res
-			}
 		}
 		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)
 		if err == nil {
@@ -121,6 +127,7 @@ func main() {
 						Longitude:  state.MatchNode.Longitude(),
 						Speedlimit: nextSpeedLimit,
 					})
+
 					loge(err)
 					if err == nil {
 						err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
