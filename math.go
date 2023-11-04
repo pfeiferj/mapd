@@ -37,6 +37,7 @@ func PointOnLine(startLat float64, startLon float64, endLat float64, endLon floa
 	return latitude, longitude
 }
 
+// arguments should be in radians
 func DistanceToPoint(ax float64, ay float64, bx float64, by float64) float64 {
 	a := math.Sin((bx-ax)/2)*math.Sin((bx-ax)/2) + math.Cos(ax)*math.Cos(bx)*math.Sin((by-ay)/2)*math.Sin((by-ay)/2)
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))

@@ -45,7 +45,7 @@ func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coo
 	for i := 0; i < nodes.Len()-1; i++ {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
-		lineLat, lineLon := PointOnLine(float64(nodeStart.Latitude()), float64(nodeStart.Longitude()), float64(nodeEnd.Latitude()), float64(nodeEnd.Longitude()), lat, lon)
+		lineLat, lineLon := PointOnLine(nodeStart.Latitude(), nodeStart.Longitude(), nodeEnd.Latitude(), nodeEnd.Longitude(), lat, lon)
 		distance := DistanceToPoint(latRad, lonRad, lineLat*TO_RADIANS, lineLon*TO_RADIANS)
 		if distance < minDistance {
 			minDistance = distance
