@@ -155,10 +155,8 @@ func DownloadBounds(bounds Bounds) (err error) {
 			}
 			file, err := os.Open(outputName)
 			loge(err)
-			defer file.Close()
 			reader, err := gzip.NewReader(file)
 			loge(err)
-			defer reader.Close()
 			tr := tar.NewReader(reader)
 			for {
 				header, err := tr.Next()
@@ -195,8 +193,13 @@ func DownloadBounds(bounds Bounds) (err error) {
 					f.Close()
 				}
 			}
+			err = reader.Close()
+			loge(err)
+			err = file.Close()
+			loge(err)
 
-			os.Remove(outputName)
+			err = os.Remove(outputName)
+			loge(err)
 		}
 	}
 	err = os.RemoveAll(filepath.Join(GetBaseOpPath(), "tmp"))
