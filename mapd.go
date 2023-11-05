@@ -74,6 +74,7 @@ func main() {
 	loge(err)
 
 	for {
+		time.Sleep(1 * time.Second)
 		DownloadIfTriggered()
 
 		msg, err := capnp.UnmarshalPacked(state.Data)
@@ -122,6 +123,7 @@ func main() {
 
 		if len(state.MatchingWays) > 0 {
 			state.NextWay = state.MatchingWays[0]
+			fmt.Printf("%f, %f\n", state.NextWay.MaxLat(), state.NextWay.MaxLon())
 			if state.NextWay.HasNodes() {
 				nextSpeedLimit := state.NextWay.MaxSpeed()
 				if nextSpeedLimit != lastNextSpeedLimit {
@@ -161,6 +163,5 @@ func main() {
 
 			}
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
