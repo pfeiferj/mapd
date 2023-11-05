@@ -104,7 +104,7 @@ func GenerateAreas() []Area {
 	return areas
 }
 
-func GenerateOffline() {
+func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int) {
 	fmt.Println("Generating Offline Map")
 	EnsureOfflineMapsDirectories()
 	file, err := os.Open("./map.osm.pbf")
@@ -188,6 +188,9 @@ func GenerateOffline() {
 
 	println("Finding Bounds")
 	for _, area := range areas {
+		if area.MinLat < float64(minGenLat) || area.MinLon < float64(minGenLon) || area.MaxLat > float64(maxGenLat) || area.MaxLon > float64(maxGenLon) {
+			continue
+		}
 		haveWays := Overlapping(allMinLat, allMinLon, allMaxLat, allMaxLon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if !haveWays {
 			continue
@@ -224,6 +227,8 @@ func GenerateOffline() {
 			err = w.SetRef(way.Ref)
 			check(err)
 			w.SetMaxSpeed(way.MaxSpeed)
+			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
+			w.SetLanes(way.Lanes)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
 			check(err)
 			for j, node := range way.Nodes {
@@ -239,8 +244,13 @@ func GenerateOffline() {
 		check(err)
 		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0644)
 		check(err)
-
 	}
+	f, err := os.Open(BOUNDS_DIR)
+	check(err)
+	err = f.Sync()
+	check(err)
+	err = f.Close()
+	check(err)
 
 	fmt.Println("Done Generating Offline Map")
 }

@@ -48,9 +48,13 @@ func RoadName(way Way) string {
 
 func main() {
 	generatePtr := flag.Bool("generate", false, "Triggers a generation of map data from 'map.osm.pbf'")
+	minGenLatPtr := flag.Int("minlat", -90, "the minimum latitude to generate")
+	minGenLonPtr := flag.Int("minlon", -180, "the minimum longitude to generate")
+	maxGenLatPtr := flag.Int("maxlat", -90, "the maximum latitude to generate")
+	maxGenLonPtr := flag.Int("maxlon", -180, "the maximum longitude to generate")
 	flag.Parse()
 	if *generatePtr {
-		GenerateOffline()
+		GenerateOffline(*minGenLatPtr, *minGenLonPtr, *maxGenLatPtr, *maxGenLonPtr)
 		return
 	}
 	EnsureParamDirectories()
