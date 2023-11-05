@@ -107,6 +107,7 @@ func GetParam(path string) ([]byte, error) {
 
 func PutParam(path string, data []byte) error {
 	dir := filepath.Dir(path)
+	lock_dir := filepath.Dir(dir)
 	file, err := os.CreateTemp(dir, ".tmp_value_"+filepath.Base(path))
 	if err != nil {
 		return err
@@ -124,13 +125,13 @@ func PutParam(path string, data []byte) error {
 		return err
 	}
 
-	fileLock := flock.New(filepath.Join(dir, ".lock"))
+	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
 
 	err = fileLock.Lock()
 	if err != nil {
 		return err
 	}
-	defer fileLock.Unlock()
+	defer loge(fileLock.Unlock())
 
 	err = os.Rename(tmpName, path)
 	if err != nil {
@@ -159,7 +160,7 @@ func RemoveParam(path string) error {
 	if err != nil {
 		return err
 	}
-	defer fileLock.Unlock()
+	defer loge(fileLock.Unlock())
 
 	os.Remove(path)
 
