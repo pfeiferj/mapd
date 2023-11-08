@@ -35,10 +35,10 @@ func Exists(path string) (bool, error) {
 }
 
 func GetBasePath() string {
-	exists, err := Exists("/data/media/0/realdata")
+	exists, err := Exists("/data/media/0")
 	loge(err)
 	if exists {
-		return "/data/media/0/realdata/"
+		return "/data/media/0/osm"
 	} else {
 		return "media/"
 	}
