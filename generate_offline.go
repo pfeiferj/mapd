@@ -43,10 +43,10 @@ var AREA_BOX_DEGREES = float64(1.0 / 4) // Must be 1.0 divided by an integer num
 var WAYS_PER_FILE = 2000
 
 func GetBaseOpPath() string {
-	exists, err := Exists("/data/media/0/realdata")
+	exists, err := Exists("/data/media/0/osm")
 	loge(err)
 	if exists {
-		return "/data/media/0/realdata"
+		return "/data/media/0/osm"
 	} else {
 		return "."
 	}
