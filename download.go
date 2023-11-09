@@ -88,6 +88,16 @@ type DownloadLocationDetail struct {
 
 var progress DownloadProgress
 
+func AddLocationDetailsToProgress(locationNames []string, locationType string) {
+	for _, locationName := range locationNames {
+		if _, ok := progress.LocationDetails[locationName]; !ok {
+			progress.LocationDetails[locationName] = &DownloadLocationDetail{
+				TotalFiles: countTotalFiles([]string{locationName}, locationType),
+			}
+		}
+	}
+}
+
 func DownloadIfTriggered() {
 	progress = DownloadProgress{
 		LocationsToDownload: []string{},
@@ -102,15 +112,10 @@ func DownloadIfTriggered() {
 		loge(err)
 
 		progress.LocationsToDownload = append(locations.Nations, locations.States...)
-		progress.TotalFiles = countTotalFiles(progress.LocationsToDownload)
+		progress.TotalFiles = countTotalFiles(locations.Nations, "nation") + countTotalFiles(locations.States, "state")
 
-		for _, locationName := range progress.LocationsToDownload {
-			if _, ok := progress.LocationDetails[locationName]; !ok {
-				progress.LocationDetails[locationName] = &DownloadLocationDetail{
-					TotalFiles: countTotalFiles([]string{locationName}),
-				}
-			}
-		}
+		AddLocationDetailsToProgress(locations.Nations, "nation")
+		AddLocationDetailsToProgress(locations.States, "state")
 
 		if err == nil {
 			for _, location := range locations.Nations {
@@ -264,14 +269,18 @@ func countFilesForBounds(bounds Bounds) int {
 	return ((maxLat - minLat) / GROUP_AREA_BOX_DEGREES) * ((maxLon - minLon) / GROUP_AREA_BOX_DEGREES)
 }
 
-func countTotalFiles(allLocations []string) int {
+func countTotalFiles(allLocations []string, locationType string) int {
 	totalFiles := 0
 
+	var boxes map[string]LocationData
+	if locationType == "nation" {
+		boxes = NATION_BOXES
+	} else if locationType == "state" {
+		boxes = STATE_BOXES
+	}
+
 	for _, location := range allLocations {
-		if lData, ok := NATION_BOXES[location]; ok {
-			totalFiles += countFilesForBounds(lData.BoundingBox)
-		}
-		if lData, ok := STATE_BOXES[location]; ok {
+		if lData, ok := boxes[location]; ok {
 			totalFiles += countFilesForBounds(lData.BoundingBox)
 		}
 	}
