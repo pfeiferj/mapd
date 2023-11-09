@@ -60,7 +60,6 @@ func main() {
 	EnsureParamDirectories()
 	lastSpeedLimit := float64(0)
 	lastAdvisoryLimit := float64(0)
-	lastNextSpeedLimit := float64(0)
 	speedLimit := float64(0)
 	advisoryLimit := float64(0)
 	state := State{}
