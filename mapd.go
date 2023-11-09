@@ -126,22 +126,28 @@ func main() {
 			fmt.Printf("%f, %f\n", state.NextWay.MaxLat(), state.NextWay.MaxLon())
 			if state.NextWay.HasNodes() {
 				nextSpeedLimit := state.NextWay.MaxSpeed()
-				if nextSpeedLimit != lastNextSpeedLimit {
-					lastNextSpeedLimit = nextSpeedLimit
-					data, err := json.Marshal(NextSpeedLimit{
-						Latitude:   state.MatchNode.Latitude(),
-						Longitude:  state.MatchNode.Longitude(),
-						Speedlimit: nextSpeedLimit,
-					})
+				data, err := json.Marshal(NextSpeedLimit{
+					Latitude:   state.MatchNode.Latitude(),
+					Longitude:  state.MatchNode.Longitude(),
+					Speedlimit: nextSpeedLimit,
+				})
 
-					loge(err)
-					if err == nil {
-						err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-						if err != nil {
-							lastNextSpeedLimit = 0
-							loge(err)
-						}
+				loge(err)
+				if err == nil {
+					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
+					if err != nil {
+						lastNextSpeedLimit = 0
+						loge(err)
 					}
+				}
+			}
+		} else {
+			data, err := json.Marshal(NextSpeedLimit{})
+			loge(err)
+			if err == nil {
+				err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
+				if err != nil {
+					loge(err)
 				}
 			}
 		}
