@@ -74,6 +74,12 @@ type DownloadLocations struct {
 	States  []string `json:"states"`
 }
 
+type DownloadProgress struct {
+	TotalFiles      int     `json:"total_files"`
+	DownloadedFiles int     `json:"downloaded_files"`
+	Percentage      float64 `json:"percentage"`
+}
+
 func DownloadIfTriggered() {
 	b, err := GetParam(DOWNLOAD_LOCATIONS)
 	loge(err)
@@ -140,6 +146,10 @@ func DownloadBounds(bounds Bounds) (err error) {
 	if bounds.MaxLon > float64(maxLon) {
 		maxLon += GROUP_AREA_BOX_DEGREES
 	}
+	totalFiles := ((maxLat - minLat) / GROUP_AREA_BOX_DEGREES) * ((maxLon - minLon) / GROUP_AREA_BOX_DEGREES)
+	progress := &DownloadProgress{
+		TotalFiles: totalFiles,
+	}
 
 	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
 		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
@@ -200,6 +210,20 @@ func DownloadBounds(bounds Bounds) (err error) {
 
 			err = os.Remove(outputName)
 			loge(err)
+
+			progress.DownloadedFiles++
+			progress.Percentage = (float64(progress.DownloadedFiles) / float64(progress.TotalFiles)) * 100
+
+			progressData, err := json.Marshal(progress)
+			if err != nil {
+				loge(err)
+			}
+
+			progressFile := ParamPath("DownloadProgress", true)
+			err = PutParam(progressFile, progressData)
+			if err != nil {
+				loge(err)
+			}
 		}
 	}
 	err = os.RemoveAll(filepath.Join(GetBaseOpPath(), "tmp"))
