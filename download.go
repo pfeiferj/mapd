@@ -75,12 +75,25 @@ type DownloadLocations struct {
 }
 
 type DownloadProgress struct {
-	TotalFiles      int     `json:"total_files"`
-	DownloadedFiles int     `json:"downloaded_files"`
-	Percentage      float64 `json:"percentage"`
+	LocationsToDownload []string                           `json:"locations_to_download"`
+	DownloadedFiles     int                                `json:"downloaded_files"`
+	LocationDetails     map[string]*DownloadLocationDetail `json:"location_details"`
+	TotalFiles          int                                `json:"total_files"`
 }
 
+type DownloadLocationDetail struct {
+	TotalFiles      int `json:"location_total_files"`
+	DownloadedFiles int `json:"location_downloaded_files"`
+}
+
+var progress DownloadProgress
+
 func DownloadIfTriggered() {
+	progress = DownloadProgress{
+		LocationsToDownload: []string{},
+		LocationDetails:     map[string]*DownloadLocationDetail{},
+	}
+
 	b, err := GetParam(DOWNLOAD_LOCATIONS)
 	loge(err)
 	if err == nil && len(b) != 0 {
@@ -88,13 +101,22 @@ func DownloadIfTriggered() {
 		err = json.Unmarshal(b, &locations)
 		loge(err)
 
+		progress.LocationsToDownload = append(locations.Nations, locations.States...)
+		progress.TotalFiles = countTotalFiles(locations)
+
+		for _, locationName := range progress.LocationsToDownload {
+			if _, ok := progress.LocationDetails[locationName]; !ok {
+				progress.LocationDetails[locationName] = &DownloadLocationDetail{}
+			}
+		}
+
 		if err == nil {
 			for _, location := range locations.Nations {
 				fmt.Println(location)
 				lData, ok := NATION_BOXES[location]
 				fmt.Println(ok)
 				if ok {
-					err = DownloadBounds(lData.BoundingBox)
+					err = DownloadBounds(lData.BoundingBox, location)
 					if err != nil {
 						loge(err)
 					}
@@ -103,7 +125,7 @@ func DownloadIfTriggered() {
 			for _, location := range locations.States {
 				lData, ok := STATE_BOXES[location]
 				if ok {
-					err = DownloadBounds(lData.BoundingBox)
+					err = DownloadBounds(lData.BoundingBox, location)
 					if err != nil {
 						loge(err)
 					}
@@ -122,7 +144,7 @@ func DownloadIfTriggered() {
 		loge(err)
 
 		if err == nil {
-			err = DownloadBounds(bounds)
+			err = DownloadBounds(bounds, "CUSTOM")
 			loge(err)
 			if err == nil {
 				err = PutParam(DOWNLOAD_BOUNDS, []byte{})
@@ -132,24 +154,27 @@ func DownloadIfTriggered() {
 	}
 }
 
-func DownloadBounds(bounds Bounds) (err error) {
-	fmt.Printf("Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
-
-	// clip given bounds to file areas
+func adjustedBounds(bounds Bounds) (int, int, int, int) {
 	minLat := int(math.Floor(bounds.MinLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	minLon := int(math.Floor(bounds.MinLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	maxLat := int(math.Floor(bounds.MaxLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	maxLon := int(math.Floor(bounds.MaxLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+
 	if bounds.MaxLat > float64(maxLat) {
 		maxLat += GROUP_AREA_BOX_DEGREES
 	}
 	if bounds.MaxLon > float64(maxLon) {
 		maxLon += GROUP_AREA_BOX_DEGREES
 	}
-	totalFiles := ((maxLat - minLat) / GROUP_AREA_BOX_DEGREES) * ((maxLon - minLon) / GROUP_AREA_BOX_DEGREES)
-	progress := &DownloadProgress{
-		TotalFiles: totalFiles,
-	}
+	return minLat, minLon, maxLat, maxLon
+}
+
+func DownloadBounds(bounds Bounds, locationName string) (err error) {
+	fmt.Printf("Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
+
+	// clip given bounds to file areas
+	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
+	progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
 
 	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
 		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
@@ -212,15 +237,14 @@ func DownloadBounds(bounds Bounds) (err error) {
 			loge(err)
 
 			progress.DownloadedFiles++
-			progress.Percentage = (float64(progress.DownloadedFiles) / float64(progress.TotalFiles)) * 100
+			progress.LocationDetails[locationName].DownloadedFiles++
 
 			progressData, err := json.Marshal(progress)
 			if err != nil {
 				loge(err)
 			}
 
-			progressFile := ParamPath("DownloadProgress", true)
-			err = PutParam(progressFile, progressData)
+			err = PutParam(DOWNLOAD_PROGRESS, progressData)
 			if err != nil {
 				loge(err)
 			}
@@ -231,4 +255,25 @@ func DownloadBounds(bounds Bounds) (err error) {
 
 	fmt.Printf("Finished Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
 	return nil
+}
+
+func countFilesForBounds(bounds Bounds) int {
+	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
+	return ((maxLat - minLat) / GROUP_AREA_BOX_DEGREES) * ((maxLon - minLon) / GROUP_AREA_BOX_DEGREES)
+}
+
+func countTotalFiles(locations DownloadLocations) int {
+	totalFiles := 0
+	allLocations := append(locations.Nations, locations.States...)
+
+	for _, location := range allLocations {
+		if lData, ok := NATION_BOXES[location]; ok {
+			totalFiles += countFilesForBounds(lData.BoundingBox)
+		}
+		if lData, ok := STATE_BOXES[location]; ok {
+			totalFiles += countFilesForBounds(lData.BoundingBox)
+		}
+	}
+
+	return totalFiles
 }
