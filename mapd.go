@@ -135,7 +135,6 @@ func main() {
 				if err == nil {
 					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
 					if err != nil {
-						lastNextSpeedLimit = 0
 						loge(err)
 					}
 				}
