@@ -21,6 +21,7 @@ var LAST_GPS_POSITION = ParamPath("LastGPSPosition", true)
 var LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
 var DOWNLOAD_BOUNDS = ParamPath("OSMDownloadBounds", true)
 var DOWNLOAD_LOCATIONS = ParamPath("OSMDownloadLocations", true)
+var DOWNLOAD_PROGRESS = ParamPath("OSMDownloadProgress", false)
 
 // exists returns whether the given file or directory exists
 func Exists(path string) (bool, error) {
