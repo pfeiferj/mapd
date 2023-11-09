@@ -75,10 +75,10 @@ type DownloadLocations struct {
 }
 
 type DownloadProgress struct {
-	LocationsToDownload []string                           `json:"locations_to_download"`
-	DownloadedFiles     int                                `json:"downloaded_files"`
-	LocationDetails     map[string]*DownloadLocationDetail `json:"location_details"`
 	TotalFiles          int                                `json:"total_files"`
+	DownloadedFiles     int                                `json:"downloaded_files"`
+	LocationsToDownload []string                           `json:"locations_to_download"`
+	LocationDetails     map[string]*DownloadLocationDetail `json:"location_details"`
 }
 
 type DownloadLocationDetail struct {
@@ -102,11 +102,13 @@ func DownloadIfTriggered() {
 		loge(err)
 
 		progress.LocationsToDownload = append(locations.Nations, locations.States...)
-		progress.TotalFiles = countTotalFiles(locations)
+		progress.TotalFiles = countTotalFiles(progress.LocationsToDownload)
 
 		for _, locationName := range progress.LocationsToDownload {
 			if _, ok := progress.LocationDetails[locationName]; !ok {
-				progress.LocationDetails[locationName] = &DownloadLocationDetail{}
+				progress.LocationDetails[locationName] = &DownloadLocationDetail{
+					TotalFiles: countTotalFiles([]string{locationName}),
+				}
 			}
 		}
 
@@ -262,9 +264,8 @@ func countFilesForBounds(bounds Bounds) int {
 	return ((maxLat - minLat) / GROUP_AREA_BOX_DEGREES) * ((maxLon - minLon) / GROUP_AREA_BOX_DEGREES)
 }
 
-func countTotalFiles(locations DownloadLocations) int {
+func countTotalFiles(allLocations []string) int {
 	totalFiles := 0
-	allLocations := append(locations.Nations, locations.States...)
 
 	for _, location := range allLocations {
 		if lData, ok := NATION_BOXES[location]; ok {
