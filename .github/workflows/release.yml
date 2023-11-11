@@ -17,16 +17,18 @@ jobs:
         with:
           image: tonistiigi/binfmt:latest
           platforms: all
-      - uses: earthly/actions-setup@v1
+      - name: Install Earthly
+        uses: earthly/actions-setup@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: "latest" # or pin to an specific version, e.g. "0.7.1"
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Run build
+      - name: Build Release Binary (arm64 for comma device)
         run: earthly --push +build-release
-      - name: Release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: build/mapd
+          generate_release_notes: true
