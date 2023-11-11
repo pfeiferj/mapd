@@ -18,7 +18,11 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: "latest" # or pin to an specific version, e.g. "0.7.1"
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mapd
+          path: build/mapd
       - name: Earthly version
         run: earthly --version
       - name: Run build
