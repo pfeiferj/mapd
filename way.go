@@ -173,10 +173,10 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 			ar, _ := a.Ref()
 			br, _ := b.Ref()
 			if ar == ref {
-				aVal = -1000
+				aVal = -500
 			}
-			if br == name {
-				bVal = -1000
+			if br == ref {
+				bVal = -500
 			}
 		} else {
 			var aBearingNode Coordinates
@@ -189,7 +189,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 			} else {
 				aBearingNode = aNodes.At(aNodes.Len() - 2)
 			}
-			aBearing := Bearing(float64(matchNode.Latitude()), float64(matchNode.Longitude()), float64(aBearingNode.Latitude()), float64(aBearingNode.Longitude()))
+			aBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), aBearingNode.Latitude(), aBearingNode.Longitude())
 			aVal = math.Abs(math.Abs(state.Position.Bearing*TO_RADIANS) - math.Abs(aBearing))
 
 			var bBearingNode Coordinates
@@ -202,7 +202,7 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 			} else {
 				bBearingNode = bNodes.At(bNodes.Len() - 2)
 			}
-			bBearing := Bearing(float64(matchNode.Latitude()), float64(matchNode.Longitude()), float64(bBearingNode.Latitude()), float64(bBearingNode.Longitude()))
+			bBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), bBearingNode.Latitude(), bBearingNode.Longitude())
 			bVal = math.Abs(math.Abs(state.Position.Bearing*TO_RADIANS) - math.Abs(bBearing))
 		}
 
