@@ -117,7 +117,7 @@ earthly +lint
 
 ### Build capnp files
 ```bash
-capnp compile -I ../go-capnp/std -ogo offline.capnp
+earthly +compile-capnp
 ```
 
 ### Build Release Binary
