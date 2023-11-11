@@ -15,6 +15,22 @@ build:
     RUN CGO_ENABLED=0 go build -ldflags="-extldflags=-static -s -w" -o build/mapd
     SAVE ARTIFACT build/mapd /mapd AS LOCAL build/mapd
 
+test-deps:
+    FROM +deps
+    RUN mkdir .snapshots
+    COPY .snapshots/* .snapshots/
+    COPY *.go .
+    COPY *.json .
+
+test:
+    FROM +test-deps
+    RUN go test .
+
+update-snapshots:
+    FROM +test-deps
+    RUN UPDATE_SNAPSHOTS=true go test . || echo "Snapshot changes generated"
+    SAVE ARTIFACT .snapshots/* AS LOCAL .snapshots/
+
 format-deps:
     FROM +deps
     RUN go install mvdan.cc/gofumpt@latest

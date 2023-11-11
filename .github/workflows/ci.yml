@@ -31,6 +31,8 @@ jobs:
         run: earthly --version
       - name: Lint
         run: earthly +lint
+      - name: Test
+        run: earthly +test
       - name: Build Release Binary (arm64 for comma device)
         run: earthly --push +build-release
       - uses: actions/upload-artifact@v3
