@@ -4,7 +4,10 @@ MIN_LAT=-90
 MAX_LON=180
 MAX_LAT=90
 
-CGO_ENABLED=0 go build -ldflags="-extldflags=-static -s -w"
+cd ..
+earthly +build
+cp build/mapd scripts/
+cd scripts
 
 ./filter_planet.sh
 
