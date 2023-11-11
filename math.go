@@ -4,12 +4,14 @@ import (
 	"math"
 )
 
-var R = 6373000.0                 // approximate radius of earth in meters
-var LANE_WIDTH = 3.7              // meters
-var QUERY_RADIUS = float64(3000)  // meters
-var PADDING = 10 / R * TO_DEGREES // 10 meters in degrees
-var TO_RADIANS = math.Pi / 180
-var TO_DEGREES = 180 / math.Pi
+var (
+	R            = 6373000.0           // approximate radius of earth in meters
+	LANE_WIDTH   = 3.7                 // meters
+	QUERY_RADIUS = float64(3000)       // meters
+	PADDING      = 10 / R * TO_DEGREES // 10 meters in degrees
+	TO_RADIANS   = math.Pi / 180
+	TO_DEGREES   = 180 / math.Pi
+)
 
 func Dot(ax float64, ay float64, bx float64, by float64) float64 {
 	return (ax * bx) + (ay * by)

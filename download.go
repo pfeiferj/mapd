@@ -20,13 +20,19 @@ type LocationData struct {
 
 //go:embed nation_bounding_boxes.json
 var nationBoundingBoxesJson []byte
-var NATION_BOXES = map[string]LocationData{}
-var _ = json.Unmarshal(nationBoundingBoxesJson, &NATION_BOXES)
+
+var (
+	NATION_BOXES = map[string]LocationData{}
+	_            = json.Unmarshal(nationBoundingBoxesJson, &NATION_BOXES)
+)
 
 //go:embed us_states_bounding_boxes.json
 var statesBoundingBoxesJson []byte
-var STATE_BOXES = map[string]LocationData{}
-var _ = json.Unmarshal(statesBoundingBoxesJson, &STATE_BOXES)
+
+var (
+	STATE_BOXES = map[string]LocationData{}
+	_           = json.Unmarshal(statesBoundingBoxesJson, &STATE_BOXES)
+)
 
 func DownloadFile(url string, filepath string) (err error) {
 	fmt.Printf("Downloading: %s\n", url)
@@ -188,7 +194,7 @@ func DownloadBounds(bounds Bounds, locationName string) (err error) {
 			filename := fmt.Sprintf("offline/%d/%d.tar.gz", i, j)
 			url := fmt.Sprintf("https://map-data.pfeifer.dev/%s", filename)
 			outputName := filepath.Join(GetBaseOpPath(), "tmp", filename)
-			err := os.MkdirAll(filepath.Dir(outputName), 0775)
+			err := os.MkdirAll(filepath.Dir(outputName), 0o775)
 			loge(err)
 			err = DownloadFile(url, outputName)
 			if err != nil {
@@ -218,7 +224,7 @@ func DownloadBounds(bounds Bounds, locationName string) (err error) {
 				// if its a dir and it doesn't exist create it
 				case tar.TypeDir:
 					if _, err := os.Stat(target); err != nil {
-						err := os.MkdirAll(target, 0755)
+						err := os.MkdirAll(target, 0o755)
 						loge(err)
 					}
 

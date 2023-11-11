@@ -8,7 +8,6 @@ import (
 )
 
 func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates, error) {
-
 	if lat < way.MaxLat()+PADDING && lat > way.MinLat()-PADDING && lon < way.MaxLon()+PADDING && lon > way.MinLon()-PADDING {
 		d, nodeStart, nodeEnd, err := DistanceToWay(lat, lon, way)
 		if err != nil {
@@ -106,7 +105,7 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 		}
 	}
 
-	return CurrentWay{}, errors.New("Could not find way")
+	return CurrentWay{}, errors.New("COULD NOT FIND WAY")
 }
 
 func MatchingWays(state *State) ([]Way, Coordinates, error) {

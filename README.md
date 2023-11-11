@@ -101,6 +101,20 @@ be excluded from the download.
 
 
 ## Build
+This project uses [earthly](https://github.com/earthly/earthly/) for its build
+system. To install earthly follow the instructions at the
+[get earthly page](https://earthly.dev/get-earthly)
+
+### Format Code
+```bash
+earthly +format
+```
+
+### Lint
+```bash
+earthly +lint
+```
+
 ### Build capnp files
 ```bash
 capnp compile -I ../go-capnp/std -ogo offline.capnp
@@ -108,7 +122,7 @@ capnp compile -I ../go-capnp/std -ogo offline.capnp
 
 ### Build Release Binary
 ```bash
-CGO_ENABLED=0 go build -ldflags="-extldflags=-static -s -w"
+earthly +build-release
 ```
 
 NOTE: Must be built for ARM64 to be used on device

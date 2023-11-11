@@ -1,11 +1,12 @@
 package main
 
 import (
-	"capnproto.org/go/capnp/v3"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"time"
+
+	"capnproto.org/go/capnp/v3"
 )
 
 type State struct {
