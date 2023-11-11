@@ -115,14 +115,32 @@ earthly +format
 earthly +lint
 ```
 
-### Build capnp files
+### Test
+```bash
+earthly +test
+```
+
+### Update Snapshot Tests
+```bash
+earthly +update-snapshots
+```
+
+### Build capnp Files
 ```bash
 earthly +compile-capnp
 ```
 
 ### Build Release Binary
+NOTE: This will be built for ARM64 to be used on a comma device and my not work
+on your computer
 ```bash
 earthly +build-release
 ```
 
-NOTE: Must be built for ARM64 to be used on device
+### Build Binary
+NOTE: This will be built for your current archetecture and may not work on a
+comma device
+```bash
+earthly +build
+```
+
