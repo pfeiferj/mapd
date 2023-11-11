@@ -21,8 +21,10 @@ jobs:
       - uses: actions/checkout@v3
       - name: Earthly version
         run: earthly --version
+      - name: Run lint
+        run: earthly +lint
       - name: Run build
-        run: earthly --push +build
+        run: earthly --push +build-release
       - uses: actions/upload-artifact@v3
         with:
           name: mapd

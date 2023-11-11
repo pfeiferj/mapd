@@ -8,20 +8,24 @@ import (
 	"github.com/gofrs/flock"
 )
 
-var ParamsPath string = "/data/params/d"
-var MemParamsPath string = "/dev/shm/params/d"
-var BasePath string = GetBasePath()
+var (
+	ParamsPath    string = "/data/params/d"
+	MemParamsPath string = "/dev/shm/params/d"
+	BasePath      string = GetBasePath()
+)
 
 // Params
-var ROAD_NAME = ParamPath("RoadName", true)
-var MAP_SPEED_LIMIT = ParamPath("MapSpeedLimit", true)
-var MAP_ADVISORY_LIMIT = ParamPath("MapAdvisoryLimit", true)
-var NEXT_MAP_SPEED_LIMIT = ParamPath("NextMapSpeedLimit", true)
-var LAST_GPS_POSITION = ParamPath("LastGPSPosition", true)
-var LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
-var DOWNLOAD_BOUNDS = ParamPath("OSMDownloadBounds", true)
-var DOWNLOAD_LOCATIONS = ParamPath("OSMDownloadLocations", true)
-var DOWNLOAD_PROGRESS = ParamPath("OSMDownloadProgress", false)
+var (
+	ROAD_NAME                 = ParamPath("RoadName", true)
+	MAP_SPEED_LIMIT           = ParamPath("MapSpeedLimit", true)
+	MAP_ADVISORY_LIMIT        = ParamPath("MapAdvisoryLimit", true)
+	NEXT_MAP_SPEED_LIMIT      = ParamPath("NextMapSpeedLimit", true)
+	LAST_GPS_POSITION         = ParamPath("LastGPSPosition", true)
+	LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
+	DOWNLOAD_BOUNDS           = ParamPath("OSMDownloadBounds", true)
+	DOWNLOAD_LOCATIONS        = ParamPath("OSMDownloadLocations", true)
+	DOWNLOAD_PROGRESS         = ParamPath("OSMDownloadProgress", false)
+)
 
 // exists returns whether the given file or directory exists
 func Exists(path string) (bool, error) {
@@ -46,9 +50,9 @@ func GetBasePath() string {
 }
 
 func EnsureParamDirectories() {
-	err := os.MkdirAll(ParamsPath, 0775)
+	err := os.MkdirAll(ParamsPath, 0o775)
 	loge(err)
-	err = os.MkdirAll(MemParamsPath, 0775)
+	err = os.MkdirAll(MemParamsPath, 0o775)
 	loge(err)
 }
 

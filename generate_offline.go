@@ -38,9 +38,11 @@ type Area struct {
 	Ways   []TmpWay
 }
 
-var GROUP_AREA_BOX_DEGREES = 2
-var AREA_BOX_DEGREES = float64(1.0 / 4) // Must be 1.0 divided by an integer number
-var WAYS_PER_FILE = 2000
+var (
+	GROUP_AREA_BOX_DEGREES = 2
+	AREA_BOX_DEGREES       = float64(1.0 / 4) // Must be 1.0 divided by an integer number
+	WAYS_PER_FILE          = 2000
+)
 
 func GetBaseOpPath() string {
 	exists, err := Exists("/data/media/0")
@@ -55,7 +57,7 @@ func GetBaseOpPath() string {
 var BOUNDS_DIR = fmt.Sprintf("%s/offline", GetBaseOpPath())
 
 func EnsureOfflineMapsDirectories() {
-	err := os.MkdirAll(BOUNDS_DIR, 0775)
+	err := os.MkdirAll(BOUNDS_DIR, 0o775)
 	loge(err)
 }
 
@@ -72,7 +74,7 @@ func CreateBoundsDir(minLat float64, minLon float64, maxLat float64, maxLon floa
 	group_lat_directory := int(math.Floor(minLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	group_lon_directory := int(math.Floor(minLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	dir := fmt.Sprintf("%s/%d/%d", BOUNDS_DIR, group_lat_directory, group_lon_directory)
-	err := os.MkdirAll(dir, 0775)
+	err := os.MkdirAll(dir, 0o775)
 	return err
 }
 
@@ -88,7 +90,6 @@ func Overlapping(axMin float64, ayMin float64, axMax float64, ayMax float64, bxM
 
 // Generates bounding boxes for storing ways
 func GenerateAreas() []Area {
-
 	areas := make([]Area, int((361/AREA_BOX_DEGREES)*(181/AREA_BOX_DEGREES)))
 	index := 0
 	for i := float64(-90); i < 90; i += AREA_BOX_DEGREES {
@@ -242,7 +243,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 		check(err)
 		err = CreateBoundsDir(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		check(err)
-		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0644)
+		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0o644)
 		check(err)
 	}
 	f, err := os.Open(BOUNDS_DIR)
