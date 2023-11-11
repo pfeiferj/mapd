@@ -1,6 +1,6 @@
 VERSION 0.7
 FROM golang:1.21-alpine3.18
-WORKDIR /go-example
+WORKDIR /mapd
 
 deps:
     COPY go.mod go.sum ./
