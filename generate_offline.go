@@ -20,6 +20,7 @@ type TmpNode struct {
 type TmpWay struct {
 	Name             string
 	Ref              string
+	Hazard           string
 	MaxSpeed         float64
 	MaxSpeedAdvisory float64
 	Lanes            uint8
@@ -141,6 +142,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 				Nodes:            make([]TmpNode, len(way.Nodes)),
 				Name:             tags["name"],
 				Ref:              tags["ref"],
+				Hazard:           tags["hazard"],
 				MaxSpeed:         ParseMaxSpeed(tags["maxspeed"]),
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
@@ -226,6 +228,8 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 			err := w.SetName(way.Name)
 			check(err)
 			err = w.SetRef(way.Ref)
+			check(err)
+			err = w.SetHazard(way.Hazard)
 			check(err)
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)

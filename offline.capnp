@@ -14,6 +14,7 @@ struct Way {
   nodes @7 :List(Coordinates);
   lanes @8 :UInt8;
   advisorySpeed @9 :Float64;
+  hazard @10 :Text;
 }
 
 struct Coordinates {
