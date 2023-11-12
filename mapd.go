@@ -36,6 +36,14 @@ type AdvisoryLimit struct {
 	Speedlimit     float64 `json:"speedlimit"`
 }
 
+type Hazard struct {
+	StartLatitude  float64 `json:"start_latitude"`
+	StartLongitude float64 `json:"start_longitude"`
+	EndLatitude    float64 `json:"end_latitude"`
+	EndLongitude   float64 `json:"end_longitude"`
+	Hazard         string  `json:"hazard"`
+}
+
 func RoadName(way Way) string {
 	name, err := way.Name()
 	if err == nil {
@@ -132,7 +140,33 @@ func main() {
 		err = PutParam(MAP_ADVISORY_LIMIT, []byte(fmt.Sprintf("%f", state.CurrentWay.Way.AdvisorySpeed())))
 		loge(err)
 
-		data, err := json.Marshal(AdvisoryLimit{
+		hazard, err := state.CurrentWay.Way.Hazard()
+		loge(err)
+		data, err := json.Marshal(Hazard{
+			StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
+			StartLongitude: state.CurrentWay.StartPosition.Longitude(),
+			EndLatitude:    state.CurrentWay.EndPosition.Latitude(),
+			EndLongitude:   state.CurrentWay.EndPosition.Longitude(),
+			Hazard:         hazard,
+		})
+		loge(err)
+		err = PutParam(MAP_HAZARD, data)
+		loge(err)
+
+		hazard, err = state.NextWay.Way.Hazard()
+		loge(err)
+		data, err = json.Marshal(Hazard{
+			StartLatitude:  state.NextWay.StartPosition.Latitude(),
+			StartLongitude: state.NextWay.StartPosition.Longitude(),
+			EndLatitude:    state.NextWay.EndPosition.Latitude(),
+			EndLongitude:   state.NextWay.EndPosition.Longitude(),
+			Hazard:         hazard,
+		})
+		loge(err)
+		err = PutParam(NEXT_MAP_HAZARD, data)
+		loge(err)
+
+		data, err = json.Marshal(AdvisoryLimit{
 			StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
 			StartLongitude: state.CurrentWay.StartPosition.Longitude(),
 			EndLatitude:    state.CurrentWay.EndPosition.Latitude(),

@@ -17,6 +17,8 @@ var (
 // Params
 var (
 	ROAD_NAME                 = ParamPath("RoadName", true)
+	MAP_HAZARD                = ParamPath("MapHazard", true)
+	NEXT_MAP_HAZARD           = ParamPath("NextMapHazard", true)
 	MAP_SPEED_LIMIT           = ParamPath("MapSpeedLimit", true)
 	MAP_ADVISORY_LIMIT        = ParamPath("MapAdvisoryLimit", true)
 	NEXT_MAP_ADVISORY_LIMIT   = ParamPath("NextMapAdvisoryLimit", true)
