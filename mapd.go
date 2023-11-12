@@ -10,13 +10,11 @@ import (
 )
 
 type State struct {
-	Data         []uint8
-	Result       Offline
-	Way          CurrentWay
-	NextWay      Way
-	MatchingWays []Way
-	MatchNode    Coordinates
-	Position     Position
+	Data       []uint8
+	CurrentWay CurrentWay
+	NextWay    Way
+	MatchNode  Coordinates
+	Position   Position
 }
 
 type Position struct {
@@ -73,6 +71,7 @@ func main() {
 	state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 	loge(err)
 
+	offline := Offline{}
 	for {
 		time.Sleep(1 * time.Second)
 		DownloadIfTriggered()
@@ -80,9 +79,8 @@ func main() {
 		msg, err := capnp.UnmarshalPacked(state.Data)
 		loge(err)
 		if err == nil {
-			offline, err := ReadRootOffline(msg)
+			offline, err = ReadRootOffline(msg)
 			loge(err)
-			state.Result = offline
 		}
 		coordinates, err := GetParam(LAST_GPS_POSITION)
 		if err != nil {
@@ -96,22 +94,17 @@ func main() {
 		}
 		state.Position = pos
 
-		if !PointInBox(pos.Latitude, pos.Longitude, state.Result.MinLat(), state.Result.MinLon(), state.Result.MaxLat(), state.Result.MaxLon()) {
-			state.MatchingWays = []Way{}
+		if !PointInBox(pos.Latitude, pos.Longitude, offline.MinLat(), offline.MinLon(), offline.MaxLat(), offline.MaxLon()) {
 			state.MatchNode = Coordinates{}
-			state.Way = CurrentWay{}
-			state.Result = Offline{}
+			state.CurrentWay = CurrentWay{}
 			state.NextWay = Way{}
 			state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
 		}
-		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)
+
+		way, err := GetCurrentWay(&state, offline, pos.Latitude, pos.Longitude)
 		if err == nil {
-			state.Way.StartNode = way.StartNode
-			state.Way.EndNode = way.EndNode
-			state.Way = way
-			state.MatchingWays, state.MatchNode, err = MatchingWays(&state)
-			loge(err)
+			state.CurrentWay = way
 			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
 			loge(err)
 			speedLimit = way.Way.MaxSpeed()
@@ -121,23 +114,21 @@ func main() {
 			advisoryLimit = 0
 		}
 
-		if len(state.MatchingWays) > 0 {
-			state.NextWay = state.MatchingWays[0]
-			fmt.Printf("%f, %f\n", state.NextWay.MaxLat(), state.NextWay.MaxLon())
-			if state.NextWay.HasNodes() {
-				nextSpeedLimit := state.NextWay.MaxSpeed()
-				data, err := json.Marshal(NextSpeedLimit{
-					Latitude:   state.MatchNode.Latitude(),
-					Longitude:  state.MatchNode.Longitude(),
-					Speedlimit: nextSpeedLimit,
-				})
+		state.NextWay, state.MatchNode, err = NextWay(state.CurrentWay, offline, pos.Latitude, pos.Longitude, pos.Bearing)
+		loge(err)
+		if state.NextWay.HasNodes() {
+			nextSpeedLimit := state.NextWay.MaxSpeed()
+			data, err := json.Marshal(NextSpeedLimit{
+				Latitude:   state.MatchNode.Latitude(),
+				Longitude:  state.MatchNode.Longitude(),
+				Speedlimit: nextSpeedLimit,
+			})
 
-				loge(err)
-				if err == nil {
-					err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-					if err != nil {
-						loge(err)
-					}
+			loge(err)
+			if err == nil {
+				err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
+				if err != nil {
+					loge(err)
 				}
 			}
 		} else {
@@ -159,6 +150,7 @@ func main() {
 				loge(err)
 			}
 		}
+
 		if advisoryLimit != lastAdvisoryLimit {
 			lastAdvisoryLimit = advisoryLimit
 			err := PutParam(MAP_ADVISORY_LIMIT, []byte(fmt.Sprintf("%f", advisoryLimit)))
