@@ -1,17 +1,23 @@
 package main
 
 import (
-	"cmp"
 	"errors"
 	"math"
-	"slices"
 )
 
-func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates, error) {
+type OnWayResult struct {
+	OnWay    bool
+	Distance DistanceResult
+}
+
+func OnWay(way Way, lat float64, lon float64) (OnWayResult, error) {
+	res := OnWayResult{}
 	if lat < way.MaxLat()+PADDING && lat > way.MinLat()-PADDING && lon < way.MaxLon()+PADDING && lon > way.MinLon()-PADDING {
-		d, nodeStart, nodeEnd, err := DistanceToWay(lat, lon, way)
+		d, err := DistanceToWay(lat, lon, way)
+		res.Distance = d
 		if err != nil {
-			return false, nodeStart, nodeEnd, err
+			res.OnWay = false
+			return res, err
 		}
 		lanes := way.Lanes()
 		if lanes == 0 {
@@ -20,23 +26,32 @@ func OnWay(way Way, lat float64, lon float64) (bool, Coordinates, Coordinates, e
 		road_width_estimate := float64(lanes) * LANE_WIDTH
 		max_dist := 5 + road_width_estimate
 
-		if d < max_dist {
-			return true, nodeStart, nodeEnd, nil
+		if d.Distance < max_dist {
+			res.OnWay = true
+			return res, nil
 		}
 	}
-	return false, Coordinates{}, Coordinates{}, nil
+	res.OnWay = false
+	return res, nil
 }
 
-func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coordinates, error) {
+type DistanceResult struct {
+	LineStart Coordinates
+	LineEnd   Coordinates
+	Distance  float64
+}
+
+func DistanceToWay(lat float64, lon float64, way Way) (DistanceResult, error) {
+	res := DistanceResult{}
 	var minNodeStart Coordinates
 	var minNodeEnd Coordinates
 	minDistance := math.MaxFloat64
 	nodes, err := way.Nodes()
 	if err != nil {
-		return minDistance, minNodeStart, minNodeEnd, err
+		return res, err
 	}
 	if nodes.Len() < 2 {
-		return minDistance, minNodeStart, minNodeEnd, nil
+		return res, nil
 	}
 
 	latRad := lat * TO_RADIANS
@@ -52,55 +67,54 @@ func DistanceToWay(lat float64, lon float64, way Way) (float64, Coordinates, Coo
 			minNodeEnd = nodeEnd
 		}
 	}
-	return minDistance, minNodeStart, minNodeEnd, nil
+	res.Distance = minDistance
+	res.LineStart = minNodeStart
+	res.LineEnd = minNodeEnd
+	return res, nil
 }
 
 type CurrentWay struct {
-	Way       Way
-	StartNode Coordinates
-	EndNode   Coordinates
+	Way      Way
+	Distance DistanceResult
 }
 
-func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
-	if state.Way.Way.HasNodes() {
-		onWay, nodeStart, nodeEnd, err := OnWay(state.Way.Way, lat, lon)
+func GetCurrentWay(state *State, offline Offline, lat float64, lon float64) (CurrentWay, error) {
+	if state.CurrentWay.Way.HasNodes() {
+		onWay, err := OnWay(state.CurrentWay.Way, lat, lon)
 		loge(err)
-		if onWay {
+		if onWay.OnWay {
 			return CurrentWay{
-				Way:       state.Way.Way,
-				StartNode: nodeStart,
-				EndNode:   nodeEnd,
+				Way:      state.CurrentWay.Way,
+				Distance: onWay.Distance,
 			}, nil
 		}
 	}
 
-	// check ways that have the same name/ref
-	for _, way := range state.MatchingWays {
-		onWay, nodeStart, nodeEnd, err := OnWay(way, lat, lon)
+	// check the expected next way
+	if state.NextWay.HasNodes() {
+		onWay, err := OnWay(state.NextWay, lat, lon)
 		loge(err)
-		if onWay {
+		if onWay.OnWay {
 			return CurrentWay{
-				Way:       way,
-				StartNode: nodeStart,
-				EndNode:   nodeEnd,
+				Way:      state.NextWay,
+				Distance: onWay.Distance,
 			}, nil
 		}
 	}
 
 	// finally check all other ways
-	ways, err := state.Result.Ways()
+	ways, err := offline.Ways()
 	if err != nil {
 		return CurrentWay{}, err
 	}
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
-		onWay, nodeStart, nodeEnd, err := OnWay(way, lat, lon)
+		onWay, err := OnWay(way, lat, lon)
 		loge(err)
-		if onWay {
+		if onWay.OnWay {
 			return CurrentWay{
-				Way:       way,
-				StartNode: nodeStart,
-				EndNode:   nodeEnd,
+				Way:      way,
+				Distance: onWay.Distance,
 			}, nil
 		}
 	}
@@ -108,45 +122,42 @@ func GetCurrentWay(state *State, lat float64, lon float64) (CurrentWay, error) {
 	return CurrentWay{}, errors.New("COULD NOT FIND WAY")
 }
 
-func MatchingWays(state *State) ([]Way, Coordinates, error) {
+func IsForward(currentWay CurrentWay, bearing float64) bool {
+	startLat := currentWay.Distance.LineStart.Latitude()
+	startLon := currentWay.Distance.LineStart.Longitude()
+	endLat := currentWay.Distance.LineEnd.Latitude()
+	endLon := currentWay.Distance.LineEnd.Longitude()
+
+	wayBearing := Bearing(startLat, startLon, endLat, endLon)
+	bearingDelta := math.Abs(bearing*TO_RADIANS - wayBearing)
+	return math.Cos(bearingDelta) >= 0
+}
+
+func MatchingWays(currentWay CurrentWay, offline Offline, matchNode Coordinates) ([]Way, error) {
 	matchingWays := []Way{}
-	nodes, err := state.Way.Way.Nodes()
+	ways, err := offline.Ways()
 	if err != nil {
-		return matchingWays, Coordinates{}, err
-	}
-	if !state.Way.Way.HasNodes() || nodes.Len() == 0 {
-		return matchingWays, Coordinates{}, nil
+		return matchingWays, err
 	}
 
-	wayBearing := Bearing(state.Way.StartNode.Latitude(), state.Way.StartNode.Longitude(), state.Way.EndNode.Latitude(), state.Way.EndNode.Longitude())
-	bearingDelta := math.Abs(state.Position.Bearing*TO_RADIANS - wayBearing)
-	isForward := math.Cos(bearingDelta) >= 0
-	var matchNode Coordinates
-	if isForward {
-		matchNode = nodes.At(nodes.Len() - 1)
-	} else {
-		matchNode = nodes.At(0)
-	}
-
-	ways, err := state.Result.Ways()
-	if err != nil {
-		return matchingWays, matchNode, err
-	}
 	for i := 0; i < ways.Len(); i++ {
 		w := ways.At(i)
 		if !w.HasNodes() {
 			continue
 		}
-		if w.MinLat() == state.Way.Way.MinLat() && w.MaxLat() == state.Way.Way.MaxLat() && w.MinLon() == state.Way.Way.MinLon() && w.MaxLon() == state.Way.Way.MaxLon() {
+
+		if w.MinLat() == currentWay.Way.MinLat() && w.MaxLat() == currentWay.Way.MaxLat() && w.MinLon() == currentWay.Way.MinLon() && w.MaxLon() == currentWay.Way.MaxLon() {
 			continue
 		}
+
 		wNodes, err := w.Nodes()
 		if err != nil {
-			return matchingWays, matchNode, err
+			return matchingWays, err
 		}
 		if wNodes.Len() < 2 {
 			continue
 		}
+
 		fNode := wNodes.At(0)
 		lNode := wNodes.At(wNodes.Len() - 1)
 		if (fNode.Latitude() == matchNode.Latitude() && fNode.Longitude() == matchNode.Longitude()) || (lNode.Latitude() == matchNode.Latitude() && lNode.Longitude() == matchNode.Longitude()) {
@@ -154,59 +165,86 @@ func MatchingWays(state *State) ([]Way, Coordinates, error) {
 		}
 	}
 
-	name, _ := state.Way.Way.Name()
-	ref, _ := state.Way.Way.Ref()
-	sortMatchingWays := func(a, b Way) int {
-		aVal := float64(1000)
-		bVal := float64(1000)
-		if len(name) > 0 {
-			an, _ := a.Name()
-			bn, _ := b.Name()
-			if an == name {
-				aVal = -1000
-			}
-			if bn == name {
-				bVal = -1000
-			}
-		} else if len(ref) > 0 {
-			ar, _ := a.Ref()
-			br, _ := b.Ref()
-			if ar == ref {
-				aVal = -500
-			}
-			if br == ref {
-				bVal = -500
-			}
-		} else {
-			var aBearingNode Coordinates
-			aNodes, err := a.Nodes()
-			if err != nil {
-				return cmp.Compare(aVal, bVal)
-			}
-			if matchNode == aNodes.At(0) {
-				aBearingNode = aNodes.At(1)
-			} else {
-				aBearingNode = aNodes.At(aNodes.Len() - 2)
-			}
-			aBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), aBearingNode.Latitude(), aBearingNode.Longitude())
-			aVal = math.Abs(math.Abs(state.Position.Bearing*TO_RADIANS) - math.Abs(aBearing))
+	return matchingWays, nil
+}
 
-			var bBearingNode Coordinates
-			bNodes, err := b.Nodes()
+func NextWay(currentWay CurrentWay, offline Offline, lat float64, lon float64, bearing float64) (Way, Coordinates, error) {
+	nodes, err := currentWay.Way.Nodes()
+	if err != nil {
+		return Way{}, Coordinates{}, err
+	}
+	if !currentWay.Way.HasNodes() || nodes.Len() == 0 {
+		return Way{}, Coordinates{}, nil
+	}
+
+	var matchNode Coordinates
+	if IsForward(currentWay, bearing) {
+		matchNode = nodes.At(nodes.Len() - 1)
+	} else {
+		matchNode = nodes.At(0)
+	}
+
+	matchingWays, err := MatchingWays(currentWay, offline, matchNode)
+	if err != nil {
+		return Way{}, matchNode, err
+	}
+
+	if len(matchingWays) == 0 {
+		return Way{}, matchNode, nil
+	}
+
+	// first return if one of the next connecting ways has the same name
+	name, _ := currentWay.Way.Name()
+	if len(name) > 0 {
+		for _, mWay := range matchingWays {
+			mName, err := mWay.Name()
 			if err != nil {
-				return cmp.Compare(aVal, bVal)
+				return Way{}, matchNode, err
 			}
-			if matchNode == bNodes.At(0) {
-				bBearingNode = bNodes.At(1)
-			} else {
-				bBearingNode = bNodes.At(bNodes.Len() - 2)
+			if mName == name {
+				return mWay, matchNode, nil
 			}
-			bBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), bBearingNode.Latitude(), bBearingNode.Longitude())
-			bVal = math.Abs(math.Abs(state.Position.Bearing*TO_RADIANS) - math.Abs(bBearing))
+		}
+	}
+
+	// second return if one of the next connecting ways has the same refs
+	ref, _ := currentWay.Way.Ref()
+	if len(ref) > 0 {
+		for _, mWay := range matchingWays {
+			mRef, err := mWay.Ref()
+			if err != nil {
+				return Way{}, matchNode, err
+			}
+			if mRef == ref {
+				return mWay, matchNode, nil
+			}
+		}
+	}
+
+	// third return the next connecting way with the least change in bearing
+	minDiffWay := matchingWays[0]
+	minDiff := float64(0)
+	for _, mWay := range matchingWays {
+		nodes, err := mWay.Nodes()
+		if err != nil {
+			continue
 		}
 
-		return cmp.Compare(aVal, bVal)
+		var bearingNode Coordinates
+		if matchNode == nodes.At(0) {
+			bearingNode = nodes.At(1)
+		} else {
+			bearingNode = nodes.At(nodes.Len() - 2)
+		}
+
+		mBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+		bearingDiff := math.Abs(math.Abs(bearing*TO_RADIANS) - math.Abs(mBearing))
+
+		if bearingDiff < minDiff {
+			minDiff = bearingDiff
+			minDiffWay = mWay
+		}
 	}
-	slices.SortFunc(matchingWays, sortMatchingWays)
-	return matchingWays, matchNode, nil
+
+	return minDiffWay, matchNode, nil
 }
