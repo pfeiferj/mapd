@@ -12,8 +12,7 @@ import (
 type State struct {
 	Data       []uint8
 	CurrentWay CurrentWay
-	NextWay    Way
-	MatchNode  Coordinates
+	NextWay    NextWayResult
 	Position   Position
 }
 
@@ -27,6 +26,14 @@ type NextSpeedLimit struct {
 	Latitude   float64 `json:"latitude"`
 	Longitude  float64 `json:"longitude"`
 	Speedlimit float64 `json:"speedlimit"`
+}
+
+type AdvisoryLimit struct {
+	StartLatitude  float64 `json:"start_latitude"`
+	StartLongitude float64 `json:"start_longitude"`
+	EndLatitude    float64 `json:"end_latitude"`
+	EndLongitude   float64 `json:"end_longitude"`
+	Speedlimit     float64 `json:"speedlimit"`
 }
 
 func RoadName(way Way) string {
@@ -45,6 +52,32 @@ func RoadName(way Way) string {
 	return ""
 }
 
+func readOffline(data []uint8) Offline {
+	msg, err := capnp.UnmarshalPacked(data)
+	loge(err)
+	if err == nil {
+		offline, err := ReadRootOffline(msg)
+		loge(err)
+		return offline
+	}
+	return Offline{}
+}
+
+func readPosition(persistent bool) (Position, error) {
+	path := LAST_GPS_POSITION
+	if persistent {
+		path = LAST_GPS_POSITION_PERSIST
+	}
+
+	pos := Position{}
+	coordinates, err := GetParam(path)
+	if err != nil {
+		return pos, err
+	}
+	err = json.Unmarshal(coordinates, &pos)
+	return pos, err
+}
+
 func main() {
 	generatePtr := flag.Bool("generate", false, "Triggers a generation of map data from 'map.osm.pbf'")
 	minGenLatPtr := flag.Int("minlat", -90, "the minimum latitude to generate")
@@ -57,108 +90,77 @@ func main() {
 		return
 	}
 	EnsureParamDirectories()
-	lastSpeedLimit := float64(0)
-	lastAdvisoryLimit := float64(0)
-	speedLimit := float64(0)
-	advisoryLimit := float64(0)
 	state := State{}
 
-	var pos Position
-
-	coordinates, _ := GetParam(LAST_GPS_POSITION_PERSIST)
-	err := json.Unmarshal(coordinates, &pos)
+	pos, err := readPosition(true)
 	loge(err)
-	state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
-	loge(err)
+	if err == nil {
+		state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
+		loge(err)
+	}
 
-	offline := Offline{}
 	for {
 		time.Sleep(1 * time.Second)
 		DownloadIfTriggered()
 
-		msg, err := capnp.UnmarshalPacked(state.Data)
-		loge(err)
-		if err == nil {
-			offline, err = ReadRootOffline(msg)
-			loge(err)
-		}
-		coordinates, err := GetParam(LAST_GPS_POSITION)
+		pos, err := readPosition(false)
 		if err != nil {
 			loge(err)
 			continue
 		}
-		err = json.Unmarshal(coordinates, &pos)
-		if err != nil {
-			loge(err)
-			continue
-		}
-		state.Position = pos
+		offline := readOffline(state.Data)
 
 		if !PointInBox(pos.Latitude, pos.Longitude, offline.MinLat(), offline.MinLon(), offline.MaxLat(), offline.MaxLon()) {
-			state.MatchNode = Coordinates{}
 			state.CurrentWay = CurrentWay{}
-			state.NextWay = Way{}
+			state.NextWay = NextWayResult{}
 			state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 			loge(err)
 		}
 
-		way, err := GetCurrentWay(&state, offline, pos.Latitude, pos.Longitude)
-		if err == nil {
-			state.CurrentWay = way
-			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
-			loge(err)
-			speedLimit = way.Way.MaxSpeed()
-			advisoryLimit = way.Way.AdvisorySpeed()
-		} else {
-			speedLimit = 0
-			advisoryLimit = 0
-		}
-
-		state.NextWay, state.MatchNode, err = NextWay(state.CurrentWay, offline, pos.Latitude, pos.Longitude, pos.Bearing)
+		state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWay.Way, offline, pos)
 		loge(err)
-		if state.NextWay.HasNodes() {
-			nextSpeedLimit := state.NextWay.MaxSpeed()
-			data, err := json.Marshal(NextSpeedLimit{
-				Latitude:   state.MatchNode.Latitude(),
-				Longitude:  state.MatchNode.Longitude(),
-				Speedlimit: nextSpeedLimit,
-			})
 
-			loge(err)
-			if err == nil {
-				err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-				if err != nil {
-					loge(err)
-				}
-			}
-		} else {
-			data, err := json.Marshal(NextSpeedLimit{})
-			loge(err)
-			if err == nil {
-				err := PutParam(NEXT_MAP_SPEED_LIMIT, data)
-				if err != nil {
-					loge(err)
-				}
-			}
-		}
+		state.NextWay, err = NextWay(state.CurrentWay, offline, pos.Latitude, pos.Longitude, pos.Bearing)
+		loge(err)
 
-		if speedLimit != lastSpeedLimit {
-			lastSpeedLimit = speedLimit
-			err := PutParam(MAP_SPEED_LIMIT, []byte(fmt.Sprintf("%f", speedLimit)))
-			if err != nil {
-				lastSpeedLimit = 0
-				loge(err)
-			}
-		}
+		err = PutParam(ROAD_NAME, []byte(RoadName(state.CurrentWay.Way)))
+		loge(err)
 
-		if advisoryLimit != lastAdvisoryLimit {
-			lastAdvisoryLimit = advisoryLimit
-			err := PutParam(MAP_ADVISORY_LIMIT, []byte(fmt.Sprintf("%f", advisoryLimit)))
-			if err != nil {
-				lastAdvisoryLimit = 0
-				loge(err)
+		err = PutParam(MAP_SPEED_LIMIT, []byte(fmt.Sprintf("%f", state.CurrentWay.Way.MaxSpeed())))
+		loge(err)
 
-			}
-		}
+		err = PutParam(MAP_ADVISORY_LIMIT, []byte(fmt.Sprintf("%f", state.CurrentWay.Way.AdvisorySpeed())))
+		loge(err)
+
+		data, err := json.Marshal(AdvisoryLimit{
+			StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
+			StartLongitude: state.CurrentWay.StartPosition.Longitude(),
+			EndLatitude:    state.CurrentWay.EndPosition.Latitude(),
+			EndLongitude:   state.CurrentWay.EndPosition.Longitude(),
+			Speedlimit:     state.CurrentWay.Way.AdvisorySpeed(),
+		})
+		loge(err)
+		err = PutParam(MAP_ADVISORY_LIMIT, data)
+		loge(err)
+
+		data, err = json.Marshal(NextSpeedLimit{
+			Latitude:   state.NextWay.StartPosition.Latitude(),
+			Longitude:  state.NextWay.StartPosition.Longitude(),
+			Speedlimit: state.NextWay.Way.MaxSpeed(),
+		})
+		loge(err)
+		err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
+		loge(err)
+
+		data, err = json.Marshal(AdvisoryLimit{
+			StartLatitude:  state.NextWay.StartPosition.Latitude(),
+			StartLongitude: state.NextWay.StartPosition.Longitude(),
+			EndLatitude:    state.NextWay.EndPosition.Latitude(),
+			EndLongitude:   state.NextWay.EndPosition.Longitude(),
+			Speedlimit:     state.NextWay.Way.AdvisorySpeed(),
+		})
+		loge(err)
+		err = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
+		loge(err)
 	}
 }

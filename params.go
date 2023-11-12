@@ -19,6 +19,7 @@ var (
 	ROAD_NAME                 = ParamPath("RoadName", true)
 	MAP_SPEED_LIMIT           = ParamPath("MapSpeedLimit", true)
 	MAP_ADVISORY_LIMIT        = ParamPath("MapAdvisoryLimit", true)
+	NEXT_MAP_ADVISORY_LIMIT   = ParamPath("NextMapAdvisoryLimit", true)
 	NEXT_MAP_SPEED_LIMIT      = ParamPath("NextMapSpeedLimit", true)
 	LAST_GPS_POSITION         = ParamPath("LastGPSPosition", true)
 	LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
