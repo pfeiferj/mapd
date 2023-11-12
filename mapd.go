@@ -102,7 +102,7 @@ func main() {
 			loge(err)
 		}
 
-		way, err := GetCurrentWay(&state, pos.Latitude, pos.Longitude)
+		way, err := GetCurrentWay(&state, offline, pos.Latitude, pos.Longitude)
 		if err == nil {
 			state.CurrentWay = way
 			err := PutParam(ROAD_NAME, []byte(RoadName(way.Way)))
