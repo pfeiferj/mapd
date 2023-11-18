@@ -98,6 +98,7 @@ func main() {
 		return
 	}
 	EnsureParamDirectories()
+	EnsureParamsExist()
 	state := State{}
 
 	pos, err := readPosition(true)

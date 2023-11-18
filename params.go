@@ -59,6 +59,21 @@ func EnsureParamDirectories() {
 	loge(err)
 }
 
+func EnsureParamsExist() {
+	data := []uint8{}
+	_ = PutParam(ROAD_NAME, data)
+	_ = PutParam(MAP_HAZARD, data)
+	_ = PutParam(NEXT_MAP_HAZARD, data)
+	_ = PutParam(MAP_SPEED_LIMIT, data)
+	_ = PutParam(MAP_ADVISORY_LIMIT, data)
+	_ = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
+	_ = PutParam(NEXT_MAP_SPEED_LIMIT, data)
+	_ = PutParam(LAST_GPS_POSITION, data)
+	_ = PutParam(DOWNLOAD_BOUNDS, data)
+	_ = PutParam(DOWNLOAD_LOCATIONS, data)
+	_ = PutParam(DOWNLOAD_PROGRESS, data)
+}
+
 func IsString(data []byte) bool {
 	for _, b := range data {
 		if (b < 32 || b > 126) && !(b == 9 || b == 13 || b == 10) {
