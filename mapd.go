@@ -120,6 +120,8 @@ func main() {
 		}
 		offline := readOffline(state.Data)
 
+		// ------------- Find current and next ways ------------
+
 		if !PointInBox(pos.Latitude, pos.Longitude, offline.MinLat(), offline.MinLon(), offline.MaxLat(), offline.MaxLon()) {
 			state.CurrentWay = CurrentWay{}
 			state.NextWay = NextWayResult{}
@@ -136,6 +138,24 @@ func main() {
 		state.SecondNextWay, err = NextWay(state.NextWay.Way, offline, state.NextWay.IsForward)
 		loge(err)
 
+		curvatures, err := GetStateCurvatures(state)
+		loge(err)
+		target_velocities := GetTargetVelocities(curvatures)
+
+		// -----------------  Write data ---------------------
+
+		// -----------------  MTSC Data  -----------------------
+		data, err := json.Marshal(curvatures)
+		loge(err)
+		err = PutParam(MAP_CURVATURES, data)
+		loge(err)
+
+		data, err = json.Marshal(target_velocities)
+		loge(err)
+		err = PutParam(MAP_TARGET_VELOCITIES, data)
+		loge(err)
+
+		// ----------------- Current Data --------------------
 		err = PutParam(ROAD_NAME, []byte(RoadName(state.CurrentWay.Way)))
 		loge(err)
 
@@ -147,7 +167,7 @@ func main() {
 
 		hazard, err := state.CurrentWay.Way.Hazard()
 		loge(err)
-		data, err := json.Marshal(Hazard{
+		data, err = json.Marshal(Hazard{
 			StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
 			StartLongitude: state.CurrentWay.StartPosition.Longitude(),
 			EndLatitude:    state.CurrentWay.EndPosition.Latitude(),
@@ -157,6 +177,19 @@ func main() {
 		loge(err)
 		err = PutParam(MAP_HAZARD, data)
 		loge(err)
+
+		data, err = json.Marshal(AdvisoryLimit{
+			StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
+			StartLongitude: state.CurrentWay.StartPosition.Longitude(),
+			EndLatitude:    state.CurrentWay.EndPosition.Latitude(),
+			EndLongitude:   state.CurrentWay.EndPosition.Longitude(),
+			Speedlimit:     state.CurrentWay.Way.AdvisorySpeed(),
+		})
+		loge(err)
+		err = PutParam(MAP_ADVISORY_LIMIT, data)
+		loge(err)
+
+		// ---------------- Next Data ---------------------
 
 		hazard, err = state.NextWay.Way.Hazard()
 		loge(err)
@@ -169,17 +202,6 @@ func main() {
 		})
 		loge(err)
 		err = PutParam(NEXT_MAP_HAZARD, data)
-		loge(err)
-
-		data, err = json.Marshal(AdvisoryLimit{
-			StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
-			StartLongitude: state.CurrentWay.StartPosition.Longitude(),
-			EndLatitude:    state.CurrentWay.EndPosition.Latitude(),
-			EndLongitude:   state.CurrentWay.EndPosition.Longitude(),
-			Speedlimit:     state.CurrentWay.Way.AdvisorySpeed(),
-		})
-		loge(err)
-		err = PutParam(MAP_ADVISORY_LIMIT, data)
 		loge(err)
 
 		currentMaxSpeed := state.CurrentWay.Way.MaxSpeed()
