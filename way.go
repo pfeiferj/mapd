@@ -235,23 +235,28 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 	return true
 }
 
-func NextWay(currentWay CurrentWay, offline Offline, lat float64, lon float64, bearing float64) (NextWayResult, error) {
-	nodes, err := currentWay.Way.Nodes()
+func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
+	nodes, err := way.Nodes()
 	if err != nil {
 		return NextWayResult{}, err
 	}
-	if !currentWay.Way.HasNodes() || nodes.Len() == 0 {
+	if !way.HasNodes() || nodes.Len() == 0 {
 		return NextWayResult{}, nil
 	}
 
 	var matchNode Coordinates
-	if currentWay.OnWay.IsForward {
+	var matchBearingNode Coordinates
+	if isForward {
 		matchNode = nodes.At(nodes.Len() - 1)
+		matchBearingNode = nodes.At(nodes.Len() - 2)
 	} else {
 		matchNode = nodes.At(0)
+		matchBearingNode = nodes.At(1)
 	}
 
-	matchingWays, err := MatchingWays(currentWay.Way, offline, matchNode)
+	bearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), matchBearingNode.Latitude(), matchBearingNode.Longitude())
+
+	matchingWays, err := MatchingWays(way, offline, matchNode)
 	if err != nil {
 		return NextWayResult{StartPosition: matchNode}, err
 	}
@@ -261,7 +266,7 @@ func NextWay(currentWay CurrentWay, offline Offline, lat float64, lon float64, b
 	}
 
 	// first return if one of the next connecting ways has the same name
-	name, _ := currentWay.Way.Name()
+	name, _ := way.Name()
 	if len(name) > 0 {
 		for _, mWay := range matchingWays {
 			mName, err := mWay.Name()
@@ -282,7 +287,7 @@ func NextWay(currentWay CurrentWay, offline Offline, lat float64, lon float64, b
 	}
 
 	// second return if one of the next connecting ways has the same refs
-	ref, _ := currentWay.Way.Ref()
+	ref, _ := way.Ref()
 	if len(ref) > 0 {
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
@@ -327,12 +332,12 @@ func NextWay(currentWay CurrentWay, offline Offline, lat float64, lon float64, b
 		}
 	}
 
-	isForward := NextIsForward(minDiffWay, matchNode)
-	start, end := GetWayStartEnd(minDiffWay, isForward)
+	nextIsForward := NextIsForward(minDiffWay, matchNode)
+	start, end := GetWayStartEnd(minDiffWay, nextIsForward)
 	return NextWayResult{
 		Way:           minDiffWay,
 		StartPosition: start,
 		EndPosition:   end,
-		IsForward:     NextIsForward(minDiffWay, matchNode),
+		IsForward:     nextIsForward,
 	}, nil
 }
