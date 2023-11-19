@@ -10,10 +10,11 @@ import (
 )
 
 type State struct {
-	Data       []uint8
-	CurrentWay CurrentWay
-	NextWay    NextWayResult
-	Position   Position
+	Data          []uint8
+	CurrentWay    CurrentWay
+	NextWay       NextWayResult
+	SecondNextWay NextWayResult
+	Position      Position
 }
 
 type Position struct {
@@ -129,7 +130,10 @@ func main() {
 		state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWay.Way, offline, pos)
 		loge(err)
 
-		state.NextWay, err = NextWay(state.CurrentWay, offline, pos.Latitude, pos.Longitude, pos.Bearing)
+		state.NextWay, err = NextWay(state.CurrentWay.Way, offline, state.CurrentWay.OnWay.IsForward)
+		loge(err)
+
+		state.SecondNextWay, err = NextWay(state.NextWay.Way, offline, state.NextWay.IsForward)
 		loge(err)
 
 		err = PutParam(ROAD_NAME, []byte(RoadName(state.CurrentWay.Way)))
@@ -178,21 +182,39 @@ func main() {
 		err = PutParam(MAP_ADVISORY_LIMIT, data)
 		loge(err)
 
+		currentMaxSpeed := state.CurrentWay.Way.MaxSpeed()
+		nextMaxSpeed := state.NextWay.Way.MaxSpeed()
+		secondNextMaxSpeed := state.SecondNextWay.Way.MaxSpeed()
+		var nextSpeedWay NextWayResult
+		if (nextMaxSpeed != currentMaxSpeed || secondNextMaxSpeed == currentMaxSpeed) && (nextMaxSpeed != 0 || secondNextMaxSpeed == 0) {
+			nextSpeedWay = state.NextWay
+		} else {
+			nextSpeedWay = state.SecondNextWay
+		}
 		data, err = json.Marshal(NextSpeedLimit{
-			Latitude:   state.NextWay.StartPosition.Latitude(),
-			Longitude:  state.NextWay.StartPosition.Longitude(),
-			Speedlimit: state.NextWay.Way.MaxSpeed(),
+			Latitude:   nextSpeedWay.StartPosition.Latitude(),
+			Longitude:  nextSpeedWay.StartPosition.Longitude(),
+			Speedlimit: nextSpeedWay.Way.MaxSpeed(),
 		})
 		loge(err)
 		err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
 		loge(err)
 
+		currentAdvisorySpeed := state.CurrentWay.Way.AdvisorySpeed()
+		nextAdvisorySpeed := state.NextWay.Way.AdvisorySpeed()
+		secondNextAdvisorySpeed := state.SecondNextWay.Way.AdvisorySpeed()
+		var nextAdvisoryWay NextWayResult
+		if (nextAdvisorySpeed != currentAdvisorySpeed || secondNextAdvisorySpeed == currentAdvisorySpeed) && (nextAdvisorySpeed != 0 || secondNextAdvisorySpeed == 0) {
+			nextAdvisoryWay = state.NextWay
+		} else {
+			nextAdvisoryWay = state.SecondNextWay
+		}
 		data, err = json.Marshal(AdvisoryLimit{
-			StartLatitude:  state.NextWay.StartPosition.Latitude(),
-			StartLongitude: state.NextWay.StartPosition.Longitude(),
-			EndLatitude:    state.NextWay.EndPosition.Latitude(),
-			EndLongitude:   state.NextWay.EndPosition.Longitude(),
-			Speedlimit:     state.NextWay.Way.AdvisorySpeed(),
+			StartLatitude:  nextAdvisoryWay.StartPosition.Latitude(),
+			StartLongitude: nextAdvisoryWay.StartPosition.Longitude(),
+			EndLatitude:    nextAdvisoryWay.EndPosition.Latitude(),
+			EndLongitude:   nextAdvisoryWay.EndPosition.Longitude(),
+			Speedlimit:     nextAdvisoryWay.Way.AdvisorySpeed(),
 		})
 		loge(err)
 		err = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
