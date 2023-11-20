@@ -74,7 +74,7 @@ type Curvature struct {
 	Curvature float64 `json:"curvature"`
 }
 
-func GetStateCurvatures(state State) ([]Curvature, error) {
+func GetStateCurvatures(state *State) ([]Curvature, error) {
 	currentNodes, err := state.CurrentWay.Way.Nodes()
 	if err != nil {
 		return []Curvature{}, err
