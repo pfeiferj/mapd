@@ -161,6 +161,9 @@ type Velocity struct {
 func GetTargetVelocities(curvatures []Curvature) []Velocity {
 	velocities := make([]Velocity, len(curvatures))
 	for i, curv := range curvatures {
+		if curv.Curvature == 0 {
+			continue
+		}
 		velocities[i].Velocity = math.Pow(2.0/curv.Curvature, 1.0/2)
 		velocities[i].Latitude = curv.Latitude
 		velocities[i].Longitude = curv.Longitude
@@ -182,6 +185,12 @@ func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) ([]float6
 		al := arc_lengths[i]
 		bl := arc_lengths[i+1]
 		cl := arc_lengths[i+2]
+
+		if al+bl+cl == 0 {
+			average_curvatures[i] = 0
+			continue
+		}
+
 		average_curvatures[i] = (a*al + b*bl + c*cl) / (al + bl + cl)
 	}
 
@@ -204,9 +213,16 @@ func GetCurvatures(x_points []float64, y_points []float64) ([]float64, []float64
 
 		area := math.Sqrt(sp * (sp - length_a) * (sp - length_b) * (sp - length_c))
 
+		if length_a*length_b*length_c == 0 {
+			curvatures[i] = 0
+			arc_lengths[i] = 0
+			continue
+		}
+
 		curvatures[i] = (4 * area) / (length_a * length_b * length_c)
 
 		radius := 1.0 / curvatures[i]
+
 		angle := math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
 		arc_lengths[i] = radius * angle
 	}
