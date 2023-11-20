@@ -63,21 +63,24 @@ func EnsureParamDirectories() {
 	loge(err)
 }
 
-func EnsureParamsExist() {
-	data := []uint8{}
-	_ = PutParam(ROAD_NAME, data)
-	_ = PutParam(MAP_HAZARD, data)
-	_ = PutParam(NEXT_MAP_HAZARD, data)
-	_ = PutParam(MAP_SPEED_LIMIT, data)
-	_ = PutParam(MAP_ADVISORY_LIMIT, data)
-	_ = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
-	_ = PutParam(NEXT_MAP_SPEED_LIMIT, data)
-	_ = PutParam(LAST_GPS_POSITION, data)
-	_ = PutParam(DOWNLOAD_BOUNDS, data)
-	_ = PutParam(DOWNLOAD_LOCATIONS, data)
-	_ = PutParam(DOWNLOAD_PROGRESS, data)
-	_ = PutParam(MAP_CURVATURES, data)
-	_ = PutParam(MAP_TARGET_VELOCITIES, data)
+func ResetParams() {
+	empty_data := []uint8{}
+	empty_object := []uint8{'{', '}'}
+	empty_array := []uint8{'[', ']'}
+	zero := []uint8{'0'}
+	_ = PutParam(ROAD_NAME, empty_data)
+	_ = PutParam(MAP_HAZARD, empty_object)
+	_ = PutParam(NEXT_MAP_HAZARD, empty_object)
+	_ = PutParam(MAP_SPEED_LIMIT, zero)
+	_ = PutParam(MAP_ADVISORY_LIMIT, empty_object)
+	_ = PutParam(NEXT_MAP_ADVISORY_LIMIT, empty_object)
+	_ = PutParam(NEXT_MAP_SPEED_LIMIT, empty_object)
+	_ = PutParam(LAST_GPS_POSITION, empty_object)
+	_ = PutParam(DOWNLOAD_BOUNDS, empty_data)
+	_ = PutParam(DOWNLOAD_LOCATIONS, empty_data)
+	_ = PutParam(DOWNLOAD_PROGRESS, empty_data)
+	_ = PutParam(MAP_CURVATURES, empty_array)
+	_ = PutParam(MAP_TARGET_VELOCITIES, empty_array)
 }
 
 func IsString(data []byte) bool {

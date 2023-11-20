@@ -239,7 +239,7 @@ func main() {
 		return
 	}
 	EnsureParamDirectories()
-	EnsureParamsExist()
+	ResetParams()
 	state := State{}
 
 	pos, err := readPosition(true)
