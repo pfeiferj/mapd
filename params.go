@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/gofrs/flock"
 )
@@ -154,11 +156,25 @@ func PutParam(path string, data []byte) error {
 
 	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
 
-	err = fileLock.Lock()
+	locked, err := fileLock.TryLock()
 	if err != nil {
 		return err
 	}
+	if !locked {
+		// if we didn't obtain the lock let's try again after a short delay
+		time.Sleep(100 * time.Millisecond)
+		locked, err = fileLock.TryLock()
+		if err != nil {
+			return err
+		}
+		if !locked {
+			// try to force the lock to be removed
+			loge(os.Remove(filepath.Join(lock_dir, ".lock")))
+			return errors.New("Could not obtain lock")
+		}
+	}
 	defer loge(fileLock.Unlock())
+	defer loge(os.Remove(filepath.Join(lock_dir, ".lock")))
 
 	err = os.Rename(tmpName, path)
 	if err != nil {
@@ -183,11 +199,25 @@ func RemoveParam(path string) error {
 	lock_dir := filepath.Dir(dir)
 	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
 
-	err := fileLock.Lock()
+	locked, err := fileLock.TryLock()
 	if err != nil {
 		return err
 	}
+	if !locked {
+		// if we didn't obtain the lock let's try again after a short delay
+		time.Sleep(100 * time.Millisecond)
+		locked, err = fileLock.TryLock()
+		if err != nil {
+			return err
+		}
+		if !locked {
+			// try to force the lock to be removed
+			loge(os.Remove(filepath.Join(lock_dir, ".lock")))
+			return errors.New("Could not obtain lock")
+		}
+	}
 	defer loge(fileLock.Unlock())
+	defer loge(os.Remove(filepath.Join(lock_dir, ".lock")))
 
 	os.Remove(path)
 
