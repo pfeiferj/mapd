@@ -170,7 +170,7 @@ func PutParam(path string, data []byte) error {
 		if !locked {
 			// try to force the lock to be removed
 			loge(os.Remove(filepath.Join(lock_dir, ".lock")))
-			return errors.New("Could not obtain lock")
+			return errors.New("COULD NOT OBTAIN LOCK")
 		}
 	}
 	defer loge(fileLock.Unlock())
@@ -213,7 +213,7 @@ func RemoveParam(path string) error {
 		if !locked {
 			// try to force the lock to be removed
 			loge(os.Remove(filepath.Join(lock_dir, ".lock")))
-			return errors.New("Could not obtain lock")
+			return errors.New("COULD NOT OBTAIN LOCK")
 		}
 	}
 	defer loge(fileLock.Unlock())
