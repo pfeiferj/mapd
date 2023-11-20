@@ -28,6 +28,8 @@ var (
 	DOWNLOAD_BOUNDS           = ParamPath("OSMDownloadBounds", true)
 	DOWNLOAD_LOCATIONS        = ParamPath("OSMDownloadLocations", true)
 	DOWNLOAD_PROGRESS         = ParamPath("OSMDownloadProgress", false)
+	MAP_CURVATURES            = ParamPath("MapCurvatures", true)
+	MAP_TARGET_VELOCITIES     = ParamPath("MapTargetVelocities", true)
 )
 
 // exists returns whether the given file or directory exists
@@ -72,6 +74,8 @@ func EnsureParamsExist() {
 	_ = PutParam(DOWNLOAD_BOUNDS, data)
 	_ = PutParam(DOWNLOAD_LOCATIONS, data)
 	_ = PutParam(DOWNLOAD_PROGRESS, data)
+	_ = PutParam(MAP_CURVATURES, data)
+	_ = PutParam(MAP_TARGET_VELOCITIES, data)
 }
 
 func IsString(data []byte) bool {
