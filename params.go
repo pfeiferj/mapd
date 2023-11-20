@@ -28,8 +28,8 @@ var (
 	DOWNLOAD_BOUNDS           = ParamPath("OSMDownloadBounds", true)
 	DOWNLOAD_LOCATIONS        = ParamPath("OSMDownloadLocations", true)
 	DOWNLOAD_PROGRESS         = ParamPath("OSMDownloadProgress", false)
-	MAP_CURVATURES            = ParamPath("MapCurvatures", false)
-	MAP_TARGET_VELOCITIES     = ParamPath("MapTargetVelocities", false)
+	MAP_CURVATURES            = ParamPath("MapCurvatures", true)
+	MAP_TARGET_VELOCITIES     = ParamPath("MapTargetVelocities", true)
 )
 
 // exists returns whether the given file or directory exists
