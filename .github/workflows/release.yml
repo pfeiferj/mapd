@@ -26,6 +26,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Build Release Binary (arm64 for comma device)
         run: earthly --push +build-release
+      - name: Build Release Docker Images
+        run: earthly --push +docker-all-archs
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

@@ -74,3 +74,13 @@ compile-capnp:
 
 build-release:
     BUILD --platform=linux/arm64 +build
+
+docker:
+    COPY +build/mapd .
+    COPY scripts/*.sh .
+    CMD ["./download_generate_and_update_planet.sh"]
+    SAVE IMAGE --push openpilot-mapd:latest
+
+docker-all-archs:
+    BUILD --platform=linux/arm64 +docker
+    BUILD --platform=linux/amd64 +docker
