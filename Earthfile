@@ -74,3 +74,17 @@ compile-capnp:
 
 build-release:
     BUILD --platform=linux/arm64 +build
+
+docker:
+    FROM ubuntu:latest
+    WORKDIR /app
+    COPY +build/mapd .
+    COPY scripts/*.sh .
+    RUN apt update
+    RUN apt install rclone wget osmium-tool -y
+    CMD ["./docker_entry.sh"]
+    SAVE IMAGE --push openpilot-mapd:latest
+
+docker-all-archs:
+    BUILD --platform=linux/arm64 +docker
+    BUILD --platform=linux/amd64 +docker

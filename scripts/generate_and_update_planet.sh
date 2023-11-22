@@ -4,11 +4,6 @@ MIN_LAT=-90
 MAX_LON=180
 MAX_LAT=90
 
-cd ..
-earthly +build
-cp build/mapd scripts/
-cd scripts
-
 ./filter_planet.sh
 
 for (( i = $MIN_LON; i < $MAX_LON; i += 20 )) 
