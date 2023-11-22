@@ -76,9 +76,13 @@ build-release:
     BUILD --platform=linux/arm64 +build
 
 docker:
+    FROM ubuntu:latest
+    WORKDIR /app
     COPY +build/mapd .
     COPY scripts/*.sh .
-    CMD ["./download_generate_and_update_planet.sh"]
+    RUN apt update
+    RUN apt install rclone wget osmium-tool -y
+    CMD ["./docker_entry.sh"]
     SAVE IMAGE --push openpilot-mapd:latest
 
 docker-all-archs:
