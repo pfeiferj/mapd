@@ -83,7 +83,7 @@ docker:
     RUN apt update
     RUN apt install rclone wget osmium-tool -y
     CMD ["./docker_entry.sh"]
-    SAVE IMAGE --push openpilot-mapd:latest
+    SAVE IMAGE --push pfeiferj/openpilot-mapd:latest
 
 docker-all-archs:
     BUILD --platform=linux/arm64 +docker
