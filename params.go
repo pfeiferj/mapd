@@ -159,22 +159,26 @@ func PutParam(path string, data []byte) error {
 
 	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
 
-	locked, err := fileLock.TryLock()
-	if err != nil {
-		return err
-	}
-	if !locked {
-		// if we didn't obtain the lock let's try again after a short delay
-		time.Sleep(100 * time.Millisecond)
-		locked, err = fileLock.TryLock()
+	retries := 0
+	for {
+		locked, err := fileLock.TryLock()
 		if err != nil {
 			return err
 		}
-		if !locked {
+		if locked {
+			break
+		}
+		retries += 1
+		if retries > 30 {
 			// try to force the lock to be removed
 			loge(os.Remove(filepath.Join(lock_dir, ".lock")))
 			return errors.New("COULD NOT OBTAIN LOCK")
 		}
+		if retries > 50 {
+			return errors.New("COULD NOT OBTAIN LOCK")
+		}
+		// if we didn't obtain the lock let's try again after a short delay
+		time.Sleep(1 * time.Millisecond)
 	}
 	defer loge(fileLock.Unlock())
 	defer loge(os.Remove(filepath.Join(lock_dir, ".lock")))
@@ -202,22 +206,26 @@ func RemoveParam(path string) error {
 	lock_dir := filepath.Dir(dir)
 	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
 
-	locked, err := fileLock.TryLock()
-	if err != nil {
-		return err
-	}
-	if !locked {
-		// if we didn't obtain the lock let's try again after a short delay
-		time.Sleep(100 * time.Millisecond)
-		locked, err = fileLock.TryLock()
+	retries := 0
+	for {
+		locked, err := fileLock.TryLock()
 		if err != nil {
 			return err
 		}
-		if !locked {
+		if locked {
+			break
+		}
+		retries += 1
+		if retries > 30 {
 			// try to force the lock to be removed
 			loge(os.Remove(filepath.Join(lock_dir, ".lock")))
 			return errors.New("COULD NOT OBTAIN LOCK")
 		}
+		if retries > 50 {
+			return errors.New("COULD NOT OBTAIN LOCK")
+		}
+		// if we didn't obtain the lock let's try again after a short delay
+		time.Sleep(1 * time.Millisecond)
 	}
 	defer loge(fileLock.Unlock())
 	defer loge(os.Remove(filepath.Join(lock_dir, ".lock")))
