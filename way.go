@@ -254,6 +254,10 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		matchBearingNode = nodes.At(1)
 	}
 
+	if !PointInBox(matchNode.Latitude(), matchNode.Longitude(), offline.MinLat(), offline.MinLon(), offline.MaxLat(), offline.MaxLon()) {
+		return NextWayResult{}, nil
+	}
+
 	bearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), matchBearingNode.Latitude(), matchBearingNode.Longitude())
 
 	matchingWays, err := MatchingWays(way, offline, matchNode)
