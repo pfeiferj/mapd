@@ -88,7 +88,15 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		return []Curvature{}, err
 	}
 
-	num_points := currentNodes.Len() + nextNodes.Len() + secondNodes.Len() - 2
+	nextLen := nextNodes.Len()
+	secondLen := secondNodes.Len()
+	num_points := currentNodes.Len()
+	if nextLen > 1 {
+		num_points += nextLen - 1
+	}
+	if secondLen > 1 {
+		num_points += secondLen - 1
+	}
 	if num_points < 0 {
 		return []Curvature{}, errors.New("NOT ENOUGH NODES")
 	}
