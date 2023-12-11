@@ -52,7 +52,7 @@ tag. GPS coordinates are in degrees. schema:
     "start_longitude": float,
     "end_latitude": float,
     "end_longitude": float,
-    "speedlimit": float
+    "hazard": string
 }
 ```
 * `NextMapHazard`: output as json. The hazard name comes from the osm 'hazard'
