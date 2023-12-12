@@ -6,13 +6,14 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"io"
 	"math"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type LocationData struct {

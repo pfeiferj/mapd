@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gofrs/flock"
 )

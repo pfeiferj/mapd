@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/pkg/errors"
 	"math"
+
+	"github.com/pkg/errors"
 )
 
 type OnWayResult struct {
