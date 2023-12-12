@@ -8,6 +8,27 @@ from openpilot.common.params import Params
 mem_params = Params("/dev/shm/params")
 ```
 
+### Log Level
+The log level for mapd can be set by writing to the MapdLogLevel param. mapd
+reads the normal persistent MapdLogLevel param once at start and checks the
+MapdLogLevel memory param each loop to allow for changing the level while the
+process is running. The default level is `info`.
+
+The level should be written as one of the following strings:
+* `debug`
+* `info`
+* `warn`
+* `error`
+* `disabled`
+
+### Pretty Logs
+By default mapd outputs structured json logs. To print in a more human friendly
+format you can set the MapdPrettyLog param to 1 (in openpilot this would be
+equivalent to put\_bool("MapdPrettyLog", true)). mapd reads the persistent param
+once at start and checks the mem param location each loop to allow for changing
+the value while running. Setting the mem param to 0 will revert back to
+structured logging.
+
 ### Position Data
 To get location data into mapd you must write the gps coordinates to the
 LastGPSPosition memory param. Note that it will read the normal /data/params

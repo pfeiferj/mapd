@@ -1,8 +1,9 @@
 package main
 
 import (
-	"errors"
 	"math"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -77,15 +78,15 @@ type Curvature struct {
 func GetStateCurvatures(state *State) ([]Curvature, error) {
 	currentNodes, err := state.CurrentWay.Way.Nodes()
 	if err != nil {
-		return []Curvature{}, err
+		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
 	}
 	nextNodes, err := state.NextWay.Way.Nodes()
 	if err != nil {
-		return []Curvature{}, err
+		return []Curvature{}, errors.Wrap(err, "could not read next way nodes")
 	}
 	secondNodes, err := state.SecondNextWay.Way.Nodes()
 	if err != nil {
-		return []Curvature{}, err
+		return []Curvature{}, errors.Wrap(err, "could not read second way nodes")
 	}
 
 	nextLen := nextNodes.Len()
@@ -98,7 +99,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		num_points += secondLen - 1
 	}
 	if num_points < 0 {
-		return []Curvature{}, errors.New("NOT ENOUGH NODES")
+		return []Curvature{}, errors.New("not enough nodes to calculate curvatures")
 	}
 	x_points := make([]float64, num_points)
 	y_points := make([]float64, num_points)
@@ -145,11 +146,11 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 
 	curvatures, arc_lengths, err := GetCurvatures(x_points, y_points)
 	if err != nil {
-		return []Curvature{}, err
+		return []Curvature{}, errors.Wrap(err, "could not get curvatures from points")
 	}
 	average_curvatures, err := GetAverageCurvatures(curvatures, arc_lengths)
 	if err != nil {
-		return []Curvature{}, err
+		return []Curvature{}, errors.Wrap(err, "could not get average curvatures from curvatures")
 	}
 	curvature_outputs := make([]Curvature, len(average_curvatures))
 	for i, curvature := range average_curvatures {
@@ -181,7 +182,7 @@ func GetTargetVelocities(curvatures []Curvature) []Velocity {
 
 func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) ([]float64, error) {
 	if len(curvatures) < 3 {
-		return []float64{}, errors.New("NOT ENOUGH CURVATURES")
+		return []float64{}, errors.New("not enough curvatures to average")
 	}
 
 	average_curvatures := make([]float64, len(curvatures)-2)
@@ -207,7 +208,7 @@ func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) ([]float6
 
 func GetCurvatures(x_points []float64, y_points []float64) ([]float64, []float64, error) {
 	if len(x_points) < 3 {
-		return []float64{}, []float64{}, errors.New("NOT ENOUGH POINTS")
+		return []float64{}, []float64{}, errors.New("not enough points to calculate curvatures")
 	}
 	curvatures := make([]float64, len(x_points)-2)
 	arc_lengths := make([]float64, len(x_points)-2)
