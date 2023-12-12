@@ -6,6 +6,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 	"io"
 	"math"
 	"net/http"
@@ -35,34 +37,34 @@ var (
 )
 
 func DownloadFile(url string, filepath string) (err error) {
-	fmt.Printf("Downloading: %s\n", url)
+	log.Info().Msgf("Downloading: %s\n", url)
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not create file for download")
 	}
 	defer out.Close()
 
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not download the file data")
 	}
 	defer resp.Body.Close()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
+		return errors.Errorf("download received bad status: %s", resp.Status)
 	}
 
 	// Writer the body to file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not write download data to file")
 	}
 	err = out.Sync()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "could not fsync downloaded file")
 	}
 
 	return nil
@@ -111,11 +113,11 @@ func DownloadIfTriggered() {
 	}
 
 	b, err := GetParam(DOWNLOAD_LOCATIONS)
-	loge(err)
+	logwe(err)
 	if err == nil && len(b) != 0 {
 		var locations DownloadLocations
 		err = json.Unmarshal(b, &locations)
-		loge(err)
+		logwe(err)
 
 		progress.LocationsToDownload = append(locations.Nations, locations.States...)
 		progress.TotalFiles = countTotalFiles(locations.Nations, "nation") + countTotalFiles(locations.States, "state")
@@ -125,43 +127,47 @@ func DownloadIfTriggered() {
 
 		if err == nil {
 			for _, location := range locations.Nations {
-				fmt.Println(location)
 				lData, ok := NATION_BOXES[location]
-				fmt.Println(ok)
 				if ok {
+					log.Info().Msgf("downloading nation: %s", NATION_BOXES[location].FullName)
 					err = DownloadBounds(lData.BoundingBox, location)
 					if err != nil {
-						loge(err)
+						logie(err)
 					}
+				} else {
+					log.Warn().Msgf("no bounding box data for nation code: %s", location)
 				}
 			}
 			for _, location := range locations.States {
 				lData, ok := STATE_BOXES[location]
 				if ok {
+					log.Info().Msgf("downloading state: %s", STATE_BOXES[location].FullName)
 					err = DownloadBounds(lData.BoundingBox, location)
 					if err != nil {
-						loge(err)
+						logie(err)
 					}
+				} else {
+					log.Warn().Msgf("no bounding box data for state code: %s", location)
 				}
 			}
 		}
 	}
 	err = PutParam(DOWNLOAD_LOCATIONS, []byte{})
-	loge(err)
+	logwe(err)
 
 	b, err = GetParam(DOWNLOAD_BOUNDS)
-	loge(err)
+	logwe(err)
 	if err == nil && len(b) != 0 {
 		var bounds Bounds
 		err = json.Unmarshal(b, &bounds)
-		loge(err)
+		logde(err)
 
 		if err == nil {
 			err = DownloadBounds(bounds, "CUSTOM")
-			loge(err)
+			logie(err)
 			if err == nil {
 				err = PutParam(DOWNLOAD_BOUNDS, []byte{})
-				loge(err)
+				logwe(err)
 			}
 		}
 	}
@@ -183,7 +189,7 @@ func adjustedBounds(bounds Bounds) (int, int, int, int) {
 }
 
 func DownloadBounds(bounds Bounds, locationName string) (err error) {
-	fmt.Printf("Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
+	log.Info().Msgf("Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
 
 	// clip given bounds to file areas
 	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
@@ -195,16 +201,16 @@ func DownloadBounds(bounds Bounds, locationName string) (err error) {
 			url := fmt.Sprintf("https://map-data.pfeifer.dev/%s", filename)
 			outputName := filepath.Join(GetBaseOpPath(), "tmp", filename)
 			err := os.MkdirAll(filepath.Dir(outputName), 0o775)
-			loge(err)
+			logde(errors.Wrap(err, "failed to make output directory"))
 			err = DownloadFile(url, outputName)
 			if err != nil {
-				fmt.Print(err)
+				logwe(errors.Wrap(err, "failed to download file, continuing to next"))
 				continue
 			}
 			file, err := os.Open(outputName)
-			loge(err)
+			logde(errors.Wrap(err, "failed to open downloaded file"))
 			reader, err := gzip.NewReader(file)
-			loge(err)
+			logde(errors.Wrap(err, "failed to read downloaded gzip"))
 			tr := tar.NewReader(reader)
 			for {
 				header, err := tr.Next()
@@ -225,48 +231,48 @@ func DownloadBounds(bounds Bounds, locationName string) (err error) {
 				case tar.TypeDir:
 					if _, err := os.Stat(target); err != nil {
 						err := os.MkdirAll(target, 0o755)
-						loge(err)
+						logde(errors.Wrap(err, "could not create directory from zip"))
 					}
 
 				// if it's a file create it
 				case tar.TypeReg:
 					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-					loge(err)
+					logde(errors.Wrap(err, "could not open file target for unzipped file"))
 
 					_, err = io.Copy(f, tr)
-					loge(err)
+					logde(errors.Wrap(err, "could not write unzipped data to target file"))
 
 					err = f.Sync()
-					loge(err)
+					logde(errors.Wrap(err, "could not fsync unzipped target file"))
 					f.Close()
 				}
 			}
 			err = reader.Close()
-			loge(err)
+			logde(errors.Wrap(err, "could not close gzip reader"))
 			err = file.Close()
-			loge(err)
+			logde(errors.Wrap(err, "could not close downloaded file"))
 
 			err = os.Remove(outputName)
-			loge(err)
+			logde(errors.Wrap(err, "could not delete downloaded gzip file"))
 
 			progress.DownloadedFiles++
 			progress.LocationDetails[locationName].DownloadedFiles++
 
 			progressData, err := json.Marshal(progress)
 			if err != nil {
-				loge(err)
+				logde(errors.Wrap(err, "could not marshal download progress"))
 			}
 
 			err = PutParam(DOWNLOAD_PROGRESS, progressData)
 			if err != nil {
-				loge(err)
+				logwe(errors.Wrap(err, "could not write download progress"))
 			}
 		}
 	}
 	err = os.RemoveAll(filepath.Join(GetBaseOpPath(), "tmp"))
-	loge(err)
+	logde(errors.Wrap(err, "could not remove temp download directory"))
 
-	fmt.Printf("Finished Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
+	log.Info().Msgf("Finished Downloading Bounds: %f, %f, %f, %f\n", bounds.MinLat, bounds.MinLon, bounds.MaxLat, bounds.MaxLon)
 	return nil
 }
 

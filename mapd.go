@@ -3,10 +3,14 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
+	"os"
 	"time"
 
 	"capnproto.org/go/capnp/v3"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 )
 
 type State struct {
@@ -63,10 +67,10 @@ func RoadName(way Way) string {
 
 func readOffline(data []uint8) Offline {
 	msg, err := capnp.UnmarshalPacked(data)
-	loge(err)
+	logde(errors.Wrap(err, "could not unmarshal offline data"))
 	if err == nil {
 		offline, err := ReadRootOffline(msg)
-		loge(err)
+		logde(errors.Wrap(err, "could not read offline message"))
 		return offline
 	}
 	return Offline{}
@@ -81,25 +85,48 @@ func readPosition(persistent bool) (Position, error) {
 	pos := Position{}
 	coordinates, err := GetParam(path)
 	if err != nil {
-		return pos, err
+		return pos, errors.Wrap(err, "could not read coordinates param")
 	}
 	err = json.Unmarshal(coordinates, &pos)
-	return pos, err
+	return pos, errors.Wrap(err, "could not unmarshal coordinates")
 }
 
 func loop(state *State) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("panic occurred:", err)
+			e := errors.Errorf("panic occured: %v", err)
+			loge(e)
+			// reset state for next loop
+			state.Data = []uint8{}
+			state.NextWay = NextWayResult{}
+			state.CurrentWay = CurrentWay{}
+			state.Position = Position{}
+			state.SecondNextWay = NextWayResult{}
 		}
 	}()
+
+	logLevelData, err := GetParam(MAPD_LOG_LEVEL)
+	if err == nil {
+		level, err := zerolog.ParseLevel(string(logLevelData))
+		if err == nil {
+			zerolog.SetGlobalLevel(level)
+		}
+	}
+	prettyLog, err := GetParam(MAPD_PRETTY_LOG)
+	if err == nil && len(prettyLog) > 0 && prettyLog[0] == '1' {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		logde(RemoveParam(MAPD_PRETTY_LOG))
+	} else if err == nil && len(prettyLog) > 0 && prettyLog[0] == '0' {
+		log.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+		logde(RemoveParam(MAPD_PRETTY_LOG))
+	}
 
 	time.Sleep(1 * time.Second)
 	DownloadIfTriggered()
 
 	pos, err := readPosition(false)
 	if err != nil {
-		loge(err)
+		logwe(errors.Wrap(err, "could not read current position"))
 		return
 	}
 	offline := readOffline(state.Data)
@@ -110,51 +137,51 @@ func loop(state *State) {
 		state.CurrentWay = CurrentWay{}
 		state.NextWay = NextWayResult{}
 		state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
-		loge(err)
+		logde(errors.Wrap(err, "could not find ways around current location"))
 	}
 
-	state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWay.Way, offline, pos)
-	loge(err)
+	state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWay.Way, state.SecondNextWay.Way, offline, pos)
+	logde(errors.Wrap(err, "could not get current way"))
 
 	state.NextWay, err = NextWay(state.CurrentWay.Way, offline, state.CurrentWay.OnWay.IsForward)
-	loge(err)
+	logde(errors.Wrap(err, "could not get next way"))
 
 	state.SecondNextWay, err = NextWay(state.NextWay.Way, offline, state.NextWay.IsForward)
-	loge(err)
+	logde(errors.Wrap(err, "could not get second next way"))
 
 	curvatures, err := GetStateCurvatures(state)
-	loge(err)
+	logde(errors.Wrap(err, "could not get curvatures from current state"))
 	target_velocities := GetTargetVelocities(curvatures)
 
 	// -----------------  Write data ---------------------
 
 	// -----------------  MTSC Data  -----------------------
 	data, err := json.Marshal(curvatures)
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal curvatures"))
 	err = PutParam(MAP_CURVATURES, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write curvatures"))
 
 	data, err = json.Marshal(target_velocities)
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal target velocities"))
 	err = PutParam(MAP_TARGET_VELOCITIES, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write curvatures"))
 
 	// ----------------- Current Data --------------------
 	err = PutParam(ROAD_NAME, []byte(RoadName(state.CurrentWay.Way)))
-	loge(err)
+	logwe(errors.Wrap(err, "could not write road name"))
 
 	data, err = json.Marshal(state.CurrentWay.Way.MaxSpeed())
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal speed limit"))
 	err = PutParam(MAP_SPEED_LIMIT, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write speed limit"))
 
 	data, err = json.Marshal(state.CurrentWay.Way.AdvisorySpeed())
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal advisory speed limit"))
 	err = PutParam(MAP_ADVISORY_LIMIT, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write advisory speed limit"))
 
 	hazard, err := state.CurrentWay.Way.Hazard()
-	loge(err)
+	logde(errors.Wrap(err, "could not read current way hazard"))
 	data, err = json.Marshal(Hazard{
 		StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
 		StartLongitude: state.CurrentWay.StartPosition.Longitude(),
@@ -162,9 +189,9 @@ func loop(state *State) {
 		EndLongitude:   state.CurrentWay.EndPosition.Longitude(),
 		Hazard:         hazard,
 	})
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal hazard"))
 	err = PutParam(MAP_HAZARD, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write hazard"))
 
 	data, err = json.Marshal(AdvisoryLimit{
 		StartLatitude:  state.CurrentWay.StartPosition.Latitude(),
@@ -173,14 +200,14 @@ func loop(state *State) {
 		EndLongitude:   state.CurrentWay.EndPosition.Longitude(),
 		Speedlimit:     state.CurrentWay.Way.AdvisorySpeed(),
 	})
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal advisory speed limit"))
 	err = PutParam(MAP_ADVISORY_LIMIT, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write advisory speed limit"))
 
 	// ---------------- Next Data ---------------------
 
 	hazard, err = state.NextWay.Way.Hazard()
-	loge(err)
+	logde(errors.Wrap(err, "could not read next hazard"))
 	data, err = json.Marshal(Hazard{
 		StartLatitude:  state.NextWay.StartPosition.Latitude(),
 		StartLongitude: state.NextWay.StartPosition.Longitude(),
@@ -188,9 +215,9 @@ func loop(state *State) {
 		EndLongitude:   state.NextWay.EndPosition.Longitude(),
 		Hazard:         hazard,
 	})
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal next hazard"))
 	err = PutParam(NEXT_MAP_HAZARD, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write next hazard"))
 
 	currentMaxSpeed := state.CurrentWay.Way.MaxSpeed()
 	nextMaxSpeed := state.NextWay.Way.MaxSpeed()
@@ -206,9 +233,9 @@ func loop(state *State) {
 		Longitude:  nextSpeedWay.StartPosition.Longitude(),
 		Speedlimit: nextSpeedWay.Way.MaxSpeed(),
 	})
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal next speed limit"))
 	err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write next speed limit"))
 
 	currentAdvisorySpeed := state.CurrentWay.Way.AdvisorySpeed()
 	nextAdvisorySpeed := state.NextWay.Way.AdvisorySpeed()
@@ -226,12 +253,28 @@ func loop(state *State) {
 		EndLongitude:   nextAdvisoryWay.EndPosition.Longitude(),
 		Speedlimit:     nextAdvisoryWay.Way.AdvisorySpeed(),
 	})
-	loge(err)
+	logde(errors.Wrap(err, "could not marshal next advisory speed limit"))
 	err = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
-	loge(err)
+	logwe(errors.Wrap(err, "could not write next advisory speed limit"))
 }
 
 func main() {
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixNano
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+	l := zerolog.InfoLevel
+	logLevelData, err := GetParam(MAPD_LOG_LEVEL_PERSIST)
+	if err == nil {
+		level, err := zerolog.ParseLevel(string(logLevelData))
+		if err == nil {
+			l = level
+		}
+	}
+	zerolog.SetGlobalLevel(l)
+	prettyLog, err := GetParam(MAPD_PRETTY_LOG_PERSIST)
+	if err == nil && len(prettyLog) > 0 && prettyLog[0] == '1' {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
 	generatePtr := flag.Bool("generate", false, "Triggers a generation of map data from 'map.osm.pbf'")
 	minGenLatPtr := flag.Int("minlat", -90, "the minimum latitude to generate")
 	minGenLonPtr := flag.Int("minlon", -180, "the minimum longitude to generate")
@@ -247,10 +290,10 @@ func main() {
 	state := State{}
 
 	pos, err := readPosition(true)
-	loge(err)
+	logde(err)
 	if err == nil {
 		state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
-		loge(err)
+		logde(errors.Wrap(err, "could not find ways around initial location"))
 	}
 
 	for {

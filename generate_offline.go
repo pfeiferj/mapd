@@ -11,6 +11,8 @@ import (
 	"capnproto.org/go/capnp/v3"
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type TmpNode struct {
@@ -47,7 +49,7 @@ var (
 
 func GetBaseOpPath() string {
 	exists, err := Exists("/data/media/0")
-	loge(err)
+	logde(err)
 	if exists {
 		return "/data/media/0/osm"
 	} else {
@@ -59,7 +61,7 @@ var BOUNDS_DIR = fmt.Sprintf("%s/offline", GetBaseOpPath())
 
 func EnsureOfflineMapsDirectories() {
 	err := os.MkdirAll(BOUNDS_DIR, 0o775)
-	loge(err)
+	logwe(err)
 }
 
 // Creates a file for a specific bounding box
@@ -76,7 +78,7 @@ func CreateBoundsDir(minLat float64, minLon float64, maxLat float64, maxLon floa
 	group_lon_directory := int(math.Floor(minLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	dir := fmt.Sprintf("%s/%d/%d", BOUNDS_DIR, group_lat_directory, group_lon_directory)
 	err := os.MkdirAll(dir, 0o775)
-	return err
+	return errors.Wrap(err, "could not create bounds directory")
 }
 
 // Checks if two bounding boxes intersect
@@ -107,10 +109,10 @@ func GenerateAreas() []Area {
 }
 
 func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int) {
-	fmt.Println("Generating Offline Map")
+	log.Info().Msg("Generating Offline Map")
 	EnsureOfflineMapsDirectories()
 	file, err := os.Open("./map.osm.pbf")
-	check(err)
+	check(errors.Wrap(err, "could not open map pbf file"))
 	defer file.Close()
 
 	// The third parameter is the number of parallel decoders to use.
@@ -126,7 +128,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 	allMaxLat := float64(-90)
 	allMaxLon := float64(-180)
 
-	println("Scanning Ways")
+	log.Info().Msg("Scanning Ways")
 	for scanner.Scan() {
 		var way *osm.Way
 		switch o := scanner.Object(); o.(type) {
@@ -189,7 +191,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 		}
 	}
 
-	println("Finding Bounds")
+	log.Info().Msg("Finding Bounds")
 	for _, area := range areas {
 		if area.MinLat < float64(minGenLat) || area.MinLon < float64(minGenLon) || area.MaxLat > float64(maxGenLat) || area.MaxLon > float64(maxGenLon) {
 			continue
@@ -201,9 +203,9 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 
 		arena := capnp.MultiSegment([][]byte{})
 		msg, seg, err := capnp.NewMessage(arena)
-		check(err)
+		check(errors.Wrap(err, "could not create capnp arena for offline data"))
 		rootOffline, err := NewRootOffline(seg)
-		check(err)
+		check(errors.Wrap(err, "could not create capnp offline root"))
 
 		for _, way := range scannedWays {
 			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
@@ -212,9 +214,9 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 			}
 		}
 
-		println("Writing Area")
+		log.Info().Msg("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
-		check(err)
+		check(errors.Wrap(err, "could not create ways in offline data"))
 		rootOffline.SetMinLat(area.MinLat)
 		rootOffline.SetMinLon(area.MinLon)
 		rootOffline.SetMaxLat(area.MaxLat)
@@ -226,16 +228,16 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 			w.SetMaxLat(way.MaxLat)
 			w.SetMaxLon(way.MaxLon)
 			err := w.SetName(way.Name)
-			check(err)
+			check(errors.Wrap(err, "could not set way name"))
 			err = w.SetRef(way.Ref)
-			check(err)
+			check(errors.Wrap(err, "could not set way ref"))
 			err = w.SetHazard(way.Hazard)
-			check(err)
+			check(errors.Wrap(err, "could not set way hazard"))
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
-			check(err)
+			check(errors.Wrap(err, "could not create way nodes"))
 			for j, node := range way.Nodes {
 				n := nodes.At(j)
 				n.SetLatitude(node.Latitude)
@@ -244,20 +246,20 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 		}
 
 		data, err := msg.MarshalPacked()
-		check(err)
+		check(errors.Wrap(err, "could not marshal offline data"))
 		err = CreateBoundsDir(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
-		check(err)
+		check(errors.Wrap(err, "could not create directory for bounds file"))
 		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0o644)
-		check(err)
+		check(errors.Wrap(err, "could not write offline data to file"))
 	}
 	f, err := os.Open(BOUNDS_DIR)
-	check(err)
+	check(errors.Wrap(err, "could not open bounds directory"))
 	err = f.Sync()
-	check(err)
+	check(errors.Wrap(err, "could not fsync bounds directory"))
 	err = f.Close()
-	check(err)
+	check(errors.Wrap(err, "could not close bounds directory"))
 
-	fmt.Println("Done Generating Offline Map")
+	log.Info().Msg("Done Generating Offline Map")
 }
 
 func PointInBox(ax float64, ay float64, bxMin float64, byMin float64, bxMax float64, byMax float64) bool {
@@ -271,9 +273,9 @@ func FindWaysAroundLocation(lat float64, lon float64) ([]byte, error) {
 		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
-			fmt.Println(boundsName)
+			log.Info().Str("filename", boundsName).Msg("Loading bounds file")
 			data, err := os.ReadFile(boundsName)
-			return data, err
+			return data, errors.Wrap(err, "could not read current offline data file")
 		}
 	}
 	return []uint8{}, nil

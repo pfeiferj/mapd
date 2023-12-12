@@ -13,9 +13,13 @@ require (
 	github.com/datadog/czlib v0.0.0-20160811164712-4bc9a24e37f2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/paulmach/orb v0.1.3 // indirect
 	github.com/paulmach/protoscan v0.2.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rs/zerolog v1.31.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

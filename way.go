@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"math"
 )
 
@@ -18,7 +18,7 @@ func OnWay(way Way, pos Position) (OnWayResult, error) {
 		res.Distance = d
 		if err != nil {
 			res.OnWay = false
-			return res, err
+			return res, errors.Wrap(err, "could not get distance to way")
 		}
 		lanes := way.Lanes()
 		if lanes == 0 {
@@ -50,7 +50,7 @@ func DistanceToWay(pos Position, way Way) (DistanceResult, error) {
 	minDistance := math.MaxFloat64
 	nodes, err := way.Nodes()
 	if err != nil {
-		return res, err
+		return res, errors.Wrap(err, "could not read way nodes")
 	}
 	if nodes.Len() < 2 {
 		return res, nil
@@ -90,7 +90,7 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 
 	nodes, err := way.Nodes()
 	if err != nil {
-		loge(err)
+		logde(errors.Wrap(err, "could not read way nodes"))
 		return Coordinates{}, Coordinates{}
 	}
 
@@ -108,10 +108,10 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 	return nodes.At(nodes.Len() - 1), nodes.At(0)
 }
 
-func GetCurrentWay(currentWay Way, nextWay Way, offline Offline, pos Position) (CurrentWay, error) {
+func GetCurrentWay(currentWay Way, nextWay Way, secondWay Way, offline Offline, pos Position) (CurrentWay, error) {
 	if currentWay.HasNodes() {
 		onWay, err := OnWay(currentWay, pos)
-		loge(err)
+		logde(errors.Wrap(err, "could not check if on current way"))
 		if onWay.OnWay {
 			start, end := GetWayStartEnd(currentWay, onWay.IsForward)
 			return CurrentWay{
@@ -127,7 +127,7 @@ func GetCurrentWay(currentWay Way, nextWay Way, offline Offline, pos Position) (
 	// check the expected next way
 	if nextWay.HasNodes() {
 		onWay, err := OnWay(nextWay, pos)
-		loge(err)
+		logde(errors.Wrap(err, "could not check if on next way"))
 		if onWay.OnWay {
 			start, end := GetWayStartEnd(nextWay, onWay.IsForward)
 			return CurrentWay{
@@ -140,15 +140,31 @@ func GetCurrentWay(currentWay Way, nextWay Way, offline Offline, pos Position) (
 		}
 	}
 
+	// check the expected second way
+	if secondWay.HasNodes() {
+		onWay, err := OnWay(secondWay, pos)
+		logde(errors.Wrap(err, "could not check if on second way"))
+		if onWay.OnWay {
+			start, end := GetWayStartEnd(secondWay, onWay.IsForward)
+			return CurrentWay{
+				Way:           secondWay,
+				Distance:      onWay.Distance,
+				OnWay:         onWay,
+				StartPosition: start,
+				EndPosition:   end,
+			}, nil
+		}
+	}
+
 	// finally check all other ways
 	ways, err := offline.Ways()
 	if err != nil {
-		return CurrentWay{}, err
+		return CurrentWay{}, errors.Wrap(err, "could not get other ways")
 	}
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
 		onWay, err := OnWay(way, pos)
-		loge(err)
+		logde(errors.Wrap(err, "Could not check if on way"))
 		if onWay.OnWay {
 			start, end := GetWayStartEnd(way, onWay.IsForward)
 			return CurrentWay{
@@ -161,7 +177,7 @@ func GetCurrentWay(currentWay Way, nextWay Way, offline Offline, pos Position) (
 		}
 	}
 
-	return CurrentWay{}, errors.New("COULD NOT FIND WAY")
+	return CurrentWay{}, errors.New("could not find a current way")
 }
 
 func IsForward(lineStart Coordinates, lineEnd Coordinates, bearing float64) bool {
@@ -179,7 +195,7 @@ func MatchingWays(currentWay Way, offline Offline, matchNode Coordinates) ([]Way
 	matchingWays := []Way{}
 	ways, err := offline.Ways()
 	if err != nil {
-		return matchingWays, err
+		return matchingWays, errors.Wrap(err, "could not read ways from offline")
 	}
 
 	for i := 0; i < ways.Len(); i++ {
@@ -194,7 +210,7 @@ func MatchingWays(currentWay Way, offline Offline, matchNode Coordinates) ([]Way
 
 		wNodes, err := w.Nodes()
 		if err != nil {
-			return matchingWays, err
+			return matchingWays, errors.Wrap(err, "could not read nodes from way")
 		}
 		if wNodes.Len() < 2 {
 			continue
@@ -223,7 +239,7 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 	}
 	nodes, err := nextWay.Nodes()
 	if err != nil || nodes.Len() < 2 {
-		loge(err)
+		logde(errors.Wrap(err, "could not read next way nodes"))
 		return true
 	}
 
@@ -238,7 +254,7 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 	nodes, err := way.Nodes()
 	if err != nil {
-		return NextWayResult{}, err
+		return NextWayResult{}, errors.Wrap(err, "could not read way nodes")
 	}
 	if !way.HasNodes() || nodes.Len() == 0 {
 		return NextWayResult{}, nil
@@ -262,7 +278,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 
 	matchingWays, err := MatchingWays(way, offline, matchNode)
 	if err != nil {
-		return NextWayResult{StartPosition: matchNode}, err
+		return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not check for next ways")
 	}
 
 	if len(matchingWays) == 0 {
@@ -275,7 +291,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		for _, mWay := range matchingWays {
 			mName, err := mWay.Name()
 			if err != nil {
-				return NextWayResult{StartPosition: matchNode}, err
+				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way name")
 			}
 			if mName == name {
 				isForward := NextIsForward(mWay, matchNode)
@@ -296,7 +312,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
-				return NextWayResult{StartPosition: matchNode}, err
+				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way ref")
 			}
 			if mRef == ref {
 				isForward := NextIsForward(mWay, matchNode)
