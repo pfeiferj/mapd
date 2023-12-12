@@ -143,10 +143,14 @@ func loop(state *State) {
 	err = PutParam(ROAD_NAME, []byte(RoadName(state.CurrentWay.Way)))
 	loge(err)
 
-	err = PutParam(MAP_SPEED_LIMIT, []byte(fmt.Sprintf("%f", state.CurrentWay.Way.MaxSpeed())))
+	data, err = json.Marshal(state.CurrentWay.Way.MaxSpeed())
+	loge(err)
+	err = PutParam(MAP_SPEED_LIMIT, data)
 	loge(err)
 
-	err = PutParam(MAP_ADVISORY_LIMIT, []byte(fmt.Sprintf("%f", state.CurrentWay.Way.AdvisorySpeed())))
+	data, err = json.Marshal(state.CurrentWay.Way.AdvisorySpeed())
+	loge(err)
+	err = PutParam(MAP_ADVISORY_LIMIT, data)
 	loge(err)
 
 	hazard, err := state.CurrentWay.Way.Hazard()
