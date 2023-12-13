@@ -134,8 +134,6 @@ func loop(state *State) {
 	// ------------- Find current and next ways ------------
 
 	if !PointInBox(pos.Latitude, pos.Longitude, offline.MinLat(), offline.MinLon(), offline.MaxLat(), offline.MaxLon()) {
-		state.CurrentWay = CurrentWay{}
-		state.NextWay = NextWayResult{}
 		state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 		logde(errors.Wrap(err, "could not find ways around current location"))
 	}
