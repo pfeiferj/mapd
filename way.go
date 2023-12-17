@@ -275,8 +275,6 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		return NextWayResult{}, nil
 	}
 
-	bearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), matchBearingNode.Latitude(), matchBearingNode.Longitude())
-
 	matchingWays, err := MatchingWays(way, offline, matchNode)
 	if err != nil {
 		return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not check for next ways")
@@ -328,9 +326,9 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		}
 	}
 
-	// third return the next connecting way with the least change in bearing
-	minDiffWay := matchingWays[0]
-	minDiff := float64(0)
+	// third return the next connecting way with the least curvature
+	minCurvWay := matchingWays[0]
+	minCurv := float64(100)
 	for _, mWay := range matchingWays {
 		nodes, err := mWay.Nodes()
 		if err != nil {
@@ -344,19 +342,19 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 			bearingNode = nodes.At(nodes.Len() - 2)
 		}
 
-		mBearing := Bearing(matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-		bearingDiff := math.Abs(math.Abs(bearing*TO_RADIANS) - math.Abs(mBearing))
+		mCurv, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+		mCurv = math.Abs(mCurv)
 
-		if bearingDiff < minDiff {
-			minDiff = bearingDiff
-			minDiffWay = mWay
+		if mCurv < minCurv {
+			minCurv = mCurv
+			minCurvWay = mWay
 		}
 	}
 
-	nextIsForward := NextIsForward(minDiffWay, matchNode)
-	start, end := GetWayStartEnd(minDiffWay, nextIsForward)
+	nextIsForward := NextIsForward(minCurvWay, matchNode)
+	start, end := GetWayStartEnd(minCurvWay, nextIsForward)
 	return NextWayResult{
-		Way:           minDiffWay,
+		Way:           minCurvWay,
 		StartPosition: start,
 		EndPosition:   end,
 		IsForward:     nextIsForward,
