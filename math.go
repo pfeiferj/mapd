@@ -214,26 +214,33 @@ func GetCurvatures(x_points []float64, y_points []float64) ([]float64, []float64
 	arc_lengths := make([]float64, len(x_points)-2)
 
 	for i := 0; i < len(x_points)-2; i++ {
-		length_a := DistanceToPoint(x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS, x_points[i+1]*TO_RADIANS, y_points[i+1]*TO_RADIANS)
-		length_b := DistanceToPoint(x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS, x_points[i+2]*TO_RADIANS, y_points[i+2]*TO_RADIANS)
-		length_c := DistanceToPoint(x_points[i+1]*TO_RADIANS, y_points[i+1]*TO_RADIANS, x_points[i+2]*TO_RADIANS, y_points[i+2]*TO_RADIANS)
+		curvature, arc_length := GetCurvature(x_points[i], y_points[i], x_points[i+1], y_points[i+1], x_points[i+2], y_points[i+2])
 
-		sp := (length_a + length_b + length_c) / 2
+		curvatures[i] = curvature
 
-		area := math.Sqrt(sp * (sp - length_a) * (sp - length_b) * (sp - length_c))
-
-		if length_a*length_b*length_c == 0 {
-			curvatures[i] = 0
-			arc_lengths[i] = 0
-			continue
-		}
-
-		curvatures[i] = (4 * area) / (length_a * length_b * length_c)
-
-		radius := 1.0 / curvatures[i]
-
-		angle := math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
-		arc_lengths[i] = radius * angle
+		arc_lengths[i] = arc_length
 	}
 	return curvatures, arc_lengths, nil
+}
+
+func GetCurvature(x_a float64, y_a float64, x_b float64, y_b float64, x_c float64, y_c float64) (float64, float64) {
+	length_a := DistanceToPoint(x_a*TO_RADIANS, y_a*TO_RADIANS, x_b*TO_RADIANS, y_b*TO_RADIANS)
+	length_b := DistanceToPoint(x_a*TO_RADIANS, y_a*TO_RADIANS, x_c*TO_RADIANS, y_c*TO_RADIANS)
+	length_c := DistanceToPoint(x_b*TO_RADIANS, y_b*TO_RADIANS, x_c*TO_RADIANS, y_c*TO_RADIANS)
+
+	sp := (length_a + length_b + length_c) / 2
+
+	area := math.Sqrt(sp * (sp - length_a) * (sp - length_b) * (sp - length_c))
+
+	if length_a*length_b*length_c == 0 {
+		return 0, 0
+	}
+
+	curvature := (4 * area) / (length_a * length_b * length_c)
+
+	radius := 1.0 / curvature
+
+	angle := math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
+	arc_length := radius * angle
+	return curvature, arc_length
 }
