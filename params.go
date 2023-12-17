@@ -33,6 +33,8 @@ var (
 	DOWNLOAD_PROGRESS         = ParamPath("OSMDownloadProgress", false)
 	MAP_CURVATURES            = ParamPath("MapCurvatures", true)
 	MAP_TARGET_VELOCITIES     = ParamPath("MapTargetVelocities", true)
+	MAP_TARGET_LAT_A          = ParamPath("MapTargetLatA", true)
+	MAP_TARGET_LAT_A_PERSIST  = ParamPath("MapTargetLatA", false)
 	MAPD_LOG_LEVEL            = ParamPath("MapdLogLevel", true)
 	MAPD_LOG_LEVEL_PERSIST    = ParamPath("MapdLogLevel", false)
 	MAPD_PRETTY_LOG           = ParamPath("MapdPrettyLog", true)
