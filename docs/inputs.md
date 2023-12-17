@@ -104,3 +104,17 @@ respective json files will actually be clipped to regions of 2x2 degrees the
 same as when specifying an arbitrary bounding box to download. Also, when the
 region completely surrounds another smaller region the smaller region will not
 be excluded from the download.
+
+### Target Lateral Accel for Curvatures
+The default lateral accel used when calculating velocities for map based turn
+speed control is 2.0 m/s^2. This value can be configured using the `MapTargetLatA`
+param and memory param. The regular persistent param is only read once when the
+process starts, the memory param is read every loop to allow updating the value
+while the process is running.
+
+* A change of +- 0.1 m/s^2 results in the velocity being raised or lowered by
+about 1 mph. 
+* In general I suggest picking a value a few tenths below what the max reported
+  max accel for your car is in [torque_data/params.yaml](https://github.com/commaai/openpilot/blob/master/selfdrive/car/torque_data/params.yaml).
+  I have also created a copy of this data in a slightly easier to read format
+  [here](./torque_data.md).

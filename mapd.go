@@ -121,6 +121,17 @@ func loop(state *State) {
 		logde(RemoveParam(MAPD_PRETTY_LOG))
 	}
 
+	target_lat_a, err := GetParam(MAP_TARGET_LAT_A)
+	if err == nil && len(target_lat_a) > 0 {
+		var t_lat_a float64
+		err = json.Unmarshal(target_lat_a, &t_lat_a)
+		if err == nil {
+			TARGET_LAT_ACCEL = t_lat_a
+			_ = RemoveParam(MAP_TARGET_LAT_A)
+			log.Info().Float64("target_lat_accel", t_lat_a).Msg("loaded memory target lateral accel")
+		}
+	}
+
 	time.Sleep(1 * time.Second)
 	DownloadIfTriggered()
 
@@ -292,6 +303,16 @@ func main() {
 	if err == nil {
 		state.Data, err = FindWaysAroundLocation(pos.Latitude, pos.Longitude)
 		logde(errors.Wrap(err, "could not find ways around initial location"))
+	}
+
+	target_lat_a, err := GetParam(MAP_TARGET_LAT_A_PERSIST)
+	if err == nil && len(target_lat_a) > 0 {
+		var t_lat_a float64
+		err = json.Unmarshal(target_lat_a, &t_lat_a)
+		if err == nil {
+			TARGET_LAT_ACCEL = t_lat_a
+			log.Info().Float64("target_lat_accel", t_lat_a).Msg("loaded persistent target lateral accel")
+		}
 	}
 
 	for {
