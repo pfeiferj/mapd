@@ -46,7 +46,7 @@ earthly +compile-capnp
 ```
 
 ### Build Release Binary
-NOTE: This will be built for ARM64 to be used on a comma device and my not work
+NOTE: This will be built for ARM64 to be used on a comma device and may not work
 on your computer
 ```bash
 earthly +build-release
