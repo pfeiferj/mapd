@@ -14,11 +14,10 @@ import (
 )
 
 type State struct {
-	Data          []uint8
-	CurrentWay    CurrentWay
-	NextWay       NextWayResult
-	SecondNextWay NextWayResult
-	Position      Position
+	Data       []uint8
+	CurrentWay CurrentWay
+	NextWays   []NextWayResult
+	Position   Position
 }
 
 type Position struct {
@@ -98,10 +97,9 @@ func loop(state *State) {
 			loge(e)
 			// reset state for next loop
 			state.Data = []uint8{}
-			state.NextWay = NextWayResult{}
+			state.NextWays = []NextWayResult{}
 			state.CurrentWay = CurrentWay{}
 			state.Position = Position{}
-			state.SecondNextWay = NextWayResult{}
 		}
 	}()
 
@@ -149,14 +147,11 @@ func loop(state *State) {
 		logde(errors.Wrap(err, "could not find ways around current location"))
 	}
 
-	state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWay.Way, state.SecondNextWay.Way, offline, pos)
+	state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWays, offline, pos)
 	logde(errors.Wrap(err, "could not get current way"))
 
-	state.NextWay, err = NextWay(state.CurrentWay.Way, offline, state.CurrentWay.OnWay.IsForward)
+	state.NextWays, err = NextWays(pos, state.CurrentWay, offline, state.CurrentWay.OnWay.IsForward)
 	logde(errors.Wrap(err, "could not get next way"))
-
-	state.SecondNextWay, err = NextWay(state.NextWay.Way, offline, state.NextWay.IsForward)
-	logde(errors.Wrap(err, "could not get second next way"))
 
 	curvatures, err := GetStateCurvatures(state)
 	logde(errors.Wrap(err, "could not get curvatures from current state"))
@@ -215,56 +210,73 @@ func loop(state *State) {
 
 	// ---------------- Next Data ---------------------
 
-	hazard, err = state.NextWay.Way.Hazard()
-	logde(errors.Wrap(err, "could not read next hazard"))
-	data, err = json.Marshal(Hazard{
-		StartLatitude:  state.NextWay.StartPosition.Latitude(),
-		StartLongitude: state.NextWay.StartPosition.Longitude(),
-		EndLatitude:    state.NextWay.EndPosition.Latitude(),
-		EndLongitude:   state.NextWay.EndPosition.Longitude(),
-		Hazard:         hazard,
-	})
-	logde(errors.Wrap(err, "could not marshal next hazard"))
-	err = PutParam(NEXT_MAP_HAZARD, data)
-	logwe(errors.Wrap(err, "could not write next hazard"))
-
-	currentMaxSpeed := state.CurrentWay.Way.MaxSpeed()
-	nextMaxSpeed := state.NextWay.Way.MaxSpeed()
-	secondNextMaxSpeed := state.SecondNextWay.Way.MaxSpeed()
-	var nextSpeedWay NextWayResult
-	if (nextMaxSpeed != currentMaxSpeed || secondNextMaxSpeed == currentMaxSpeed) && (nextMaxSpeed != 0 || secondNextMaxSpeed == 0) {
-		nextSpeedWay = state.NextWay
-	} else {
-		nextSpeedWay = state.SecondNextWay
+	if len(state.NextWays) > 0 {
+		hazard, err = state.NextWays[0].Way.Hazard()
+		logde(errors.Wrap(err, "could not read next hazard"))
+		data, err = json.Marshal(Hazard{
+			StartLatitude:  state.NextWays[0].StartPosition.Latitude(),
+			StartLongitude: state.NextWays[0].StartPosition.Longitude(),
+			EndLatitude:    state.NextWays[0].EndPosition.Latitude(),
+			EndLongitude:   state.NextWays[0].EndPosition.Longitude(),
+			Hazard:         hazard,
+		})
+		logde(errors.Wrap(err, "could not marshal next hazard"))
+		err = PutParam(NEXT_MAP_HAZARD, data)
+		logwe(errors.Wrap(err, "could not write next hazard"))
 	}
-	data, err = json.Marshal(NextSpeedLimit{
-		Latitude:   nextSpeedWay.StartPosition.Latitude(),
-		Longitude:  nextSpeedWay.StartPosition.Longitude(),
-		Speedlimit: nextSpeedWay.Way.MaxSpeed(),
-	})
-	logde(errors.Wrap(err, "could not marshal next speed limit"))
-	err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
-	logwe(errors.Wrap(err, "could not write next speed limit"))
 
-	currentAdvisorySpeed := state.CurrentWay.Way.AdvisorySpeed()
-	nextAdvisorySpeed := state.NextWay.Way.AdvisorySpeed()
-	secondNextAdvisorySpeed := state.SecondNextWay.Way.AdvisorySpeed()
-	var nextAdvisoryWay NextWayResult
-	if (nextAdvisorySpeed != currentAdvisorySpeed || secondNextAdvisorySpeed == currentAdvisorySpeed) && (nextAdvisorySpeed != 0 || secondNextAdvisorySpeed == 0) {
-		nextAdvisoryWay = state.NextWay
+	if len(state.NextWays) > 0 {
+		currentMaxSpeed := state.CurrentWay.Way.MaxSpeed()
+		nextMaxSpeed := currentMaxSpeed
+		nextSpeedWay := state.NextWays[0]
+		for _, nextWay := range state.NextWays {
+			if nextMaxSpeed == currentMaxSpeed {
+				nextSpeedWay = nextWay
+				nextMaxSpeed = nextWay.Way.MaxSpeed()
+			}
+		}
+		data, err = json.Marshal(NextSpeedLimit{
+			Latitude:   nextSpeedWay.StartPosition.Latitude(),
+			Longitude:  nextSpeedWay.StartPosition.Longitude(),
+			Speedlimit: nextSpeedWay.Way.MaxSpeed(),
+		})
+		logde(errors.Wrap(err, "could not marshal next speed limit"))
+		err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
+		logwe(errors.Wrap(err, "could not write next speed limit"))
 	} else {
-		nextAdvisoryWay = state.SecondNextWay
+		data, err = json.Marshal(NextSpeedLimit{})
+		logde(errors.Wrap(err, "could not marshal next speed limit"))
+		err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
+		logwe(errors.Wrap(err, "could not write next speed limit"))
 	}
-	data, err = json.Marshal(AdvisoryLimit{
-		StartLatitude:  nextAdvisoryWay.StartPosition.Latitude(),
-		StartLongitude: nextAdvisoryWay.StartPosition.Longitude(),
-		EndLatitude:    nextAdvisoryWay.EndPosition.Latitude(),
-		EndLongitude:   nextAdvisoryWay.EndPosition.Longitude(),
-		Speedlimit:     nextAdvisoryWay.Way.AdvisorySpeed(),
-	})
-	logde(errors.Wrap(err, "could not marshal next advisory speed limit"))
-	err = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
-	logwe(errors.Wrap(err, "could not write next advisory speed limit"))
+
+	if len(state.NextWays) > 0 {
+		currentAdvisorySpeed := state.CurrentWay.Way.AdvisorySpeed()
+		nextAdvisorySpeed := currentAdvisorySpeed
+		nextAdvisoryWay := state.NextWays[0]
+
+		for _, nextWay := range state.NextWays {
+			if nextAdvisorySpeed == currentAdvisorySpeed {
+				nextAdvisoryWay = nextWay
+				nextAdvisorySpeed = nextWay.Way.AdvisorySpeed()
+			}
+		}
+		data, err = json.Marshal(AdvisoryLimit{
+			StartLatitude:  nextAdvisoryWay.StartPosition.Latitude(),
+			StartLongitude: nextAdvisoryWay.StartPosition.Longitude(),
+			EndLatitude:    nextAdvisoryWay.EndPosition.Latitude(),
+			EndLongitude:   nextAdvisoryWay.EndPosition.Longitude(),
+			Speedlimit:     nextAdvisoryWay.Way.AdvisorySpeed(),
+		})
+		logde(errors.Wrap(err, "could not marshal next advisory speed limit"))
+		err = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
+		logwe(errors.Wrap(err, "could not write next advisory speed limit"))
+	} else {
+		data, err = json.Marshal(AdvisoryLimit{})
+		logde(errors.Wrap(err, "could not marshal next advisory speed limit"))
+		err = PutParam(NEXT_MAP_ADVISORY_LIMIT, data)
+		logwe(errors.Wrap(err, "could not write next advisory speed limit"))
+	}
 }
 
 func main() {
