@@ -6,6 +6,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
+
 type OnWayResult struct {
 	OnWay     bool
 	Distance  DistanceResult
@@ -109,7 +111,7 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 	return nodes.At(nodes.Len() - 1), nodes.At(0)
 }
 
-func GetCurrentWay(currentWay Way, nextWay Way, secondWay Way, offline Offline, pos Position) (CurrentWay, error) {
+func GetCurrentWay(currentWay Way, nextWays []NextWayResult, offline Offline, pos Position) (CurrentWay, error) {
 	if currentWay.HasNodes() {
 		onWay, err := OnWay(currentWay, pos)
 		logde(errors.Wrap(err, "could not check if on current way"))
@@ -125,30 +127,14 @@ func GetCurrentWay(currentWay Way, nextWay Way, secondWay Way, offline Offline, 
 		}
 	}
 
-	// check the expected next way
-	if nextWay.HasNodes() {
-		onWay, err := OnWay(nextWay, pos)
+	// check the expected next ways
+	for _, nextWay := range nextWays {
+		onWay, err := OnWay(nextWay.Way, pos)
 		logde(errors.Wrap(err, "could not check if on next way"))
 		if onWay.OnWay {
-			start, end := GetWayStartEnd(nextWay, onWay.IsForward)
+			start, end := GetWayStartEnd(nextWay.Way, onWay.IsForward)
 			return CurrentWay{
-				Way:           nextWay,
-				Distance:      onWay.Distance,
-				OnWay:         onWay,
-				StartPosition: start,
-				EndPosition:   end,
-			}, nil
-		}
-	}
-
-	// check the expected second way
-	if secondWay.HasNodes() {
-		onWay, err := OnWay(secondWay, pos)
-		logde(errors.Wrap(err, "could not check if on second way"))
-		if onWay.OnWay {
-			start, end := GetWayStartEnd(secondWay, onWay.IsForward)
-			return CurrentWay{
-				Way:           secondWay,
+				Way:           nextWay.Way,
 				Distance:      onWay.Distance,
 				OnWay:         onWay,
 				StartPosition: start,
@@ -359,4 +345,74 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		EndPosition:   end,
 		IsForward:     nextIsForward,
 	}, nil
+}
+
+func DistanceToEndOfWay(pos Position, way Way, isForward bool) (float64, error) {
+	distanceResult, err := DistanceToWay(pos, way)
+	if err != nil {
+		return 0, err
+	}
+	lat := distanceResult.LineEnd.Latitude()
+	lon := distanceResult.LineEnd.Longitude()
+	dist := DistanceToPoint(pos.Latitude*TO_RADIANS, pos.Longitude*TO_RADIANS, lat*TO_RADIANS, lon*TO_RADIANS)
+	stopFiltering := false
+	nodes, err := way.Nodes()
+	if err != nil {
+		return 0, err
+	}
+	for i := 0; i < nodes.Len(); i++ {
+		index := i
+		if !isForward {
+			index = nodes.Len() - 1 - i
+		}
+		node := nodes.At(index)
+		nLat := node.Latitude()
+		nLon := node.Longitude()
+		if node.Latitude() == lat && node.Longitude() == lon && !stopFiltering {
+			stopFiltering = true
+		}
+		if !stopFiltering {
+			continue
+		}
+		dist += DistanceToPoint(lat*TO_RADIANS, lon*TO_RADIANS, nLat*TO_RADIANS, nLon*TO_RADIANS)
+		lat = nLat
+		lon = nLon
+	}
+	return dist, nil
+}
+
+func NextWays(pos Position, currentWay CurrentWay, offline Offline, isForward bool) ([]NextWayResult, error) {
+	nextWays := []NextWayResult{}
+	dist := 0.0
+	wayIdx := currentWay.Way
+	forward := isForward
+	startPos := pos
+	for dist < float64(MIN_WAY_DIST) {
+		d, err := DistanceToEndOfWay(startPos, wayIdx, forward)
+		if err != nil || d <= 0 {
+			break
+		}
+		dist += d
+		nw, err := NextWay(wayIdx, offline, forward)
+		if err != nil {
+			break
+		}
+		nextWays = append(nextWays, nw)
+		wayIdx = nw.Way
+		startPos = Position{
+			Latitude:  nw.StartPosition.Latitude(),
+			Longitude: nw.StartPosition.Longitude(),
+		}
+		forward = nw.IsForward
+	}
+
+	if len(nextWays) == 0 {
+		nextWay, err := NextWay(currentWay.Way, offline, isForward)
+		if err != nil {
+			return []NextWayResult{}, err
+		}
+		nextWays = append(nextWays, nextWay)
+	}
+
+	return nextWays, nil
 }

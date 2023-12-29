@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 
+	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
 )
 
@@ -73,71 +74,52 @@ type Curvature struct {
 }
 
 func GetStateCurvatures(state *State) ([]Curvature, error) {
-	currentNodes, err := state.CurrentWay.Way.Nodes()
+	nodes, err := state.CurrentWay.Way.Nodes()
 	if err != nil {
 		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
 	}
-	nextNodes, err := state.NextWay.Way.Nodes()
-	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not read next way nodes")
-	}
-	secondNodes, err := state.SecondNextWay.Way.Nodes()
-	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not read second way nodes")
+	num_points := nodes.Len()
+	all_nodes := []capnp.StructList[Coordinates]{nodes}
+	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
+	for _, nextWay := range state.NextWays {
+		nwNodes, err := nextWay.Way.Nodes()
+		if err != nil {
+			continue
+		}
+		if nwNodes.Len() > 0 {
+			num_points += nwNodes.Len() - 1
+		}
+		all_nodes = append(all_nodes, nwNodes)
+		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
 	}
 
-	nextLen := nextNodes.Len()
-	secondLen := secondNodes.Len()
-	num_points := currentNodes.Len()
-	if nextLen > 1 {
-		num_points += nextLen - 1
-	}
-	if secondLen > 1 {
-		num_points += secondLen - 1
-	}
-	if num_points < 0 {
-		return []Curvature{}, errors.New("not enough nodes to calculate curvatures")
-	}
 	x_points := make([]float64, num_points)
 	y_points := make([]float64, num_points)
 
-	for i := 0; i < currentNodes.Len(); i++ {
+	all_nodes_idx := 0
+	nodes_idx := 0
+	for i := 0; i < num_points; i++ {
 		var index int
-		if state.CurrentWay.OnWay.IsForward {
-			index = i
+		forward := all_nodes_direction[all_nodes_idx]
+		if forward {
+			index = nodes_idx
+			if all_nodes_idx > 0 {
+				index += 1
+			}
 		} else {
-			index = currentNodes.Len() - i - 1
+			index = all_nodes[all_nodes_idx].Len() - nodes_idx - 1
+			if all_nodes_idx > 0 {
+				index -= 1
+			}
 		}
-		node := currentNodes.At(index)
+		node := all_nodes[all_nodes_idx].At(index)
 		x_points[i] = node.Latitude()
 		y_points[i] = node.Longitude()
-	}
 
-	if nextNodes.Len() > 1 {
-		for i := 0; i < nextNodes.Len()-1; i++ {
-			var index int
-			if state.NextWay.IsForward {
-				index = i
-			} else {
-				index = nextNodes.Len() - i - 2
-			}
-			node := nextNodes.At(index)
-			x_points[i+currentNodes.Len()-1] = node.Latitude()
-			y_points[i+currentNodes.Len()-1] = node.Longitude()
-		}
-	}
-
-	if secondNodes.Len() > 1 {
-		for i := 0; i < secondNodes.Len()-1; i++ {
-			var index int
-			if state.SecondNextWay.IsForward {
-				index = i
-			} else {
-				index = secondNodes.Len() - i - 2
-			}
-			node := secondNodes.At(index)
-			x_points[i+currentNodes.Len()-1+nextNodes.Len()-1] = node.Latitude()
-			y_points[i+currentNodes.Len()-1+nextNodes.Len()-1] = node.Longitude()
+		nodes_idx += 1
+		if nodes_idx == all_nodes[all_nodes_idx].Len() || (nodes_idx == all_nodes[all_nodes_idx].Len()-1 && all_nodes_idx > 0) {
+			all_nodes_idx += 1
+			nodes_idx = 0
 		}
 	}
 
