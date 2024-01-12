@@ -44,6 +44,7 @@ type Area struct {
 var (
 	GROUP_AREA_BOX_DEGREES = 2
 	AREA_BOX_DEGREES       = float64(1.0 / 4) // Must be 1.0 divided by an integer number
+	OVERLAP_BOX_DEGREES    = float64(0.01)
 	WAYS_PER_FILE          = 2000
 )
 
@@ -193,10 +194,11 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 
 	log.Info().Msg("Finding Bounds")
 	for _, area := range areas {
-		if area.MinLat < float64(minGenLat) || area.MinLon < float64(minGenLon) || area.MaxLat > float64(maxGenLat) || area.MaxLon > float64(maxGenLon) {
+		if area.MinLat < float64(minGenLat)-OVERLAP_BOX_DEGREES || area.MinLon < float64(minGenLon)-OVERLAP_BOX_DEGREES || area.MaxLat > float64(maxGenLat)+OVERLAP_BOX_DEGREES || area.MaxLon > float64(maxGenLon)+OVERLAP_BOX_DEGREES {
 			continue
 		}
-		haveWays := Overlapping(allMinLat, allMinLon, allMaxLat, allMaxLon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+
+		haveWays := Overlapping(allMinLat, allMinLon, allMaxLat, allMaxLon, area.MinLat-OVERLAP_BOX_DEGREES, area.MinLon-OVERLAP_BOX_DEGREES, area.MaxLat+OVERLAP_BOX_DEGREES, area.MaxLon+OVERLAP_BOX_DEGREES)
 		if !haveWays && !generateEmptyFiles {
 			continue
 		}
@@ -208,7 +210,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 		check(errors.Wrap(err, "could not create capnp offline root"))
 
 		for _, way := range scannedWays {
-			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat-OVERLAP_BOX_DEGREES, area.MinLon-OVERLAP_BOX_DEGREES, area.MaxLat+OVERLAP_BOX_DEGREES, area.MaxLon+OVERLAP_BOX_DEGREES)
 			if overlaps {
 				area.Ways = append(area.Ways, way)
 			}
