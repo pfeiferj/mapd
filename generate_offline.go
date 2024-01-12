@@ -109,7 +109,7 @@ func GenerateAreas() []Area {
 	return areas
 }
 
-func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int) {
+func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int, generateEmptyFiles bool) {
 	log.Info().Msg("Generating Offline Map")
 	EnsureOfflineMapsDirectories()
 	file, err := os.Open("./map.osm.pbf")
@@ -197,8 +197,9 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int)
 		if area.MinLat < float64(minGenLat)-OVERLAP_BOX_DEGREES || area.MinLon < float64(minGenLon)-OVERLAP_BOX_DEGREES || area.MaxLat > float64(maxGenLat)+OVERLAP_BOX_DEGREES || area.MaxLon > float64(maxGenLon)+OVERLAP_BOX_DEGREES {
 			continue
 		}
+
 		haveWays := Overlapping(allMinLat, allMinLon, allMaxLat, allMaxLon, area.MinLat-OVERLAP_BOX_DEGREES, area.MinLon-OVERLAP_BOX_DEGREES, area.MaxLat+OVERLAP_BOX_DEGREES, area.MaxLon+OVERLAP_BOX_DEGREES)
-		if !haveWays {
+		if !haveWays && !generateEmptyFiles {
 			continue
 		}
 

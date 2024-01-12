@@ -301,9 +301,10 @@ func main() {
 	minGenLonPtr := flag.Int("minlon", -180, "the minimum longitude to generate")
 	maxGenLatPtr := flag.Int("maxlat", -90, "the maximum latitude to generate")
 	maxGenLonPtr := flag.Int("maxlon", -180, "the maximum longitude to generate")
+	generateEmptyFiles := flag.Bool("generate-empty-files", false, "Includes empty files when generating map")
 	flag.Parse()
 	if *generatePtr {
-		GenerateOffline(*minGenLatPtr, *minGenLonPtr, *maxGenLatPtr, *maxGenLonPtr)
+		GenerateOffline(*minGenLatPtr, *minGenLonPtr, *maxGenLatPtr, *maxGenLonPtr, *generateEmptyFiles)
 		return
 	}
 	EnsureParamDirectories()
