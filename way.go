@@ -322,7 +322,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		}
 
 		var bearingNode Coordinates
-		if matchNode == nodes.At(0) {
+		if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
 			bearingNode = nodes.At(1)
 		} else {
 			bearingNode = nodes.At(nodes.Len() - 2)
