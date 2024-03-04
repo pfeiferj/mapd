@@ -28,4 +28,5 @@ struct Offline {
   maxLat @2 :Float64;
   maxLon @3 :Float64;
   ways @4 :List(Way);
+  overlap @5 :Float64;
 }

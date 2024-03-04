@@ -257,7 +257,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		matchBearingNode = nodes.At(1)
 	}
 
-	if !PointInBox(matchNode.Latitude(), matchNode.Longitude(), offline.MinLat()-OVERLAP_BOX_DEGREES, offline.MinLon()-OVERLAP_BOX_DEGREES, offline.MaxLat()+OVERLAP_BOX_DEGREES, offline.MaxLon()+OVERLAP_BOX_DEGREES) {
+	if !PointInBox(matchNode.Latitude(), matchNode.Longitude(), offline.MinLat()-offline.Overlap(), offline.MinLon()-offline.Overlap(), offline.MaxLat()+offline.Overlap(), offline.MaxLon()+offline.Overlap()) {
 		return NextWayResult{}, nil
 	}
 

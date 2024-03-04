@@ -223,6 +223,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 		rootOffline.SetMinLon(area.MinLon)
 		rootOffline.SetMaxLat(area.MaxLat)
 		rootOffline.SetMaxLon(area.MaxLon)
+    rootOffline.SetOverlap(OVERLAP_BOX_DEGREES)
 		for i, way := range area.Ways {
 			w := ways.At(i)
 			w.SetMinLat(way.MinLat)
