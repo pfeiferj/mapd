@@ -30,6 +30,7 @@ type TmpWay struct {
 	MinLon           float64
 	MaxLat           float64
 	MaxLon           float64
+  OneWay           bool
 	Nodes            []TmpNode
 }
 
@@ -149,6 +150,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 				MaxSpeed:         ParseMaxSpeed(tags["maxspeed"]),
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
+				OneWay:           tags["oneway"] == "yes",
 			}
 			index++
 
@@ -239,6 +241,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
+      w.SetOneWay(way.OneWay)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
 			check(errors.Wrap(err, "could not create way nodes"))
 			for j, node := range way.Nodes {

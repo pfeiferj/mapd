@@ -15,6 +15,7 @@ struct Way {
   lanes @8 :UInt8;
   advisorySpeed @9 :Float64;
   hazard @10 :Text;
+  oneWay @11 :Bool;
 }
 
 struct Coordinates {
