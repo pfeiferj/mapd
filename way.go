@@ -280,9 +280,9 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 			}
 			if mName == name {
 				isForward := NextIsForward(mWay, matchNode)
-        if !isForward && mWay.OneWay() { //skip if going wrong direction
-          continue;
-        }
+				if !isForward && mWay.OneWay() { // skip if going wrong direction
+					continue
+				}
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
 					Way:           mWay,
@@ -304,9 +304,9 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 			}
 			if mRef == ref {
 				isForward := NextIsForward(mWay, matchNode)
-        if !isForward && mWay.OneWay() { //skip if going wrong direction
-          continue;
-        }
+				if !isForward && mWay.OneWay() { // skip if going wrong direction
+					continue
+				}
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
 					Way:           mWay,
@@ -326,10 +326,10 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		if err != nil {
 			continue
 		}
-    isForward := NextIsForward(mWay, matchNode)
-    if !isForward && mWay.OneWay() { //skip if going wrong direction
-      continue;
-    }
+		isForward := NextIsForward(mWay, matchNode)
+		if !isForward && mWay.OneWay() { // skip if going wrong direction
+			continue
+		}
 
 		var bearingNode Coordinates
 		if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
