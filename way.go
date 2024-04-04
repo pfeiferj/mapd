@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -241,7 +240,6 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 }
 
 func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
-	log.Info().Bool("oneway", way.OneWay()).Msg("hello?")
 	nodes, err := way.Nodes()
 	if err != nil {
 		return NextWayResult{}, errors.Wrap(err, "could not read way nodes")
@@ -298,8 +296,8 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 				} else {
 					bearingNode = nodes.At(nodes.Len() - 2)
 				}
-				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				if math.Abs(angle) > math.Pi/2 {
+				curv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(curv) > 0.1 {
 					continue
 				}
 
@@ -339,8 +337,8 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 				} else {
 					bearingNode = nodes.At(nodes.Len() - 2)
 				}
-				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				if math.Abs(angle) > math.Pi/2 {
+				curv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(curv) > 0.1 {
 					continue
 				}
 
@@ -359,6 +357,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 	ref, _ = way.Ref()
 	if len(ref) > 0 {
 		refs := strings.Split(ref, ";")
+		candidates := []Way{}
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
@@ -388,19 +387,51 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 				} else {
 					bearingNode = nodes.At(nodes.Len() - 2)
 				}
-				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				if math.Abs(angle) > math.Pi/2 {
+				curv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(curv) > 0.1 {
+					continue
+				}
+				candidates = append(candidates, mWay)
+
+			}
+		}
+		if len(candidates) > 0 {
+			minCurvWay := matchingWays[0]
+			minCurv := float64(100)
+			for _, mWay := range candidates {
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				isForward := NextIsForward(mWay, matchNode)
+				if !isForward && mWay.OneWay() { // skip if going wrong direction
 					continue
 				}
 
-				start, end := GetWayStartEnd(mWay, isForward)
-				return NextWayResult{
-					Way:           mWay,
-					StartPosition: start,
-					EndPosition:   end,
-					IsForward:     isForward,
-				}, nil
+				var bearingNode Coordinates
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+
+				mCurv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				mCurv = math.Abs(mCurv)
+
+				if mCurv < minCurv {
+					minCurv = mCurv
+					minCurvWay = mWay
+				}
 			}
+
+			nextIsForward := NextIsForward(minCurvWay, matchNode)
+			start, end := GetWayStartEnd(minCurvWay, nextIsForward)
+			return NextWayResult{
+				Way:           minCurvWay,
+				StartPosition: start,
+				EndPosition:   end,
+				IsForward:     nextIsForward,
+			}, nil
 		}
 	}
 
