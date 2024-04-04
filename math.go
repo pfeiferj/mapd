@@ -5,7 +5,6 @@ import (
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
 var (
