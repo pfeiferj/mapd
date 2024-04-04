@@ -241,7 +241,7 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 }
 
 func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
-  log.Info().Bool("oneway", way.OneWay()).Msg("hello?")
+	log.Info().Bool("oneway", way.OneWay()).Msg("hello?")
 	nodes, err := way.Nodes()
 	if err != nil {
 		return NextWayResult{}, errors.Wrap(err, "could not read way nodes")
@@ -287,21 +287,21 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 					continue
 				}
 
-        // Check if angle is large
-        var bearingNode Coordinates
-        nodes, err := mWay.Nodes()
-        if err != nil {
-          continue
-        }
-        if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-          bearingNode = nodes.At(1)
-        } else {
-          bearingNode = nodes.At(nodes.Len() - 2)
-        }
-        _, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-        if math.Abs(angle) > math.Pi / 2 {
-          continue
-        }
+				// Check if angle is large
+				var bearingNode Coordinates
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(angle) > math.Pi/2 {
+					continue
+				}
 
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
@@ -328,22 +328,21 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 					continue
 				}
 
-        // Check if angle is large
-        var bearingNode Coordinates
-        nodes, err := mWay.Nodes()
-        if err != nil {
-          continue
-        }
-        if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-          bearingNode = nodes.At(1)
-        } else {
-          bearingNode = nodes.At(nodes.Len() - 2)
-        }
-        _, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-        if math.Abs(angle) > math.Pi / 2 {
-          continue
-        }
-
+				// Check if angle is large
+				var bearingNode Coordinates
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(angle) > math.Pi/2 {
+					continue
+				}
 
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
@@ -359,41 +358,40 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 	// third return if one of the next connecting ways has any ref that matches
 	ref, _ = way.Ref()
 	if len(ref) > 0 {
-    refs := strings.Split(ref, ";")
+		refs := strings.Split(ref, ";")
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
 				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way ref")
 			}
-      mRefs := strings.Split(mRef, ";")
-      hasMatch := false
-      for _, r := range refs {
-        for _, mr := range mRefs {
-          hasMatch = hasMatch || (r == mr)
-        }
-      }
+			mRefs := strings.Split(mRef, ";")
+			hasMatch := false
+			for _, r := range refs {
+				for _, mr := range mRefs {
+					hasMatch = hasMatch || (r == mr)
+				}
+			}
 			if hasMatch {
 				isForward := NextIsForward(mWay, matchNode)
 				if !isForward && mWay.OneWay() { // skip if going wrong direction
 					continue
 				}
 
-        // Check if angle is large
-        var bearingNode Coordinates
-        nodes, err := mWay.Nodes()
-        if err != nil {
-          continue
-        }
-        if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-          bearingNode = nodes.At(1)
-        } else {
-          bearingNode = nodes.At(nodes.Len() - 2)
-        }
-        _, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-        if math.Abs(angle) > math.Pi / 2 {
-          continue
-        }
-
+				// Check if angle is large
+				var bearingNode Coordinates
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(angle) > math.Pi/2 {
+					continue
+				}
 
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
