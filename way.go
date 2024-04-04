@@ -2,8 +2,10 @@ package main
 
 import (
 	"math"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -239,6 +241,7 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 }
 
 func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
+	log.Info().Bool("oneway", way.OneWay()).Msg("hello?")
 	nodes, err := way.Nodes()
 	if err != nil {
 		return NextWayResult{}, errors.Wrap(err, "could not read way nodes")
@@ -283,6 +286,23 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 				if !isForward && mWay.OneWay() { // skip if going wrong direction
 					continue
 				}
+
+				// Check if angle is large
+				var bearingNode Coordinates
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(angle) > math.Pi/2 {
+					continue
+				}
+
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
 					Way:           mWay,
@@ -307,6 +327,23 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 				if !isForward && mWay.OneWay() { // skip if going wrong direction
 					continue
 				}
+
+				// Check if angle is large
+				var bearingNode Coordinates
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(angle) > math.Pi/2 {
+					continue
+				}
+
 				start, end := GetWayStartEnd(mWay, isForward)
 				return NextWayResult{
 					Way:           mWay,
@@ -318,7 +355,56 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		}
 	}
 
-	// third return the next connecting way with the least curvature
+	// third return if one of the next connecting ways has any ref that matches
+	ref, _ = way.Ref()
+	if len(ref) > 0 {
+		refs := strings.Split(ref, ";")
+		for _, mWay := range matchingWays {
+			mRef, err := mWay.Ref()
+			if err != nil {
+				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way ref")
+			}
+			mRefs := strings.Split(mRef, ";")
+			hasMatch := false
+			for _, r := range refs {
+				for _, mr := range mRefs {
+					hasMatch = hasMatch || (r == mr)
+				}
+			}
+			if hasMatch {
+				isForward := NextIsForward(mWay, matchNode)
+				if !isForward && mWay.OneWay() { // skip if going wrong direction
+					continue
+				}
+
+				// Check if angle is large
+				var bearingNode Coordinates
+				nodes, err := mWay.Nodes()
+				if err != nil {
+					continue
+				}
+				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+					bearingNode = nodes.At(1)
+				} else {
+					bearingNode = nodes.At(nodes.Len() - 2)
+				}
+				_, _, angle := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+				if math.Abs(angle) > math.Pi/2 {
+					continue
+				}
+
+				start, end := GetWayStartEnd(mWay, isForward)
+				return NextWayResult{
+					Way:           mWay,
+					StartPosition: start,
+					EndPosition:   end,
+					IsForward:     isForward,
+				}, nil
+			}
+		}
+	}
+
+	// finaly return the next connecting way with the least curvature
 	minCurvWay := matchingWays[0]
 	minCurv := float64(100)
 	for _, mWay := range matchingWays {
@@ -338,7 +424,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 			bearingNode = nodes.At(nodes.Len() - 2)
 		}
 
-		mCurv, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
+		mCurv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
 		mCurv = math.Abs(mCurv)
 
 		if mCurv < minCurv {
