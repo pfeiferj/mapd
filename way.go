@@ -34,6 +34,9 @@ func OnWay(way Way, pos Position) (OnWayResult, error) {
 		if d.Distance < max_dist {
 			res.OnWay = true
 			res.IsForward = IsForward(d.LineStart, d.LineEnd, pos.Bearing)
+			if !res.IsForward && way.OneWay() {
+				res.OnWay = false
+			}
 			return res, nil
 		}
 	}

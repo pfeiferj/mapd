@@ -81,7 +81,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 	num_points := nodes.Len()
 	all_nodes := []capnp.StructList[Coordinates]{nodes}
 	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
-	all_nodes_is_merge := []bool{false}
+	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way
 	for _, nextWay := range state.NextWays {
 		nwNodes, err := nextWay.Way.Nodes()
@@ -93,14 +93,14 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		}
 		all_nodes = append(all_nodes, nwNodes)
 		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
-		all_nodes_is_merge = append(all_nodes_is_merge, lastWay.Lanes() < nextWay.Way.Lanes())
+		all_nodes_is_merge_or_split = append(all_nodes_is_merge_or_split, lastWay.Lanes() < nextWay.Way.Lanes() || (lastWay.Lanes() > nextWay.Way.Lanes() && !lastWay.OneWay() && nextWay.Way.OneWay()))
 		lastWay = nextWay.Way
 	}
 
 	x_points := make([]float64, num_points)
 	y_points := make([]float64, num_points)
 
-	merge_nodes := []int{}
+	merge_or_split_nodes := []int{}
 	all_nodes_idx := 0
 	nodes_idx := 0
 	for i := 0; i < num_points; i++ {
@@ -125,8 +125,8 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		if nodes_idx == all_nodes[all_nodes_idx].Len() || (nodes_idx == all_nodes[all_nodes_idx].Len()-1 && all_nodes_idx > 0) {
 			all_nodes_idx += 1
 			nodes_idx = 0
-			if all_nodes_idx < len(all_nodes_is_merge) && all_nodes_is_merge[all_nodes_idx] {
-				merge_nodes = append(merge_nodes, i)
+			if all_nodes_idx < len(all_nodes_is_merge_or_split) && all_nodes_is_merge_or_split[all_nodes_idx] {
+				merge_or_split_nodes = append(merge_or_split_nodes, i)
 			}
 		}
 	}
@@ -137,17 +137,24 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 	}
 
 	// set the merge nodes to be straight to help balance out issues with map representation
-	for _, merge_node := range merge_nodes {
-		if merge_node >= 2 {
-			curvatures[merge_node-2] = 0.000000000001
-			curvatures[merge_node-1] = 0.000000000001
+	for _, merge_or_split_node := range merge_or_split_nodes {
+		if merge_or_split_node >= 2 {
+			curvatures[merge_or_split_node-2] = 0.0015
+			curvatures[merge_or_split_node-1] = 0.0015
 		}
-		// also include nodes within 30 meters
-		for i := merge_node - 3; i >= 0; i-- {
-			if DistanceToPoint(x_points[merge_node]*TO_RADIANS, y_points[merge_node]*TO_RADIANS, x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS) > 30 {
+		// also include nodes within 15 meters
+		for i := merge_or_split_node - 3; i >= 0; i-- {
+			if DistanceToPoint(x_points[merge_or_split_node]*TO_RADIANS, y_points[merge_or_split_node]*TO_RADIANS, x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS) > 15 {
 				break
 			}
-			curvatures[i] = 0.000000000001
+			curvatures[i] = 0.0015
+		}
+		// also include forward nodes within 15 meters
+		for i := merge_or_split_node; i < len(curvatures); i++ {
+			if DistanceToPoint(x_points[merge_or_split_node]*TO_RADIANS, y_points[merge_or_split_node]*TO_RADIANS, x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS) > 15 {
+				break
+			}
+			curvatures[i] = 0.0015
 		}
 	}
 
