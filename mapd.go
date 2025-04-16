@@ -227,22 +227,22 @@ func loop(state *State) {
 
 	if len(state.NextWays) > 0 {
 		currentMaxSpeed := state.CurrentWay.Way.MaxSpeed()
-    if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
-      currentMaxSpeed = state.CurrentWay.Way.MaxSpeedForward()
-    } else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
-      currentMaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
-    }
+		if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
+			currentMaxSpeed = state.CurrentWay.Way.MaxSpeedForward()
+		} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
+			currentMaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
+		}
 		nextMaxSpeed := currentMaxSpeed
 		nextSpeedWay := state.NextWays[0]
 		for _, nextWay := range state.NextWays {
 			if nextMaxSpeed == currentMaxSpeed {
 				nextSpeedWay = nextWay
 				nextMaxSpeed = nextWay.Way.MaxSpeed()
-        if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
-          nextMaxSpeed = nextWay.Way.MaxSpeedForward()
-        } else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
-          nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
-        }
+				if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
+					nextMaxSpeed = nextWay.Way.MaxSpeedForward()
+				} else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
+					nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
+				}
 
 			}
 		}
