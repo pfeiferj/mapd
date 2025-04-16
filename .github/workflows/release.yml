@@ -24,7 +24,7 @@ jobs:
           use-cache: true
           version: "latest" # or pin to an specific version, e.g. "0.7.1"
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build Release Binary (arm64 for comma device)
         run: earthly --push +build-release
       - name: Log in to Docker Hub
