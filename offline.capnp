@@ -16,6 +16,8 @@ struct Way {
   advisorySpeed @9 :Float64;
   hazard @10 :Text;
   oneWay @11 :Bool;
+  maxSpeedForward @12 :Float64;
+  maxSpeedBackward @13 :Float64;
 }
 
 struct Coordinates {

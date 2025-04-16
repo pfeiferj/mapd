@@ -1,5 +1,5 @@
 VERSION 0.7
-FROM golang:1.21-alpine3.18
+FROM golang:1.24-alpine3.21
 WORKDIR /mapd
 
 deps:
