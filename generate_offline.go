@@ -24,6 +24,8 @@ type TmpWay struct {
 	Ref              string
 	Hazard           string
 	MaxSpeed         float64
+	MaxSpeedForward  float64
+	MaxSpeedBackward float64
 	MaxSpeedAdvisory float64
 	Lanes            uint8
 	MinLat           float64
@@ -148,6 +150,8 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 				Ref:              tags["ref"],
 				Hazard:           tags["hazard"],
 				MaxSpeed:         ParseMaxSpeed(tags["maxspeed"]),
+				MaxSpeedForward:  ParseMaxSpeed(tags["maxspeed:forward"]),
+				MaxSpeedBackward: ParseMaxSpeed(tags["maxspeed:backward"]),
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
 				OneWay:           tags["oneway"] == "yes",
@@ -239,6 +243,8 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 			err = w.SetHazard(way.Hazard)
 			check(errors.Wrap(err, "could not set way hazard"))
 			w.SetMaxSpeed(way.MaxSpeed)
+			w.SetMaxSpeedForward(way.MaxSpeedForward)
+			w.SetMaxSpeedBackward(way.MaxSpeedBackward)
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
