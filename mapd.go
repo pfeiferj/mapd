@@ -147,7 +147,7 @@ func loop(state *State) {
 		logde(errors.Wrap(err, "could not find ways around current location"))
 	}
 
-	state.CurrentWay, err = GetCurrentWay(state.CurrentWay.Way, state.NextWays, offline, pos)
+	state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offline, pos)
 	logde(errors.Wrap(err, "could not get current way"))
 
 	state.NextWays, err = NextWays(pos, state.CurrentWay, offline, state.CurrentWay.OnWay.IsForward)
