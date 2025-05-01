@@ -15,7 +15,7 @@ type OnWayResult struct {
 	IsForward bool
 }
 
-func OnWay(way Way, pos Position) (OnWayResult, error) {
+func OnWay(way Way, pos Position, extended bool) (OnWayResult, error) {
 	res := OnWayResult{}
 	if pos.Latitude < way.MaxLat()+PADDING && pos.Latitude > way.MinLat()-PADDING && pos.Longitude < way.MaxLon()+PADDING && pos.Longitude > way.MinLon()-PADDING {
 		d, err := DistanceToWay(pos, way)
@@ -30,6 +30,9 @@ func OnWay(way Way, pos Position) (OnWayResult, error) {
 		}
 		road_width_estimate := float64(lanes) * LANE_WIDTH
 		max_dist := 5 + road_width_estimate
+		if extended {
+			max_dist = max_dist * 2
+		}
 
 		if d.Distance < max_dist {
 			res.OnWay = true
@@ -115,14 +118,14 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 	return nodes.At(nodes.Len() - 1), nodes.At(0)
 }
 
-func GetCurrentWay(currentWay Way, nextWays []NextWayResult, offline Offline, pos Position) (CurrentWay, error) {
-	if currentWay.HasNodes() {
-		onWay, err := OnWay(currentWay, pos)
+func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offline, pos Position) (CurrentWay, error) {
+	if currentWay.Way.HasNodes() {
+		onWay, err := OnWay(currentWay.Way, pos, false)
 		logde(errors.Wrap(err, "could not check if on current way"))
 		if onWay.OnWay {
-			start, end := GetWayStartEnd(currentWay, onWay.IsForward)
+			start, end := GetWayStartEnd(currentWay.Way, onWay.IsForward)
 			return CurrentWay{
-				Way:           currentWay,
+				Way:           currentWay.Way,
 				Distance:      onWay.Distance,
 				OnWay:         onWay,
 				StartPosition: start,
@@ -133,7 +136,7 @@ func GetCurrentWay(currentWay Way, nextWays []NextWayResult, offline Offline, po
 
 	// check the expected next ways
 	for _, nextWay := range nextWays {
-		onWay, err := OnWay(nextWay.Way, pos)
+		onWay, err := OnWay(nextWay.Way, pos, false)
 		logde(errors.Wrap(err, "could not check if on next way"))
 		if onWay.OnWay {
 			start, end := GetWayStartEnd(nextWay.Way, onWay.IsForward)
@@ -147,19 +150,46 @@ func GetCurrentWay(currentWay Way, nextWays []NextWayResult, offline Offline, po
 		}
 	}
 
-	// finally check all other ways
-	ways, err := offline.Ways()
-	if err != nil {
-		return CurrentWay{}, errors.Wrap(err, "could not get other ways")
-	}
-	for i := 0; i < ways.Len(); i++ {
-		way := ways.At(i)
-		onWay, err := OnWay(way, pos)
+	possibleWays, err := getPossibleWays(offline, pos)
+	logde(errors.Wrap(err, "Failed to get possible ways"))
+	if len(possibleWays) > 0 {
+		preferredWay := possibleWays[0]
+		preferredOnWay, err := OnWay(preferredWay, pos, false)
 		logde(errors.Wrap(err, "Could not check if on way"))
+		for _, way := range possibleWays {
+			if way.Lanes() < preferredWay.Lanes() {
+				continue
+			}
+
+			onWay, err := OnWay(preferredWay, pos, false)
+			logde(errors.Wrap(err, "Could not check if on way"))
+			if way.Lanes() > preferredWay.Lanes() {
+				preferredWay = way
+				preferredOnWay = onWay
+			}
+
+			if onWay.Distance.Distance < preferredOnWay.Distance.Distance {
+				preferredWay = way
+				preferredOnWay = onWay
+			}
+		}
+		start, end := GetWayStartEnd(preferredWay, preferredOnWay.IsForward)
+		return CurrentWay{
+			Way:           preferredWay,
+			Distance:      preferredOnWay.Distance,
+			OnWay:         preferredOnWay,
+			StartPosition: start,
+			EndPosition:   end,
+		}, nil
+	}
+
+	if currentWay.Way.HasNodes() { // if we lost all matches, allow a much further match distance for previous match
+		onWay, err := OnWay(currentWay.Way, pos, true)
+		logde(errors.Wrap(err, "could not extended check if on current way"))
 		if onWay.OnWay {
-			start, end := GetWayStartEnd(way, onWay.IsForward)
+			start, end := GetWayStartEnd(currentWay.Way, onWay.IsForward)
 			return CurrentWay{
-				Way:           way,
+				Way:           currentWay.Way,
 				Distance:      onWay.Distance,
 				OnWay:         onWay,
 				StartPosition: start,
@@ -169,6 +199,23 @@ func GetCurrentWay(currentWay Way, nextWays []NextWayResult, offline Offline, po
 	}
 
 	return CurrentWay{}, errors.New("could not find a current way")
+}
+
+func getPossibleWays(offline Offline, pos Position) ([]Way, error) {
+	possibleWays := []Way{}
+	ways, err := offline.Ways()
+	if err != nil {
+		return possibleWays, errors.Wrap(err, "could not get other ways")
+	}
+	for i := 0; i < ways.Len(); i++ {
+		way := ways.At(i)
+		onWay, err := OnWay(way, pos, false)
+		logde(errors.Wrap(err, "Could not check if on way"))
+		if onWay.OnWay {
+			possibleWays = append(possibleWays, way)
+		}
+	}
+	return possibleWays, nil
 }
 
 func IsForward(lineStart Coordinates, lineEnd Coordinates, bearing float64) bool {
