@@ -136,7 +136,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 
 	// check the expected next ways
 	for _, nextWay := range nextWays {
-		onWay, err := OnWay(nextWay.Way, pos, false)
+		onWay, err := OnWay(nextWay.Way, pos, true)
 		logde(errors.Wrap(err, "could not check if on next way"))
 		if onWay.OnWay {
 			start, end := GetWayStartEnd(nextWay.Way, onWay.IsForward)
