@@ -174,11 +174,6 @@ func loop(state *State) {
 	err = PutParam(ROAD_NAME, []byte(RoadName(state.CurrentWay.Way)))
 	logwe(errors.Wrap(err, "could not write road name"))
 
-	data, err = json.Marshal(state.CurrentWay.Way.MaxSpeed())
-	logde(errors.Wrap(err, "could not marshal speed limit"))
-	err = PutParam(MAP_SPEED_LIMIT, data)
-	logwe(errors.Wrap(err, "could not write speed limit"))
-
 	data, err = json.Marshal(state.CurrentWay.Way.AdvisorySpeed())
 	logde(errors.Wrap(err, "could not marshal advisory speed limit"))
 	err = PutParam(MAP_ADVISORY_LIMIT, data)
@@ -232,18 +227,24 @@ func loop(state *State) {
 		} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
 			currentMaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
 		}
+
+		data, err = json.Marshal(currentMaxSpeed)
+		logde(errors.Wrap(err, "could not marshal speed limit"))
+		err = PutParam(MAP_SPEED_LIMIT, data)
+		logwe(errors.Wrap(err, "could not write speed limit"))
+
 		nextMaxSpeed := currentMaxSpeed
 		nextSpeedWay := state.NextWays[0]
 		for _, nextWay := range state.NextWays {
-			if nextMaxSpeed == currentMaxSpeed {
+			nextMaxSpeed = nextWay.Way.MaxSpeed()
+			if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
+				nextMaxSpeed = nextWay.Way.MaxSpeedForward()
+			} else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
+				nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
+			}
+			if nextMaxSpeed != currentMaxSpeed {
 				nextSpeedWay = nextWay
-				nextMaxSpeed = nextWay.Way.MaxSpeed()
-				if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
-					nextMaxSpeed = nextWay.Way.MaxSpeedForward()
-				} else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
-					nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
-				}
-
+				break
 			}
 		}
 		data, err = json.Marshal(NextSpeedLimit{
