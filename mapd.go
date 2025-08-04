@@ -90,6 +90,15 @@ func readPosition(persistent bool) (Position, error) {
 	return pos, errors.Wrap(err, "could not unmarshal coordinates")
 }
 
+func getEffectiveMaxSpeed(way Way, isForward bool) float64 {
+	if isForward && way.MaxSpeedForward() > 0 {
+		return way.MaxSpeedForward()
+	} else if !isForward && way.MaxSpeedBackward() > 0 {
+		return way.MaxSpeedBackward()
+	}
+	return way.MaxSpeed()
+}
+
 func loop(state *State) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -236,12 +245,7 @@ func loop(state *State) {
 		nextMaxSpeed := currentMaxSpeed
 		nextSpeedWay := state.NextWays[0]
 		for _, nextWay := range state.NextWays {
-			nextMaxSpeed = nextWay.Way.MaxSpeed()
-			if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
-				nextMaxSpeed = nextWay.Way.MaxSpeedForward()
-			} else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
-				nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
-			}
+			nextMaxSpeed = getEffectiveMaxSpeed(nextWay.Way, nextWay.IsForward)
 			if nextMaxSpeed != currentMaxSpeed {
 				nextSpeedWay = nextWay
 				break
@@ -250,7 +254,7 @@ func loop(state *State) {
 		data, err = json.Marshal(NextSpeedLimit{
 			Latitude:   nextSpeedWay.StartPosition.Latitude(),
 			Longitude:  nextSpeedWay.StartPosition.Longitude(),
-			Speedlimit: nextSpeedWay.Way.MaxSpeed(),
+			Speedlimit: nextMaxSpeed, // Use the calculated speed
 		})
 		logde(errors.Wrap(err, "could not marshal next speed limit"))
 		err = PutParam(NEXT_MAP_SPEED_LIMIT, data)
@@ -268,9 +272,10 @@ func loop(state *State) {
 		nextAdvisoryWay := state.NextWays[0]
 
 		for _, nextWay := range state.NextWays {
-			if nextAdvisorySpeed == currentAdvisorySpeed {
+			nextAdvisorySpeed = nextWay.Way.AdvisorySpeed()
+			if nextAdvisorySpeed != currentAdvisorySpeed {
 				nextAdvisoryWay = nextWay
-				nextAdvisorySpeed = nextWay.Way.AdvisorySpeed()
+				break
 			}
 		}
 		data, err = json.Marshal(AdvisoryLimit{
