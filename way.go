@@ -9,6 +9,26 @@ import (
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
 
+type RoadContext int
+
+const (
+	CONTEXT_FREEWAY RoadContext = iota
+	CONTEXT_CITY
+	CONTEXT_UNKNOWN
+)
+
+// Road type detection and priorities
+var LANE_COUNT_PRIORITY = map[uint8]int{
+	8: 110, // Major freeway
+	6: 100, // Freeway
+	5: 95,
+	4: 90, // Major arterial
+	3: 70, // Arterial
+	2: 50, // Collector/local
+	1: 40, // Local street
+	0: 30, // Unknown
+}
+
 type OnWayResult struct {
 	OnWay     bool
 	Distance  DistanceResult
@@ -34,6 +54,13 @@ func OnWay(way Way, pos Position, extended bool) (OnWayResult, error) {
 			max_dist = max_dist * 2
 		}
 
+		context := determineRoadContext(way, pos)
+		if context == CONTEXT_FREEWAY {
+			max_dist = max_dist * 1.5
+		} else if context == CONTEXT_CITY {
+			max_dist = max_dist * 0.8
+		}
+
 		if d.Distance < max_dist {
 			res.OnWay = true
 			res.IsForward = IsForward(d.LineStart, d.LineEnd, pos.Bearing)
@@ -45,6 +72,95 @@ func OnWay(way Way, pos Position, extended bool) (OnWayResult, error) {
 	}
 	res.OnWay = false
 	return res, nil
+}
+
+func determineRoadContext(way Way, pos Position) RoadContext {
+	lanes := way.Lanes()
+	name, _ := way.Name()
+	ref, _ := way.Ref()
+
+	if isFreeway(way) || lanes >= 4 {
+		return CONTEXT_FREEWAY
+	}
+
+	nameUpper := strings.ToUpper(name)
+	if lanes <= 3 && (strings.Contains(nameUpper, "STREET") ||
+		strings.Contains(nameUpper, "AVENUE") ||
+		strings.Contains(nameUpper, "BOULEVARD") ||
+		strings.Contains(nameUpper, "ROAD") ||
+		len(ref) == 0) {
+		return CONTEXT_CITY
+	}
+
+	return CONTEXT_UNKNOWN
+}
+
+func isFreeway(way Way) bool {
+	lanes := way.Lanes()
+	name, _ := way.Name()
+	ref, _ := way.Ref()
+
+	if lanes >= 6 {
+		return true
+	}
+
+	nameUpper := strings.ToUpper(name)
+	refUpper := strings.ToUpper(ref)
+
+	if strings.Contains(nameUpper, "INTERSTATE") ||
+		strings.Contains(nameUpper, "FREEWAY") ||
+		strings.Contains(nameUpper, "EXPRESSWAY") ||
+		strings.Contains(nameUpper, "PARKWAY") ||
+		strings.HasPrefix(refUpper, "I-") ||
+		strings.HasPrefix(refUpper, "I ") ||
+		(lanes >= 4 && len(ref) > 0 && !strings.Contains(nameUpper, "STREET")) {
+		return true
+	}
+
+	return false
+}
+
+func getRoadPriority(way Way, context RoadContext) int {
+	lanes := way.Lanes()
+	name, _ := way.Name()
+	ref, _ := way.Ref()
+
+	priority := LANE_COUNT_PRIORITY[lanes]
+	if priority == 0 {
+		priority = 30
+	}
+
+	switch context {
+	case CONTEXT_FREEWAY:
+		if isFreeway(way) {
+			priority += 30
+		}
+		nameUpper := strings.ToUpper(name)
+		if strings.Contains(nameUpper, "STREET") ||
+			strings.Contains(nameUpper, "AVENUE") {
+			priority -= 40
+		}
+
+	case CONTEXT_CITY:
+		if isFreeway(way) {
+			priority += 15
+		}
+		nameUpper := strings.ToUpper(name)
+		if strings.Contains(nameUpper, "SERVICE") {
+			priority -= 5
+		}
+
+	case CONTEXT_UNKNOWN:
+		if isFreeway(way) {
+			priority += 20
+		}
+	}
+
+	if len(ref) > 0 {
+		priority += 10
+	}
+
+	return priority
 }
 
 type DistanceResult struct {
@@ -119,22 +235,47 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 }
 
 func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offline, pos Position) (CurrentWay, error) {
+	currentContext := CONTEXT_UNKNOWN
+	if currentWay.Way.HasNodes() {
+		currentContext = determineRoadContext(currentWay.Way, pos)
+	}
+
 	if currentWay.Way.HasNodes() {
 		onWay, err := OnWay(currentWay.Way, pos, false)
 		logde(errors.Wrap(err, "could not check if on current way"))
 		if onWay.OnWay {
-			start, end := GetWayStartEnd(currentWay.Way, onWay.IsForward)
-			return CurrentWay{
-				Way:           currentWay.Way,
-				Distance:      onWay.Distance,
-				OnWay:         onWay,
-				StartPosition: start,
-				EndPosition:   end,
-			}, nil
+			stickThreshold := 15.0
+			if currentContext == CONTEXT_FREEWAY {
+				stickThreshold = 25.0
+			} else if currentContext == CONTEXT_CITY {
+				stickThreshold = 10.0
+			}
+
+			possibleWays, err := getPossibleWays(offline, pos)
+			if err == nil && len(possibleWays) > 1 {
+				if onWay.Distance.Distance < stickThreshold {
+					start, end := GetWayStartEnd(currentWay.Way, onWay.IsForward)
+					return CurrentWay{
+						Way:           currentWay.Way,
+						Distance:      onWay.Distance,
+						OnWay:         onWay,
+						StartPosition: start,
+						EndPosition:   end,
+					}, nil
+				}
+			} else {
+				start, end := GetWayStartEnd(currentWay.Way, onWay.IsForward)
+				return CurrentWay{
+					Way:           currentWay.Way,
+					Distance:      onWay.Distance,
+					OnWay:         onWay,
+					StartPosition: start,
+					EndPosition:   end,
+				}, nil
+			}
 		}
 	}
 
-	// check the expected next ways
 	for _, nextWay := range nextWays {
 		onWay, err := OnWay(nextWay.Way, pos, true)
 		logde(errors.Wrap(err, "could not check if on next way"))
@@ -153,37 +294,21 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 	possibleWays, err := getPossibleWays(offline, pos)
 	logde(errors.Wrap(err, "Failed to get possible ways"))
 	if len(possibleWays) > 0 {
-		preferredWay := possibleWays[0]
-		preferredOnWay, err := OnWay(preferredWay, pos, false)
+		selectedWay := selectBestWay(possibleWays, pos, currentWay.Way, currentContext)
+		selectedOnWay, err := OnWay(selectedWay, pos, false)
 		logde(errors.Wrap(err, "Could not check if on way"))
-		for _, way := range possibleWays {
-			if way.Lanes() < preferredWay.Lanes() {
-				continue
-			}
 
-			onWay, err := OnWay(preferredWay, pos, false)
-			logde(errors.Wrap(err, "Could not check if on way"))
-			if way.Lanes() > preferredWay.Lanes() {
-				preferredWay = way
-				preferredOnWay = onWay
-			}
-
-			if onWay.Distance.Distance < preferredOnWay.Distance.Distance {
-				preferredWay = way
-				preferredOnWay = onWay
-			}
-		}
-		start, end := GetWayStartEnd(preferredWay, preferredOnWay.IsForward)
+		start, end := GetWayStartEnd(selectedWay, selectedOnWay.IsForward)
 		return CurrentWay{
-			Way:           preferredWay,
-			Distance:      preferredOnWay.Distance,
-			OnWay:         preferredOnWay,
+			Way:           selectedWay,
+			Distance:      selectedOnWay.Distance,
+			OnWay:         selectedOnWay,
 			StartPosition: start,
 			EndPosition:   end,
 		}, nil
 	}
 
-	if currentWay.Way.HasNodes() { // if we lost all matches, allow a much further match distance for previous match
+	if currentWay.Way.HasNodes() {
 		onWay, err := OnWay(currentWay.Way, pos, true)
 		logde(errors.Wrap(err, "could not extended check if on current way"))
 		if onWay.OnWay {
@@ -201,12 +326,99 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 	return CurrentWay{}, errors.New("could not find a current way")
 }
 
+func selectBestWay(possibleWays []Way, pos Position, currentWay Way, context RoadContext) Way {
+	if len(possibleWays) == 1 {
+		return possibleWays[0]
+	}
+
+	bestWay := possibleWays[0]
+	bestScore := float64(-1000)
+
+	for _, way := range possibleWays {
+		score := calculateWayScore(way, pos, currentWay, context)
+		if score > bestScore {
+			bestScore = score
+			bestWay = way
+		}
+	}
+
+	return bestWay
+}
+
+func calculateWayScore(way Way, pos Position, currentWay Way, context RoadContext) float64 {
+	score := float64(0)
+
+	priority := getRoadPriority(way, context)
+	score += float64(priority)
+
+	onWay, err := OnWay(way, pos, false)
+	if err == nil {
+		distanceWeight := -2.0
+		if context == CONTEXT_CITY {
+			distanceWeight = -3.0
+		} else if context == CONTEXT_FREEWAY {
+			distanceWeight = -1.5
+		}
+		score += onWay.Distance.Distance * distanceWeight
+	}
+
+	lanes := way.Lanes()
+	if lanes > 0 {
+		laneWeight := 3.0
+		if context == CONTEXT_FREEWAY {
+			laneWeight = 5.0
+		} else if context == CONTEXT_CITY {
+			laneWeight = 2.0
+		}
+		score += float64(lanes) * laneWeight
+	}
+
+	if currentWay.HasNodes() {
+		currentName, _ := currentWay.Name()
+		currentRef, _ := currentWay.Ref()
+		wayName, _ := way.Name()
+		wayRef, _ := way.Ref()
+
+		continuityWeight := 25.0
+		if context == CONTEXT_FREEWAY {
+			continuityWeight = 40.0
+		} else if context == CONTEXT_CITY {
+			continuityWeight = 15.0
+		}
+
+		if len(currentName) > 0 && currentName == wayName {
+			score += continuityWeight
+		}
+		if len(currentRef) > 0 && currentRef == wayRef {
+			score += continuityWeight * 0.8
+		}
+	}
+
+	name, _ := way.Name()
+	nameUpper := strings.ToUpper(name)
+
+	if context == CONTEXT_FREEWAY {
+		if strings.Contains(nameUpper, "SERVICE") ||
+			strings.Contains(nameUpper, "ACCESS") ||
+			strings.Contains(nameUpper, "RAMP") {
+			score -= 30.0
+		}
+	} else if context == CONTEXT_CITY {
+		if strings.Contains(nameUpper, "SERVICE") {
+			score -= 5.0
+		}
+	}
+
+	return score
+}
+
 func getPossibleWays(offline Offline, pos Position) ([]Way, error) {
 	possibleWays := []Way{}
 	ways, err := offline.Ways()
 	if err != nil {
 		return possibleWays, errors.Wrap(err, "could not get other ways")
 	}
+
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
 		onWay, err := OnWay(way, pos, false)
@@ -302,10 +514,14 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 	var matchBearingNode Coordinates
 	if isForward {
 		matchNode = nodes.At(nodes.Len() - 1)
-		matchBearingNode = nodes.At(nodes.Len() - 2)
+		if nodes.Len() > 1 {
+			matchBearingNode = nodes.At(nodes.Len() - 2)
+		}
 	} else {
 		matchNode = nodes.At(0)
-		matchBearingNode = nodes.At(1)
+		if nodes.Len() > 1 {
+			matchBearingNode = nodes.At(1)
+		}
 	}
 
 	if !PointInBox(matchNode.Latitude(), matchNode.Longitude(), offline.MinLat()-offline.Overlap(), offline.MinLon()-offline.Overlap(), offline.MaxLat()+offline.Overlap(), offline.MaxLon()+offline.Overlap()) {
@@ -321,207 +537,219 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		return NextWayResult{StartPosition: matchNode}, nil
 	}
 
-	// first return if one of the next connecting ways has the same name
+	context := determineRoadContext(way, Position{Latitude: matchNode.Latitude(), Longitude: matchNode.Longitude()})
+	if context == CONTEXT_FREEWAY {
+		filteredWays := []Way{}
+		for _, mWay := range matchingWays {
+			name, _ := mWay.Name()
+			nameUpper := strings.ToUpper(name)
+			if !strings.Contains(nameUpper, "SERVICE") &&
+				!strings.Contains(nameUpper, "ACCESS") &&
+				!(strings.Contains(nameUpper, "RAMP") && mWay.Lanes() < 2) {
+				filteredWays = append(filteredWays, mWay)
+			}
+		}
+		if len(filteredWays) > 0 {
+			matchingWays = filteredWays
+		}
+	}
+
+	curvatureThreshold := 0.15
+	if context == CONTEXT_CITY {
+		curvatureThreshold = 0.3
+	} else if context == CONTEXT_FREEWAY {
+		curvatureThreshold = 0.1
+	}
+
 	name, _ := way.Name()
 	if len(name) > 0 {
+		candidates := []Way{}
 		for _, mWay := range matchingWays {
 			mName, err := mWay.Name()
 			if err != nil {
-				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way name")
+				continue
 			}
 			if mName == name {
 				isForward := NextIsForward(mWay, matchNode)
-				if !isForward && mWay.OneWay() { // skip if going wrong direction
+				if !isForward && mWay.OneWay() {
 					continue
 				}
 
-				// Check if angle is large
-				var bearingNode Coordinates
-				nodes, err := mWay.Nodes()
-				if err != nil {
-					continue
+				if nodes.Len() > 1 && isValidConnection(mWay, matchNode, matchBearingNode, curvatureThreshold) {
+					candidates = append(candidates, mWay)
 				}
-				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-					bearingNode = nodes.At(1)
-				} else {
-					bearingNode = nodes.At(nodes.Len() - 2)
-				}
-				curv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				if math.Abs(curv) > 0.1 {
-					continue
-				}
-
-				start, end := GetWayStartEnd(mWay, isForward)
-				return NextWayResult{
-					Way:           mWay,
-					StartPosition: start,
-					EndPosition:   end,
-					IsForward:     isForward,
-				}, nil
 			}
+		}
+
+		if len(candidates) > 0 {
+			bestWay := selectBestCandidate(candidates, matchNode, context)
+			isForward := NextIsForward(bestWay, matchNode)
+			start, end := GetWayStartEnd(bestWay, isForward)
+			return NextWayResult{
+				Way:           bestWay,
+				StartPosition: start,
+				EndPosition:   end,
+				IsForward:     isForward,
+			}, nil
 		}
 	}
 
-	// second return if one of the next connecting ways has the same refs
 	ref, _ := way.Ref()
 	if len(ref) > 0 {
+		candidates := []Way{}
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
-				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way ref")
+				continue
 			}
 			if mRef == ref {
 				isForward := NextIsForward(mWay, matchNode)
-				if !isForward && mWay.OneWay() { // skip if going wrong direction
+				if !isForward && mWay.OneWay() {
 					continue
 				}
 
-				// Check if angle is large
-				var bearingNode Coordinates
-				nodes, err := mWay.Nodes()
-				if err != nil {
-					continue
+				if nodes.Len() > 1 && isValidConnection(mWay, matchNode, matchBearingNode, curvatureThreshold) {
+					candidates = append(candidates, mWay)
 				}
-				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-					bearingNode = nodes.At(1)
-				} else {
-					bearingNode = nodes.At(nodes.Len() - 2)
-				}
-				curv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				if math.Abs(curv) > 0.1 {
-					continue
-				}
-
-				start, end := GetWayStartEnd(mWay, isForward)
-				return NextWayResult{
-					Way:           mWay,
-					StartPosition: start,
-					EndPosition:   end,
-					IsForward:     isForward,
-				}, nil
 			}
+		}
+
+		if len(candidates) > 0 {
+			bestWay := selectBestCandidate(candidates, matchNode, context)
+			isForward := NextIsForward(bestWay, matchNode)
+			start, end := GetWayStartEnd(bestWay, isForward)
+			return NextWayResult{
+				Way:           bestWay,
+				StartPosition: start,
+				EndPosition:   end,
+				IsForward:     isForward,
+			}, nil
 		}
 	}
 
-	// third return if one of the next connecting ways has any ref that matches
-	ref, _ = way.Ref()
 	if len(ref) > 0 {
 		refs := strings.Split(ref, ";")
 		candidates := []Way{}
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
-				return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not read way ref")
+				continue
 			}
 			mRefs := strings.Split(mRef, ";")
 			hasMatch := false
 			for _, r := range refs {
 				for _, mr := range mRefs {
-					hasMatch = hasMatch || (r == mr)
+					hasMatch = hasMatch || (strings.TrimSpace(r) == strings.TrimSpace(mr))
 				}
 			}
 			if hasMatch {
 				isForward := NextIsForward(mWay, matchNode)
-				if !isForward && mWay.OneWay() { // skip if going wrong direction
+				if !isForward && mWay.OneWay() {
 					continue
 				}
 
-				// Check if angle is large
-				var bearingNode Coordinates
-				nodes, err := mWay.Nodes()
-				if err != nil {
-					continue
+				if nodes.Len() > 1 && isValidConnection(mWay, matchNode, matchBearingNode, curvatureThreshold) {
+					candidates = append(candidates, mWay)
 				}
-				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-					bearingNode = nodes.At(1)
-				} else {
-					bearingNode = nodes.At(nodes.Len() - 2)
-				}
-				curv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				if math.Abs(curv) > 0.1 {
-					continue
-				}
-				candidates = append(candidates, mWay)
-
 			}
 		}
+
 		if len(candidates) > 0 {
-			minCurvWay := matchingWays[0]
-			minCurv := float64(100)
-			for _, mWay := range candidates {
-				nodes, err := mWay.Nodes()
-				if err != nil {
-					continue
-				}
-				isForward := NextIsForward(mWay, matchNode)
-				if !isForward && mWay.OneWay() { // skip if going wrong direction
-					continue
-				}
-
-				var bearingNode Coordinates
-				if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-					bearingNode = nodes.At(1)
-				} else {
-					bearingNode = nodes.At(nodes.Len() - 2)
-				}
-
-				mCurv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-				mCurv = math.Abs(mCurv)
-
-				if mCurv < minCurv {
-					minCurv = mCurv
-					minCurvWay = mWay
-				}
-			}
-
-			nextIsForward := NextIsForward(minCurvWay, matchNode)
-			start, end := GetWayStartEnd(minCurvWay, nextIsForward)
+			bestWay := selectBestCandidate(candidates, matchNode, context)
+			isForward := NextIsForward(bestWay, matchNode)
+			start, end := GetWayStartEnd(bestWay, isForward)
 			return NextWayResult{
-				Way:           minCurvWay,
+				Way:           bestWay,
 				StartPosition: start,
 				EndPosition:   end,
-				IsForward:     nextIsForward,
+				IsForward:     isForward,
 			}, nil
 		}
 	}
 
-	// finaly return the next connecting way with the least curvature
-	minCurvWay := matchingWays[0]
-	minCurv := float64(100)
+	validWays := []Way{}
 	for _, mWay := range matchingWays {
-		nodes, err := mWay.Nodes()
-		if err != nil {
-			continue
-		}
 		isForward := NextIsForward(mWay, matchNode)
-		if !isForward && mWay.OneWay() { // skip if going wrong direction
+		if !isForward && mWay.OneWay() {
 			continue
 		}
-
-		var bearingNode Coordinates
-		if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
-			bearingNode = nodes.At(1)
-		} else {
-			bearingNode = nodes.At(nodes.Len() - 2)
-		}
-
-		mCurv, _, _ := GetCurvature(matchBearingNode.Latitude(), matchBearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), bearingNode.Latitude(), bearingNode.Longitude())
-		mCurv = math.Abs(mCurv)
-
-		if mCurv < minCurv {
-			minCurv = mCurv
-			minCurvWay = mWay
+		if nodes.Len() > 1 && isValidConnection(mWay, matchNode, matchBearingNode, curvatureThreshold) {
+			validWays = append(validWays, mWay)
 		}
 	}
 
-	nextIsForward := NextIsForward(minCurvWay, matchNode)
-	start, end := GetWayStartEnd(minCurvWay, nextIsForward)
-	return NextWayResult{
-		Way:           minCurvWay,
-		StartPosition: start,
-		EndPosition:   end,
-		IsForward:     nextIsForward,
-	}, nil
+	if len(validWays) > 0 {
+		bestWay := selectBestCandidate(validWays, matchNode, context)
+		nextIsForward := NextIsForward(bestWay, matchNode)
+		start, end := GetWayStartEnd(bestWay, nextIsForward)
+		return NextWayResult{
+			Way:           bestWay,
+			StartPosition: start,
+			EndPosition:   end,
+			IsForward:     nextIsForward,
+		}, nil
+	}
+
+	if len(matchingWays) > 0 {
+		nextIsForward := NextIsForward(matchingWays[0], matchNode)
+		start, end := GetWayStartEnd(matchingWays[0], nextIsForward)
+		return NextWayResult{
+			Way:           matchingWays[0],
+			StartPosition: start,
+			EndPosition:   end,
+			IsForward:     nextIsForward,
+		}, nil
+	}
+
+	return NextWayResult{StartPosition: matchNode}, nil
+}
+
+func isValidConnection(way Way, matchNode, bearingNode Coordinates, maxCurvature float64) bool {
+	nodes, err := way.Nodes()
+	if err != nil || nodes.Len() < 2 {
+		return false
+	}
+
+	var nextBearingNode Coordinates
+	if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
+		nextBearingNode = nodes.At(1)
+	} else {
+		nextBearingNode = nodes.At(nodes.Len() - 2)
+	}
+
+	curv, _, _ := GetCurvature(bearingNode.Latitude(), bearingNode.Longitude(), matchNode.Latitude(), matchNode.Longitude(), nextBearingNode.Latitude(), nextBearingNode.Longitude())
+	return math.Abs(curv) <= maxCurvature
+}
+
+func selectBestCandidate(candidates []Way, matchNode Coordinates, context RoadContext) Way {
+	if len(candidates) == 1 {
+		return candidates[0]
+	}
+
+	bestWay := candidates[0]
+	bestScore := float64(-1000)
+
+	for _, way := range candidates {
+		score := float64(getRoadPriority(way, context))
+
+		lanes := way.Lanes()
+		if lanes > 0 {
+			laneWeight := 2.0
+			if context == CONTEXT_FREEWAY {
+				laneWeight = 4.0
+			} else if context == CONTEXT_CITY {
+				laneWeight = 1.0
+			}
+			score += float64(lanes) * laneWeight
+		}
+
+		if score > bestScore {
+			bestScore = score
+			bestWay = way
+		}
+	}
+
+	return bestWay
 }
 
 func DistanceToEndOfWay(pos Position, way Way, isForward bool) (float64, error) {
