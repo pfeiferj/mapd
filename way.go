@@ -22,11 +22,11 @@ var LANE_COUNT_PRIORITY = map[uint8]int{
 	8: 110, // Major freeway
 	6: 100, // Freeway
 	5: 95,
-	4: 90,  // Major arterial
-	3: 70,  // Arterial
-	2: 50,  // Collector/local
-	1: 40,  // Local street
-	0: 30,  // Unknown
+	4: 90, // Major arterial
+	3: 70, // Arterial
+	2: 50, // Collector/local
+	1: 40, // Local street
+	0: 30, // Unknown
 }
 
 type OnWayResult struct {
@@ -85,10 +85,10 @@ func determineRoadContext(way Way, pos Position) RoadContext {
 
 	nameUpper := strings.ToUpper(name)
 	if lanes <= 3 && (strings.Contains(nameUpper, "STREET") ||
-					  strings.Contains(nameUpper, "AVENUE") ||
-					  strings.Contains(nameUpper, "BOULEVARD") ||
-					  strings.Contains(nameUpper, "ROAD") ||
-					  len(ref) == 0) {
+		strings.Contains(nameUpper, "AVENUE") ||
+		strings.Contains(nameUpper, "BOULEVARD") ||
+		strings.Contains(nameUpper, "ROAD") ||
+		len(ref) == 0) {
 		return CONTEXT_CITY
 	}
 
@@ -108,12 +108,12 @@ func isFreeway(way Way) bool {
 	refUpper := strings.ToUpper(ref)
 
 	if strings.Contains(nameUpper, "INTERSTATE") ||
-	   strings.Contains(nameUpper, "FREEWAY") ||
-	   strings.Contains(nameUpper, "EXPRESSWAY") ||
-	   strings.Contains(nameUpper, "PARKWAY") ||
-	   strings.HasPrefix(refUpper, "I-") ||
-	   strings.HasPrefix(refUpper, "I ") ||
-	   (lanes >= 4 && len(ref) > 0 && !strings.Contains(nameUpper, "STREET")) {
+		strings.Contains(nameUpper, "FREEWAY") ||
+		strings.Contains(nameUpper, "EXPRESSWAY") ||
+		strings.Contains(nameUpper, "PARKWAY") ||
+		strings.HasPrefix(refUpper, "I-") ||
+		strings.HasPrefix(refUpper, "I ") ||
+		(lanes >= 4 && len(ref) > 0 && !strings.Contains(nameUpper, "STREET")) {
 		return true
 	}
 
@@ -137,7 +137,7 @@ func getRoadPriority(way Way, context RoadContext) int {
 		}
 		nameUpper := strings.ToUpper(name)
 		if strings.Contains(nameUpper, "STREET") ||
-		   strings.Contains(nameUpper, "AVENUE") {
+			strings.Contains(nameUpper, "AVENUE") {
 			priority -= 40
 		}
 
@@ -399,8 +399,8 @@ func calculateWayScore(way Way, pos Position, currentWay Way, context RoadContex
 
 	if context == CONTEXT_FREEWAY {
 		if strings.Contains(nameUpper, "SERVICE") ||
-		   strings.Contains(nameUpper, "ACCESS") ||
-		   strings.Contains(nameUpper, "RAMP") {
+			strings.Contains(nameUpper, "ACCESS") ||
+			strings.Contains(nameUpper, "RAMP") {
 			score -= 30.0
 		}
 	} else if context == CONTEXT_CITY {
@@ -544,8 +544,8 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 			name, _ := mWay.Name()
 			nameUpper := strings.ToUpper(name)
 			if !strings.Contains(nameUpper, "SERVICE") &&
-			   !strings.Contains(nameUpper, "ACCESS") &&
-			   !(strings.Contains(nameUpper, "RAMP") && mWay.Lanes() < 2) {
+				!strings.Contains(nameUpper, "ACCESS") &&
+				!(strings.Contains(nameUpper, "RAMP") && mWay.Lanes() < 2) {
 				filteredWays = append(filteredWays, mWay)
 			}
 		}
