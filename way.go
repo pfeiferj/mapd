@@ -286,11 +286,6 @@ func selectBestWayAdvanced(possibleWays []Way, pos Position, currentWay Way, con
 	return bestWay
 }
 
-// Legacy selectBestWay function for backward compatibility
-func selectBestWay(possibleWays []Way, pos Position, currentWay Way, context RoadContext, currentStableDistance float64) Way {
-	return selectBestWayAdvanced(possibleWays, pos, currentWay, context, 5.0)
-}
-
 func getRoadPriority(way Way, context RoadContext) int {
 	lanes := way.Lanes()
 	name, _ := way.Name()
@@ -392,70 +387,9 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 	}
 
 	if isForward {
-		return nodes.At(0), nodes.At(nodes.Len() - 1)
+		return nodes.At(0), nodes.At(nodes.Len()-1)
 	}
-	return nodes.At(nodes.Len() - 1), nodes.At(0)
-}
-
-// distinguish between real turns and GPS noise
-func isLikelyRealTurn(currentWay Way, newWay Way, pos Position, lastPos Position) bool {
-	if !currentWay.HasNodes() || !newWay.HasNodes() {
-		return true
-	}
-
-	// If GPS moved significantly and bearing changed significantly, it's likely a real turn
-	if lastPos.Latitude != 0 && lastPos.Longitude != 0 {
-		distance := DistanceToPoint(pos.Latitude*TO_RADIANS, pos.Longitude*TO_RADIANS,
-			lastPos.Latitude*TO_RADIANS, lastPos.Longitude*TO_RADIANS)
-		bearingChange := math.Abs(pos.Bearing - lastPos.Bearing)
-
-		// Normalize bearing change to 0-180 degrees
-		if bearingChange > math.Pi {
-			bearingChange = 2*math.Pi - bearingChange
-		}
-		bearingChange = bearingChange * TO_DEGREES
-
-		if distance > 10 && bearingChange > 20 {
-			return true
-		}
-
-		// Very small movement with big bearing change = likely GPS noise
-		if distance < 5 && bearingChange > 45 {
-			return false
-		}
-	}
-
-	currentName, _ := currentWay.Name()
-	newName, _ := newWay.Name()
-	currentRef, _ := currentWay.Ref()
-	newRef, _ := newWay.Ref()
-
-	if len(currentName) > 0 && len(newName) > 0 && currentName != newName {
-		return true
-	}
-	if len(currentRef) > 0 && len(newRef) > 0 && currentRef != newRef {
-		return true
-	}
-
-	if math.Abs(currentWay.MaxSpeed()-newWay.MaxSpeed()) > 10 {
-		return true
-	}
-
-	return true
-}
-
-// Check if GPS position seems reasonable
-func isGPSQualityGood(pos Position, lastPos Position) bool {
-	if lastPos.Latitude == 0 || lastPos.Longitude == 0 {
-		return true // First reading
-	}
-
-	// Check for GPS jumps (likely poor quality)
-	distance := DistanceToPoint(pos.Latitude*TO_RADIANS, pos.Longitude*TO_RADIANS,
-		lastPos.Latitude*TO_RADIANS, lastPos.Longitude*TO_RADIANS)
-
-	// If GPS jumped more than 150m in 1 second, it's probably bad
-	return distance < 150
+	return nodes.At(nodes.Len()-1), nodes.At(0)
 }
 
 func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offline, pos Position, lastPos Position, gpsAccuracy float64) (CurrentWay, error) {

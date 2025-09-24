@@ -112,15 +112,11 @@ func hasRoadInfoChanged(oldWay, newWay Way) bool {
 	}
 
 	return !(oldWay.MinLat() == newWay.MinLat() &&
-		oldWay.MaxLat() == newWay.MaxLat() &&
-		oldWay.MinLon() == newWay.MinLon() &&
-		oldWay.MaxLon() == newWay.MaxLon())
+			 oldWay.MaxLat() == newWay.MaxLat() &&
+			 oldWay.MinLon() == newWay.MinLon() &&
+			 oldWay.MaxLon() == newWay.MaxLon())
 }
 
-// Calculate distance from current position to a specific coordinate
-func calculateDistanceToPoint(pos Position, lat float64, lon float64) float64 {
-	return DistanceToPoint(pos.Latitude*TO_RADIANS, pos.Longitude*TO_RADIANS, lat*TO_RADIANS, lon*TO_RADIANS)
-}
 
 func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLimit {
 	if len(state.NextWays) == 0 {
@@ -158,7 +154,8 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 			wayName := RoadName(nextWay.Way)
 			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
 				smoothedDistance := state.LastSpeedLimitDistance*0.8 + cumulativeDistance*0.2
-				if math.Abs(smoothedDistance-state.LastSpeedLimitDistance) < 50 {
+
+				if math.Abs(smoothedDistance - state.LastSpeedLimitDistance) < 50 {
 					result.Distance = smoothedDistance
 				}
 
