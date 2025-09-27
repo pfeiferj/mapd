@@ -387,9 +387,9 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 	}
 
 	if isForward {
-		return nodes.At(0), nodes.At(nodes.Len()-1)
+		return nodes.At(0), nodes.At(nodes.Len() - 1)
 	}
-	return nodes.At(nodes.Len()-1), nodes.At(0)
+	return nodes.At(nodes.Len() - 1), nodes.At(0)
 }
 
 func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offline, pos Position, lastPos Position, gpsAccuracy float64) (CurrentWay, error) {

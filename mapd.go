@@ -112,11 +112,10 @@ func hasRoadInfoChanged(oldWay, newWay Way) bool {
 	}
 
 	return !(oldWay.MinLat() == newWay.MinLat() &&
-			 oldWay.MaxLat() == newWay.MaxLat() &&
-			 oldWay.MinLon() == newWay.MinLon() &&
-			 oldWay.MaxLon() == newWay.MaxLon())
+		oldWay.MaxLat() == newWay.MaxLat() &&
+		oldWay.MinLon() == newWay.MinLon() &&
+		oldWay.MaxLon() == newWay.MaxLon())
 }
-
 
 func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLimit {
 	if len(state.NextWays) == 0 {
@@ -155,7 +154,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
 				smoothedDistance := state.LastSpeedLimitDistance*0.8 + cumulativeDistance*0.2
 
-				if math.Abs(smoothedDistance - state.LastSpeedLimitDistance) < 50 {
+				if math.Abs(smoothedDistance-state.LastSpeedLimitDistance) < 50 {
 					result.Distance = smoothedDistance
 				}
 
