@@ -33,7 +33,7 @@ func (g *GpsSubscriber) readGpsLocation() (location log.GpsLocationData, success
 
 	location, err = event.GpsLocation()
 	if err != nil {
-		panic(err)
+		return location, false
 	}
 	return location, true
 }
@@ -57,7 +57,7 @@ func (g *GpsSubscriber) readGpsLocationExternal() (location log.GpsLocationData,
 	if err != nil {
 		panic(err)
 	}
-	return location, false
+	return location, true
 }
 
 func getGpsSub() (gpsSub GpsSubscriber) {
