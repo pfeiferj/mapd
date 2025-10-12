@@ -19,7 +19,8 @@ var (
 
 // Params
 var (
-	LAST_GPS_POSITION_PERSIST = ParamPath("LastGPSPosition", false)
+	LAST_GPS_POSITION = ParamPath("LastGPSPosition", false)
+	MAPD_SETTINGS     = ParamPath("MapdSettings", false)
 )
 
 // exists returns whether the given file or directory exists

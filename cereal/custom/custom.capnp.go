@@ -6,6 +6,7 @@ import (
 	capnp "capnproto.org/go/capnp/v3"
 	text "capnproto.org/go/capnp/v3/encoding/text"
 	schemas "capnproto.org/go/capnp/v3/schemas"
+	math "math"
 )
 
 type CustomReserved0 capnp.Struct
@@ -658,134 +659,507 @@ func (f CustomReserved9_Future) Struct() (CustomReserved9, error) {
 	return CustomReserved9(p.Struct()), err
 }
 
-type CustomReserved10 capnp.Struct
+type MapdInputType uint16
 
-// CustomReserved10_TypeID is the unique identifier for the type CustomReserved10.
-const CustomReserved10_TypeID = 0xcb9fd56c7057593a
+// MapdInputType_TypeID is the unique identifier for the type MapdInputType.
+const MapdInputType_TypeID = 0x859f26628fc24358
 
-func NewCustomReserved10(s *capnp.Segment) (CustomReserved10, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 0})
-	return CustomReserved10(st), err
+// Values of MapdInputType.
+const (
+	MapdInputType_download              MapdInputType = 0
+	MapdInputType_setTargetLateralAccel MapdInputType = 1
+	MapdInputType_setSpeedLimitOffset   MapdInputType = 2
+	MapdInputType_setSpeedLimitControl  MapdInputType = 3
+	MapdInputType_setCurveSpeedControl  MapdInputType = 4
+	MapdInputType_setLogLevel           MapdInputType = 5
+)
+
+// String returns the enum's constant name.
+func (c MapdInputType) String() string {
+	switch c {
+	case MapdInputType_download:
+		return "download"
+	case MapdInputType_setTargetLateralAccel:
+		return "setTargetLateralAccel"
+	case MapdInputType_setSpeedLimitOffset:
+		return "setSpeedLimitOffset"
+	case MapdInputType_setSpeedLimitControl:
+		return "setSpeedLimitControl"
+	case MapdInputType_setCurveSpeedControl:
+		return "setCurveSpeedControl"
+	case MapdInputType_setLogLevel:
+		return "setLogLevel"
+
+	default:
+		return ""
+	}
 }
 
-func NewRootCustomReserved10(s *capnp.Segment) (CustomReserved10, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 0})
-	return CustomReserved10(st), err
+// MapdInputTypeFromString returns the enum value with a name,
+// or the zero value if there's no such value.
+func MapdInputTypeFromString(c string) MapdInputType {
+	switch c {
+	case "download":
+		return MapdInputType_download
+	case "setTargetLateralAccel":
+		return MapdInputType_setTargetLateralAccel
+	case "setSpeedLimitOffset":
+		return MapdInputType_setSpeedLimitOffset
+	case "setSpeedLimitControl":
+		return MapdInputType_setSpeedLimitControl
+	case "setCurveSpeedControl":
+		return MapdInputType_setCurveSpeedControl
+	case "setLogLevel":
+		return MapdInputType_setLogLevel
+
+	default:
+		return 0
+	}
 }
 
-func ReadRootCustomReserved10(msg *capnp.Message) (CustomReserved10, error) {
+type MapdInputType_List = capnp.EnumList[MapdInputType]
+
+func NewMapdInputType_List(s *capnp.Segment, sz int32) (MapdInputType_List, error) {
+	return capnp.NewEnumList[MapdInputType](s, sz)
+}
+
+type SpeedLimitOffsetType uint16
+
+// SpeedLimitOffsetType_TypeID is the unique identifier for the type SpeedLimitOffsetType.
+const SpeedLimitOffsetType_TypeID = 0xa5a3dfadcac04344
+
+// Values of SpeedLimitOffsetType.
+const (
+	SpeedLimitOffsetType_static  SpeedLimitOffsetType = 0
+	SpeedLimitOffsetType_percent SpeedLimitOffsetType = 1
+)
+
+// String returns the enum's constant name.
+func (c SpeedLimitOffsetType) String() string {
+	switch c {
+	case SpeedLimitOffsetType_static:
+		return "static"
+	case SpeedLimitOffsetType_percent:
+		return "percent"
+
+	default:
+		return ""
+	}
+}
+
+// SpeedLimitOffsetTypeFromString returns the enum value with a name,
+// or the zero value if there's no such value.
+func SpeedLimitOffsetTypeFromString(c string) SpeedLimitOffsetType {
+	switch c {
+	case "static":
+		return SpeedLimitOffsetType_static
+	case "percent":
+		return SpeedLimitOffsetType_percent
+
+	default:
+		return 0
+	}
+}
+
+type SpeedLimitOffsetType_List = capnp.EnumList[SpeedLimitOffsetType]
+
+func NewSpeedLimitOffsetType_List(s *capnp.Segment, sz int32) (SpeedLimitOffsetType_List, error) {
+	return capnp.NewEnumList[SpeedLimitOffsetType](s, sz)
+}
+
+type MapdIn capnp.Struct
+
+// MapdIn_TypeID is the unique identifier for the type MapdIn.
+const MapdIn_TypeID = 0xcb9fd56c7057593a
+
+func NewMapdIn(s *capnp.Segment) (MapdIn, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 0})
+	return MapdIn(st), err
+}
+
+func NewRootMapdIn(s *capnp.Segment) (MapdIn, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 0})
+	return MapdIn(st), err
+}
+
+func ReadRootMapdIn(msg *capnp.Message) (MapdIn, error) {
 	root, err := msg.Root()
-	return CustomReserved10(root.Struct()), err
+	return MapdIn(root.Struct()), err
 }
 
-func (s CustomReserved10) String() string {
+func (s MapdIn) String() string {
 	str, _ := text.Marshal(0xcb9fd56c7057593a, capnp.Struct(s))
 	return str
 }
 
-func (s CustomReserved10) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+func (s MapdIn) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
 	return capnp.Struct(s).EncodeAsPtr(seg)
 }
 
-func (CustomReserved10) DecodeFromPtr(p capnp.Ptr) CustomReserved10 {
-	return CustomReserved10(capnp.Struct{}.DecodeFromPtr(p))
+func (MapdIn) DecodeFromPtr(p capnp.Ptr) MapdIn {
+	return MapdIn(capnp.Struct{}.DecodeFromPtr(p))
 }
 
-func (s CustomReserved10) ToPtr() capnp.Ptr {
+func (s MapdIn) ToPtr() capnp.Ptr {
 	return capnp.Struct(s).ToPtr()
 }
-func (s CustomReserved10) IsValid() bool {
+func (s MapdIn) IsValid() bool {
 	return capnp.Struct(s).IsValid()
 }
 
-func (s CustomReserved10) Message() *capnp.Message {
+func (s MapdIn) Message() *capnp.Message {
 	return capnp.Struct(s).Message()
 }
 
-func (s CustomReserved10) Segment() *capnp.Segment {
+func (s MapdIn) Segment() *capnp.Segment {
 	return capnp.Struct(s).Segment()
 }
-
-// CustomReserved10_List is a list of CustomReserved10.
-type CustomReserved10_List = capnp.StructList[CustomReserved10]
-
-// NewCustomReserved10 creates a new list of CustomReserved10.
-func NewCustomReserved10_List(s *capnp.Segment, sz int32) (CustomReserved10_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 0, PointerCount: 0}, sz)
-	return capnp.StructList[CustomReserved10](l), err
+func (s MapdIn) Type() MapdInputType {
+	return MapdInputType(capnp.Struct(s).Uint16(0))
 }
 
-// CustomReserved10_Future is a wrapper for a CustomReserved10 promised by a client call.
-type CustomReserved10_Future struct{ *capnp.Future }
+func (s MapdIn) SetType(v MapdInputType) {
+	capnp.Struct(s).SetUint16(0, uint16(v))
+}
 
-func (f CustomReserved10_Future) Struct() (CustomReserved10, error) {
+// MapdIn_List is a list of MapdIn.
+type MapdIn_List = capnp.StructList[MapdIn]
+
+// NewMapdIn creates a new list of MapdIn.
+func NewMapdIn_List(s *capnp.Segment, sz int32) (MapdIn_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 8, PointerCount: 0}, sz)
+	return capnp.StructList[MapdIn](l), err
+}
+
+// MapdIn_Future is a wrapper for a MapdIn promised by a client call.
+type MapdIn_Future struct{ *capnp.Future }
+
+func (f MapdIn_Future) Struct() (MapdIn, error) {
 	p, err := f.Future.Ptr()
-	return CustomReserved10(p.Struct()), err
+	return MapdIn(p.Struct()), err
 }
 
-type CustomReserved11 capnp.Struct
+type RoadContext uint16
 
-// CustomReserved11_TypeID is the unique identifier for the type CustomReserved11.
-const CustomReserved11_TypeID = 0xc2243c65e0340384
+// RoadContext_TypeID is the unique identifier for the type RoadContext.
+const RoadContext_TypeID = 0xabefa88b9563dbae
 
-func NewCustomReserved11(s *capnp.Segment) (CustomReserved11, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 0})
-	return CustomReserved11(st), err
+// Values of RoadContext.
+const (
+	RoadContext_freeway RoadContext = 0
+	RoadContext_city    RoadContext = 1
+	RoadContext_unknown RoadContext = 2
+)
+
+// String returns the enum's constant name.
+func (c RoadContext) String() string {
+	switch c {
+	case RoadContext_freeway:
+		return "freeway"
+	case RoadContext_city:
+		return "city"
+	case RoadContext_unknown:
+		return "unknown"
+
+	default:
+		return ""
+	}
 }
 
-func NewRootCustomReserved11(s *capnp.Segment) (CustomReserved11, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 0})
-	return CustomReserved11(st), err
+// RoadContextFromString returns the enum value with a name,
+// or the zero value if there's no such value.
+func RoadContextFromString(c string) RoadContext {
+	switch c {
+	case "freeway":
+		return RoadContext_freeway
+	case "city":
+		return RoadContext_city
+	case "unknown":
+		return RoadContext_unknown
+
+	default:
+		return 0
+	}
 }
 
-func ReadRootCustomReserved11(msg *capnp.Message) (CustomReserved11, error) {
+type RoadContext_List = capnp.EnumList[RoadContext]
+
+func NewRoadContext_List(s *capnp.Segment, sz int32) (RoadContext_List, error) {
+	return capnp.NewEnumList[RoadContext](s, sz)
+}
+
+type MapdOut capnp.Struct
+
+// MapdOut_TypeID is the unique identifier for the type MapdOut.
+const MapdOut_TypeID = 0xc2243c65e0340384
+
+func NewMapdOut(s *capnp.Segment) (MapdOut, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 48, PointerCount: 5})
+	return MapdOut(st), err
+}
+
+func NewRootMapdOut(s *capnp.Segment) (MapdOut, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 48, PointerCount: 5})
+	return MapdOut(st), err
+}
+
+func ReadRootMapdOut(msg *capnp.Message) (MapdOut, error) {
 	root, err := msg.Root()
-	return CustomReserved11(root.Struct()), err
+	return MapdOut(root.Struct()), err
 }
 
-func (s CustomReserved11) String() string {
+func (s MapdOut) String() string {
 	str, _ := text.Marshal(0xc2243c65e0340384, capnp.Struct(s))
 	return str
 }
 
-func (s CustomReserved11) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+func (s MapdOut) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
 	return capnp.Struct(s).EncodeAsPtr(seg)
 }
 
-func (CustomReserved11) DecodeFromPtr(p capnp.Ptr) CustomReserved11 {
-	return CustomReserved11(capnp.Struct{}.DecodeFromPtr(p))
+func (MapdOut) DecodeFromPtr(p capnp.Ptr) MapdOut {
+	return MapdOut(capnp.Struct{}.DecodeFromPtr(p))
 }
 
-func (s CustomReserved11) ToPtr() capnp.Ptr {
+func (s MapdOut) ToPtr() capnp.Ptr {
 	return capnp.Struct(s).ToPtr()
 }
-func (s CustomReserved11) IsValid() bool {
+func (s MapdOut) IsValid() bool {
 	return capnp.Struct(s).IsValid()
 }
 
-func (s CustomReserved11) Message() *capnp.Message {
+func (s MapdOut) Message() *capnp.Message {
 	return capnp.Struct(s).Message()
 }
 
-func (s CustomReserved11) Segment() *capnp.Segment {
+func (s MapdOut) Segment() *capnp.Segment {
 	return capnp.Struct(s).Segment()
 }
-
-// CustomReserved11_List is a list of CustomReserved11.
-type CustomReserved11_List = capnp.StructList[CustomReserved11]
-
-// NewCustomReserved11 creates a new list of CustomReserved11.
-func NewCustomReserved11_List(s *capnp.Segment, sz int32) (CustomReserved11_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 0, PointerCount: 0}, sz)
-	return capnp.StructList[CustomReserved11](l), err
+func (s MapdOut) WayName() (string, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return p.Text(), err
 }
 
-// CustomReserved11_Future is a wrapper for a CustomReserved11 promised by a client call.
-type CustomReserved11_Future struct{ *capnp.Future }
+func (s MapdOut) HasWayName() bool {
+	return capnp.Struct(s).HasPtr(0)
+}
 
-func (f CustomReserved11_Future) Struct() (CustomReserved11, error) {
+func (s MapdOut) WayNameBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return p.TextBytes(), err
+}
+
+func (s MapdOut) SetWayName(v string) error {
+	return capnp.Struct(s).SetText(0, v)
+}
+
+func (s MapdOut) WayRef() (string, error) {
+	p, err := capnp.Struct(s).Ptr(1)
+	return p.Text(), err
+}
+
+func (s MapdOut) HasWayRef() bool {
+	return capnp.Struct(s).HasPtr(1)
+}
+
+func (s MapdOut) WayRefBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(1)
+	return p.TextBytes(), err
+}
+
+func (s MapdOut) SetWayRef(v string) error {
+	return capnp.Struct(s).SetText(1, v)
+}
+
+func (s MapdOut) RoadName() (string, error) {
+	p, err := capnp.Struct(s).Ptr(2)
+	return p.Text(), err
+}
+
+func (s MapdOut) HasRoadName() bool {
+	return capnp.Struct(s).HasPtr(2)
+}
+
+func (s MapdOut) RoadNameBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(2)
+	return p.TextBytes(), err
+}
+
+func (s MapdOut) SetRoadName(v string) error {
+	return capnp.Struct(s).SetText(2, v)
+}
+
+func (s MapdOut) SpeedLimit() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(0))
+}
+
+func (s MapdOut) SetSpeedLimit(v float32) {
+	capnp.Struct(s).SetUint32(0, math.Float32bits(v))
+}
+
+func (s MapdOut) NextSpeedLimit() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(4))
+}
+
+func (s MapdOut) SetNextSpeedLimit(v float32) {
+	capnp.Struct(s).SetUint32(4, math.Float32bits(v))
+}
+
+func (s MapdOut) NextSpeedLimitDistance() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(8))
+}
+
+func (s MapdOut) SetNextSpeedLimitDistance(v float32) {
+	capnp.Struct(s).SetUint32(8, math.Float32bits(v))
+}
+
+func (s MapdOut) Hazard() (string, error) {
+	p, err := capnp.Struct(s).Ptr(3)
+	return p.Text(), err
+}
+
+func (s MapdOut) HasHazard() bool {
+	return capnp.Struct(s).HasPtr(3)
+}
+
+func (s MapdOut) HazardBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(3)
+	return p.TextBytes(), err
+}
+
+func (s MapdOut) SetHazard(v string) error {
+	return capnp.Struct(s).SetText(3, v)
+}
+
+func (s MapdOut) NextHazard() (string, error) {
+	p, err := capnp.Struct(s).Ptr(4)
+	return p.Text(), err
+}
+
+func (s MapdOut) HasNextHazard() bool {
+	return capnp.Struct(s).HasPtr(4)
+}
+
+func (s MapdOut) NextHazardBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(4)
+	return p.TextBytes(), err
+}
+
+func (s MapdOut) SetNextHazard(v string) error {
+	return capnp.Struct(s).SetText(4, v)
+}
+
+func (s MapdOut) NextHazardDistance() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(12))
+}
+
+func (s MapdOut) SetNextHazardDistance(v float32) {
+	capnp.Struct(s).SetUint32(12, math.Float32bits(v))
+}
+
+func (s MapdOut) AdvisorySpeed() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(16))
+}
+
+func (s MapdOut) SetAdvisorySpeed(v float32) {
+	capnp.Struct(s).SetUint32(16, math.Float32bits(v))
+}
+
+func (s MapdOut) NextAdvisorySpeed() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(20))
+}
+
+func (s MapdOut) SetNextAdvisorySpeed(v float32) {
+	capnp.Struct(s).SetUint32(20, math.Float32bits(v))
+}
+
+func (s MapdOut) NextAdvisorySpeedDistance() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(24))
+}
+
+func (s MapdOut) SetNextAdvisorySpeedDistance(v float32) {
+	capnp.Struct(s).SetUint32(24, math.Float32bits(v))
+}
+
+func (s MapdOut) OneWay() bool {
+	return capnp.Struct(s).Bit(224)
+}
+
+func (s MapdOut) SetOneWay(v bool) {
+	capnp.Struct(s).SetBit(224, v)
+}
+
+func (s MapdOut) Lanes() uint8 {
+	return capnp.Struct(s).Uint8(29)
+}
+
+func (s MapdOut) SetLanes(v uint8) {
+	capnp.Struct(s).SetUint8(29, v)
+}
+
+func (s MapdOut) TileLoaded() bool {
+	return capnp.Struct(s).Bit(225)
+}
+
+func (s MapdOut) SetTileLoaded(v bool) {
+	capnp.Struct(s).SetBit(225, v)
+}
+
+func (s MapdOut) SpeedLimitOffset() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(32))
+}
+
+func (s MapdOut) SetSpeedLimitOffset(v float32) {
+	capnp.Struct(s).SetUint32(32, math.Float32bits(v))
+}
+
+func (s MapdOut) SuggestedSpeed() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(36))
+}
+
+func (s MapdOut) SetSuggestedSpeed(v float32) {
+	capnp.Struct(s).SetUint32(36, math.Float32bits(v))
+}
+
+func (s MapdOut) EstimatedRoadWidth() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(40))
+}
+
+func (s MapdOut) SetEstimatedRoadWidth(v float32) {
+	capnp.Struct(s).SetUint32(40, math.Float32bits(v))
+}
+
+func (s MapdOut) RoadContext() RoadContext {
+	return RoadContext(capnp.Struct(s).Uint16(30))
+}
+
+func (s MapdOut) SetRoadContext(v RoadContext) {
+	capnp.Struct(s).SetUint16(30, uint16(v))
+}
+
+func (s MapdOut) DistanceFromWayCenter() float32 {
+	return math.Float32frombits(capnp.Struct(s).Uint32(44))
+}
+
+func (s MapdOut) SetDistanceFromWayCenter(v float32) {
+	capnp.Struct(s).SetUint32(44, math.Float32bits(v))
+}
+
+// MapdOut_List is a list of MapdOut.
+type MapdOut_List = capnp.StructList[MapdOut]
+
+// NewMapdOut creates a new list of MapdOut.
+func NewMapdOut_List(s *capnp.Segment, sz int32) (MapdOut_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 48, PointerCount: 5}, sz)
+	return capnp.StructList[MapdOut](l), err
+}
+
+// MapdOut_Future is a wrapper for a MapdOut promised by a client call.
+type MapdOut_Future struct{ *capnp.Future }
+
+func (f MapdOut_Future) Struct() (MapdOut, error) {
 	p, err := f.Future.Ptr()
-	return CustomReserved11(p.Struct()), err
+	return MapdOut(p.Struct()), err
 }
 
 type CustomReserved12 capnp.Struct
@@ -1308,38 +1682,95 @@ func (f CustomReserved19_Future) Struct() (CustomReserved19, error) {
 	return CustomReserved19(p.Struct()), err
 }
 
-const schema_b526ba661d550a59 = "x\xda2\x98\xc5\xe8\xc0b\xc8\xeb\xce\xc1\xc0\x14\x98\xc0" +
-	"\xca\xf6_0;\xf2Q^\xc9\xba\x06\x06Ai\xc6\xff" +
-	"\x91\\\xa1\xb2i\xbb\xd4\xb62\xb0\xb030\x18s\xb2" +
-	"D1\x0a\xcb\xb2\xb030\xff_\xff\xc5\xc72\xea\xc3" +
-	"\xa1F,\xaa~2G1\x0a\xf3\x82U\x09maL" +
-	"O?qv\x0e\x16U/\x99\x93\x18\x85\xff2\x83T" +
-	"\xe9\xde\x96gva\xcfX\x88E\xd5M\x90Yo\xc1" +
-	"\xaar\x98\x8d\x1d~$\xb1-\xc6\xa2\xea$\xc8\xac\xbb" +
-	"`UM_\xbf*\x1b\xbf\xfe\xb8\x04\x8b\xaa\x9d U" +
-	"g\xc1\xaaB\x97\x04\xde\xd4);\xbb\x14\x8b\xaa\x95 " +
-	"\x1b\xf7\x82U\xc5n}n\xd8\xff\xf7\xfe:,\xaaf" +
-	"\x82T\xad\x05\xab\xb2\xbf\xff\xaa\xd6W!|\x03\x16U" +
-	"\x9d \x1b\xe7\x82U\x9d`\xf4Q\xccL\xce\xdb\x81E" +
-	"U%\xc8\xac^\xb0\xaa\x8c=\x93\xa7\x04[\xbb\xec\xc5" +
-	"\xa2*\x13dV-XU\x0b\xb3\xc9\x83T\x1b\x95C" +
-	"XTE\x82T\xe5\x82U\xbd\xdflw\xd1\xc26\xeb" +
-	"\x04\x16U\x9e U\xb1`UV\x91\xe1\x059W\xe7" +
-	"\x9f\xc6\xa2\xca\x12\xa4\xca\x17\xac\xeaB\xd3\x82\xf4\xdf\xb7" +
-	"\xa6\x9d\xc5\xa2J\x13\xa4\xca\x16\xac\xca\xd4\xc7\xa5yF" +
-	"\xf8\xb4[XTI\x82\xfc\xa8\x0bVu(o?w" +
-	"\xd8\x91\x98\xcf\xd8\xd2\x17H\x95,X\x95\xe4\xdc\xb9\x9e" +
-	"\x9co\xc4\xbe`K_L\xa0\xf4\x05V\xb5\x98\xa5\xe0" +
-	"\xafuK\xefOl\xe9\x0b\xa4\xea/\x13H\x95\xe0\xb6" +
-	"\xf2\x8e\xb7\x8eI\x7f\xb0\xa5/\xa6$F\xe1\xb7L\xec" +
-	"\x0c\xfa\xff\x93S\x8bR\x13s\xf4\x93YJ\x8bK\xf2" +
-	"s\xf5\x93\xc1\x94^rbA^\x81\x953\x98\x13\x94" +
-	"Z\x9cZT\x96\xca\x9cb\x12\xc0\xc8H\x8az\x03\x92" +
-	"\xd4\xb3\xa7\x18\x1a\x91h\x81%\xa9\x16\x98\x93\xaa\xc1\x92" +
-	"D\x17\x99\x92\xa8\xde\x90T\x07\x91\x1a\x07$\xfb\xd8\x94" +
-	"T\x0d${\xc1\x82T\x0d$\xa7#c\x12\x03\x89T" +
-	"\xf5\xa4\xa6S\x0b\x12\xd5\x9b\x91\xeaa\x90\x06@\x00\x00" +
-	"\x00\xff\xffL\xf0@c"
+const schema_b526ba661d550a59 = "x\xda\x94\x96]l\x13W\x16\xc7\xcf\xb93\xb6\xe3|" +
+	"`\x9c\x99]\xed.\x8b\x02\xda]\xc4\"v!\x04\x96" +
+	"\x10\xc8\x86\xc4V\x05\xc84\x09\x03M\x13\xd1\x87\xb1\xe7" +
+	"\xc6qq\xc6\xd6x\x92`T\x14\xa0 \x91\xb6\x08h" +
+	"\x81\x96\x8a\x88R\x88\x04\xadB)-\x15 PK\xc4" +
+	"\x03m\x15\x09*\xf5\x01P\x05\xf4\xa5\xea\x07\xa2UA" +
+	"j\xd5\xa2\xa9\xceM\x9c\x00\x19\x09\xe6\xc9\xf2\xef\xfe\xee" +
+	"\xff\x9e9\xe39\xe3\xb9m\xd2R\xb9\xb2\xac1\x08\xac" +
+	"9\xed\xf3;\xe1u\xad_\x9b\xf6\xf1M\x10\x9e\x82N" +
+	"k\xf1\x9a\xa9\xedgg\x9c\x029\x00P\xb5CnC" +
+	"\xe5\x90\x1c\x00\xc9y\xefnlQ\xdb\x8fC\x9b]\xac" +
+	"\x8dd\xed\x16\xd6\xb3\x91\xa1\x9d\xf1\x19\x07\xb7Ax\x0a" +
+	"\x1b\xb7\x00\xab:\xe5\x15\xa8l&]\xd9(\xbf\x0e\xe8" +
+	"\x94\x7f\x88\xc9\xe4\xa5\xe1\x03.y\xdf\xcaqT\xee\x8b" +
+	"\xbc\xff\\\xaf\x90\xa2\x81\x8eC.\xd6U:\xf5\xb6\xb0" +
+	"\xd2R\xd5\xd2_\xe2\xfe\xc3.\xd6\xa7\x94\xf5\x95\xb0\xb6" +
+	"\xdc\xbb\xf7\x8f\xaa\xef\x7f:\xe2b\x9d!kXX\xd1" +
+	"\xc8'\x9f\x0d\xde8<0\xe1\x0a\x8e\xc9[P9/" +
+	"\xae\xe0\x8c\xbc\x10\xd0Ys\xa4\xf9\xea\xec\xee\xe1\x01\x97" +
+	"\xbc\xf3T\xdb\x15\x91w\xfczb\xef\xcbG\xef\xbc;" +
+	"!oP\xae\x19\xcfk\x04t\x9e;\xf5M\xe5\xce\xfb" +
+	"7\x8e\xbb\xe4\x0dS\xde-\x91Ww\xe3\xbb\x8d+\xa7" +
+	"\xb5\x9cp=5^8\xf5\x12\xc6\xa6\xa7\x12\xe6i\x17" +
+	"k\x90\xb2.\x08\xab\xe3\xdck{\xb4\xc5\xd1\xf3.V" +
+	"?e\xbd/\xac\xad\xd2\xfc\x9b|\xc9?\x87\xa0y\x0a" +
+	"\xfa\xc75\x9fo\xe4\x17\xf27T\xfa\xc5\x96\xfdrR" +
+	"\x06t\xee|\xf0\xff+\xd5\xb5\xcf_r\x09\xed\x0b\xc6" +
+	"Q\xe9\x0fRhMkK6\xfd\xe5\xc1\xcf)\xf4Q" +
+	"-\x1f,G\xa5/H\x9d\xd9\x16\xac\x03t.oy" +
+	"+\xf9\xdb\xb5}\xc3.\x91\x03\x14yFD.\x88E" +
+	"_|\xa3e\xdf5\x17ko\xb0\x0d\x95c\xc2\x1a2" +
+	"?.y\xe6\xe2\xda\x9f]\xacmd\xed\x17\xd6_\xfb" +
+	"\xfb\x97\x07\x7f\xf8\xf3]\x17\xab\x8b\xac>a\x1d\x96\xb3" +
+	"\xf7\x17o\xdd\xf1\xab\x8b\xc5\xc9\xca\x0b+\xfcQ\xcf\xf6" +
+	"\xdb\xf5\xf1\xdf]\xac5T}*\x18\x809N\x82[" +
+	"\\O\xcfI\xc8]9;\xd39'!>\xfe\x9b\xd0" +
+	"\xb3f\xb6&\"\xbe\xac\xe29nus\xc9\x98\xdf\x84" +
+	"\xe8\xc5\x9f\xfb8\x7f\xa5\x9e5\x96\x9b\xd9.{u>" +
+	"\xcb\x01\x9a\x10\x9b\xff\x82\x0c \\\xbf\x02\x001\\{" +
+	"\x12\x00Y\xb8\xf6m\x00\x94\xc2\xb5\xef\x00\xa0<\xf2\xe1" +
+	"\x0b\xd7\xc6\x01\x1c#\xd3c\xa63\xba\x01\x00N\x8e\xdb" +
+	"\xabu+\xc9\xd1\x8e\xe96\xb7\xf4tE}\"\xc1\xd3" +
+	"\xc4\xb5,\xe7\x06\xc6R\x9d)\xbb\xb1\xbd=\x90\xe3\xf6" +
+	"#4\x921C\xb6\x95\x11r\xa4\xcb\xea\xe6(\x16\x1f" +
+	"\xc4\xb1L2\xc6!\xd0\xcd\xd3O\xde\x82\x80Q9\xcf" +
+	"c\xcf\x16y\xf2\x03F\xe5B\xaf\x1b\x1e:\xc1\xe7\xb2" +
+	"A\\z\xa1Y\xd4U\xba9to\x8a\xc4\xbd\x09\xd7" +
+	"\x88{\x13l\x00\xa8\xcb\xd9\xba\x9dJ\xf4f\xb9\x95\xe0" +
+	"\xa6\xed\xe5:\x17<X\x85\xe4\xe2\xaf\xca\xe8F\xa4." +
+	"c\xda|\xbdM\x87\x97\x8a\xc3\xa76\x88\xc3\xff4K" +
+	"\xfc0\xca\x1a\x00z\xdb-\xce{\xf4|(\x91\xb2\xf3" +
+	"\xbd]\xe6:3\xd3cz\xa9\xa4\xd2k\x03\xbd>\x06" +
+	"\x9e\xef\xd0c{C\xcfM\xa3\xd4%\xfa\xd2$\xc9\x00" +
+	"2\x02(\xd3Y\x03\x80\xf6w&\xa16\x931\x0c#" +
+	"\xaaH\xfc_\xac\x06@\x9bF|6q\xc6T\xea\xa5" +
+	"\xf2o\xb6\x02@\x9bI|>c\x88\x92\x8a\x12\x80R" +
+	"\xc9\xda\x00\xb4\xb9\x84\x97\x90.\xa3\x8a2\x80\xb2\x88m" +
+	"\x00\xd0\xaa\x89G\x89\xfb\x98\x8a>\x00\xa5\x9e\x9d\x05\xd0" +
+	"\xa2\xc4\x9b\x88\xfb%\x15\xfd\x00\xcaJq\xec2\xe2\xab" +
+	"\x89\x07d\x15i\xb46\x8b\xfc&\xe2k\x89\x17I*" +
+	"\x16\x01(\xad\xecM\x00m-\xf1\x0e\xe2AY\xc5 " +
+	"\x80\xc2\x99\x05\xa0\x19\xc4\xb3\xc4\x8b}*\x16\x03(\x9d" +
+	"\xecU\x00-K\xfc\x05\xe2%~\x15K\x00\x94<\xfb" +
+	"\x02@\xdbD\xfc\x15\xe2\xa57U,\x05P\xfaD=" +
+	"[\x89\xef\"^6U\xc52\x00e\x07\x9b\x07\xa0m" +
+	"'\xbe\x87\xf8\xa4[*N\x02Pv\x8b:w\x11?" +
+	"@<T\xa4b\x08@\xd9\xcf^\x02\xd0\x0e\x10?J" +
+	"|rP\xc5\xc9\x00\xca\x80\xe8\xcf\x11\xe2'\x88\x87\x8b" +
+	"U\x0c\x03(\x83\xe2\xbaN\x10?G\xbc<\xa4b9" +
+	"\xbd|Y\x1c@;M\xfc\"q\xa5DE\x05@\xb9" +
+	"\xc0N\x02h\x17\x89_f\x0c{{\xf4\xfc\xd3z'" +
+	"\xc7R`X\x0aX\xd7\xa3\xe7W\xf1\xf6\xc2W\xc7\xca" +
+	"\xe8\x06\xad\x03\xc0\x18\xcb\x8d>\xc1 \xa5l,\x06\x86" +
+	"\xc5\x80\x8e\xc9\xd7\x8b\x91\x07u#\x0f\xf7\x84\x05\x1c\xe1" +
+	"\xd1\x14=\xd6f\x82\x17\x84\xba\x0e}\x83n\x19c\xe9" +
+	"\xe4/\xd37\xe8 \xb9@\xb4\x8ch\x8a\xf6K\xe3\x01" +
+	"\x8ent\xa7r\x19+\x0f\x15#3\xf7\xc1\x93\xeb\x8d" +
+	"\xee\x14\xd2\xe2H\x09\x13\xd6Xam47\x81\xe3\x85" +
+	"eL\xde\xa2\xe7\x11\x81!\x02V\xa4u\x93\xe7\xd0\x0f" +
+	"\x0c\xfd\x80\x8e\x9dJ\xf3\x18\xbd\x1b$n\x14\x94\xb1\xce" +
+	"`a\xb8\x01\x8c\x9d\x98\xebJ&y\xce\xa6\x06=\\" +
+	"&\xcf\xd9\xa9N\xdd\xe6h\xd0PjI\x19\x92\xdd1" +
+	"\xb6H\xfd\x8fdL\x1b\x02|\xbd\x8d\xa1\xf1\xff]\x80" +
+	"\x18\x02t\x8c\xd4h7\x9f\xb22\x9d-z>R\xc1" +
+	"M\x9b[c\xfb\xbd\x0c\x86\xea'\x19\x0c\xcb\xd1\xa4\xb9" +
+	" \x17\xe6B\xb8l\x16@s\x91\x84\xcd*\xc3\x90\x9d" +
+	"\xcfr\x0c\x8d\xff_\x1e\xad\xd2K\x15U\x1e\xe7\x9fW" +
+	"\xdf\xeb+\xb3\xda\xa3\xff?\xaf\xf3\x986\xfc\x11\x00\x00" +
+	"\xff\xff*P\xa4\x8c"
 
 func RegisterSchema(reg *schemas.Registry) {
 	reg.Register(&schemas.Schema{
@@ -1347,11 +1778,14 @@ func RegisterSchema(reg *schemas.Registry) {
 		Nodes: []uint64{
 			0x80ae746ee2596b11,
 			0x81c2f05a394cf4af,
+			0x859f26628fc24358,
 			0x9ccdc8676701b412,
 			0xa1680744031fdb2d,
 			0xa30662f84033036c,
 			0xa4f1eb3323f5f582,
+			0xa5a3dfadcac04344,
 			0xa5cd762cd951a455,
+			0xabefa88b9563dbae,
 			0xaedffd8f31e7b55d,
 			0xb057204d7deadf3f,
 			0xb86e6369214c01c8,

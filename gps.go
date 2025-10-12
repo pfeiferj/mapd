@@ -1,19 +1,18 @@
 package main
 
 import (
-	"github.com/pfeiferj/gomsgq"
-	"time"
 	"log/slog"
+	"time"
+
+	"github.com/pfeiferj/gomsgq"
 
 	"capnproto.org/go/capnp/v3"
 	"pfeifer.dev/mapd/cereal/log"
 )
 
-
 type GpsSubscriber struct {
-  Sub gomsgq.MsgqSubscriber
-	Read func()(location log.GpsLocationData, success bool)
-
+	Sub  gomsgq.MsgqSubscriber
+	Read func() (location log.GpsLocationData, success bool)
 }
 
 func (g *GpsSubscriber) readGpsLocation() (location log.GpsLocationData, success bool) {
@@ -80,27 +79,27 @@ func getGpsSub() (gpsSub GpsSubscriber) {
 	for {
 		time.Sleep(LOOP_DELAY)
 
-		if(sub.Ready()) {
+		if sub.Ready() {
 			err, err2 := subExt.Msgq.Close()
-			if (err != nil) {
+			if err != nil {
 				panic(err)
 			}
-			if err2 != nil { 
+			if err2 != nil {
 				panic(err2)
 			}
-			slog.Info("Using gpsLocation");
+			slog.Info("Using gpsLocation")
 			gpsSub.Sub = sub
 			gpsSub.Read = gpsSub.readGpsLocation
 			return gpsSub
 		}
 
-		if(subExt.Ready()) {
-			slog.Info("Using gpsLocationExternal");
+		if subExt.Ready() {
+			slog.Info("Using gpsLocationExternal")
 			err, err2 := sub.Msgq.Close()
-			if (err != nil) {
+			if err != nil {
 				panic(err)
 			}
-			if err2 != nil { 
+			if err2 != nil {
 				panic(err2)
 			}
 			gpsSub.Sub = subExt

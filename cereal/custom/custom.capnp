@@ -40,10 +40,51 @@ struct CustomReserved8 @0xf416ec09499d9d19 {
 struct CustomReserved9 @0xa1680744031fdb2d {
 }
 
-struct CustomReserved10 @0xcb9fd56c7057593a {
+enum MapdInputType {
+    download @0;
+    setTargetLateralAccel @1;
+    setSpeedLimitOffset @2;
+    setSpeedLimitControl @3;
+    setCurveSpeedControl @4;
+    setLogLevel @5;
 }
 
-struct CustomReserved11 @0xc2243c65e0340384 {
+enum SpeedLimitOffsetType {
+  static @0;
+  percent @1;
+}
+
+struct MapdIn @0xcb9fd56c7057593a {
+  type @0 :MapdInputType;
+}
+
+enum RoadContext {
+  freeway @0;
+  city @1;
+  unknown @2;
+}
+
+struct MapdOut @0xc2243c65e0340384 {
+  wayName @0 :Text;
+  wayRef @1 :Text;
+  roadName @2 :Text;
+  speedLimit @3 :Float32;
+  nextSpeedLimit @4 :Float32;
+  nextSpeedLimitDistance @5 :Float32;
+  hazard @6 :Text;
+  nextHazard @7 :Text;
+  nextHazardDistance @8 :Float32;
+  advisorySpeed @9 :Float32;
+  nextAdvisorySpeed @10 :Float32;
+  nextAdvisorySpeedDistance @11 :Float32;
+  oneWay @12 :Bool;
+  lanes @13 :UInt8;
+  tileLoaded @14 :Bool;
+  speedLimitOffset @15 :Float32;
+  suggestedSpeed @16 :Float32;
+  estimatedRoadWidth @17 :Float32;
+  roadContext @18 :RoadContext;
+  distanceFromWayCenter @19 :Float32;
 }
 
 struct CustomReserved12 @0x9ccdc8676701b412 {

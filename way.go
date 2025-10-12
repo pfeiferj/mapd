@@ -82,6 +82,7 @@ type CurrentWay struct {
 	ConfidenceCounter int
 	LastChangeTime    time.Time
 	StableDistance    float64
+	Context           RoadContext
 }
 
 type NextWayResult struct {
@@ -89,6 +90,14 @@ type NextWayResult struct {
 	IsForward     bool
 	StartPosition Coordinates
 	EndPosition   Coordinates
+}
+
+func estimateRoadWidth(way Way) float64 {
+		lanes := way.Lanes()
+		if lanes == 0 {
+			lanes = 2
+		}
+		return float64(lanes) * LANE_WIDTH
 }
 
 func OnWay(way Way, location log.GpsLocationData, extended bool) (OnWayResult, error) {
@@ -100,11 +109,7 @@ func OnWay(way Way, location log.GpsLocationData, extended bool) (OnWayResult, e
 			res.OnWay = false
 			return res, errors.Wrap(err, "could not get distance to way")
 		}
-		lanes := way.Lanes()
-		if lanes == 0 {
-			lanes = 2
-		}
-		road_width_estimate := float64(lanes) * LANE_WIDTH
+		road_width_estimate := estimateRoadWidth(way)
 		max_dist := 5 + road_width_estimate
 		if extended {
 			max_dist = max_dist * 2
@@ -422,6 +427,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 					ConfidenceCounter: currentWay.ConfidenceCounter + 1,
 					LastChangeTime:    currentWay.LastChangeTime,
 					StableDistance:    newStableDistance,
+					Context:           determineRoadContext(currentWay.Way),
 				}, nil
 			}
 		}
@@ -440,6 +446,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 				ConfidenceCounter: 1,
 				LastChangeTime:    time.Now(),
 				StableDistance:    onWay.Distance.Distance,
+				Context:           determineRoadContext(nextWay.Way),
 			}, nil
 		}
 	}
@@ -460,6 +467,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 					ConfidenceCounter: 1,
 					LastChangeTime:    time.Now(),
 					StableDistance:    selectedOnWay.Distance.Distance,
+					Context:           determineRoadContext(selectedWay),
 				}, nil
 			}
 		}
@@ -478,6 +486,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 				ConfidenceCounter: currentWay.ConfidenceCounter,
 				LastChangeTime:    currentWay.LastChangeTime,
 				StableDistance:    currentWay.StableDistance,
+				Context:           determineRoadContext(currentWay.Way),
 			}, nil
 		}
 	}

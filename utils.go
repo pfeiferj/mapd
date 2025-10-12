@@ -13,24 +13,24 @@ func check(e error) {
 
 func loge(e error) {
 	if e != nil {
-		slog.Error("Error Occurred", "error", e)
+		slog.Error("", "error", e)
 	}
 }
 
 func logwe(e error) {
 	if e != nil {
-		slog.Warn("Error Occurred", "error", e)
+		slog.Warn("", "error", e)
 	}
 }
 
 func logie(e error) {
 	if e != nil {
-		slog.Info("Error Occurred", "error", e)
+		slog.Info("", "error", e)
 	}
 }
 
 func logde(e error) {
 	if e != nil {
-		slog.Debug("Error Occurred", "error", e)
+		slog.Debug("", "error", e)
 	}
 }

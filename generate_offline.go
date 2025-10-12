@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"os"
 	"runtime"
 	"strconv"
-	"log/slog"
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/paulmach/osm"
