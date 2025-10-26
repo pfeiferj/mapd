@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var err error
-	slog.SetLogLoggerLevel(slog.LevelDebug)
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 	state := State{}
 
 	msgq := gomsgq.Msgq{}
