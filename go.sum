@@ -21,6 +21,8 @@ github.com/paulmach/protoscan v0.2.1 h1:rM0FpcTjUMvPUNk2BhPJrreDKetq43ChnL+x1sRg
 github.com/paulmach/protoscan v0.2.1/go.mod h1:SpcSwydNLrxUGSDvXvO0P7g7AuhJ7lcKfDlhJCDw2gY=
 github.com/pfeiferj/gomsgq v0.1.0 h1:Zt5DgxwOcKxH2ifV5g17sAn+8EVvoZ25Fawr6wAJGoQ=
 github.com/pfeiferj/gomsgq v0.1.0/go.mod h1:egKAzaiP4IwQ4rk+G/P7k7LZ0DXwtOx4bDocuOBrhQU=
+github.com/pfeiferj/gomsgq v0.1.1 h1:FTozKGmcrP5X8HuWbaVYvLgLqiKPnmXMZy/s9GDcZSE=
+github.com/pfeiferj/gomsgq v0.1.1/go.mod h1:egKAzaiP4IwQ4rk+G/P7k7LZ0DXwtOx4bDocuOBrhQU=
 github.com/philhofer/fwd v1.1.2 h1:bnDivRJ1EWPjUIRXV5KfORO897HTbpFAQddBdE8t7Gw=
 github.com/philhofer/fwd v1.1.2/go.mod h1:qkPdfjR2SIEbspLqpe1tO4n5yICnr2DY7mqEx2tUTP0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
