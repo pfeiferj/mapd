@@ -25,12 +25,30 @@ func main() {
 	pub := gomsgq.MsgqPublisher{}
 	pub.Init(msgq)
 
-	sub := getGpsSub()
-	defer sub.Sub.Msgq.Close()
+	gps := getGpsSub()
+	defer gps.Sub.Msgq.Close()
+
+	model := getModelSub()
+	defer model.Sub.Msgq.Close()
+
 	offline := readOffline(state.Data)
 	for {
+		msg := state.ToMessage()
+
+		b, err := msg.Marshal()
+		if err != nil {
+			slog.Error("Failed to send update", "error", err)
+		}
+		pub.Send(b)
+
 		time.Sleep(LOOP_DELAY)
-		location, success := sub.Read()
+
+		modelData, success := model.Read()
+		if success {
+			state.VtscSpeed = calcVtscSpeed(modelData)
+		}
+
+		location, success := gps.Read()
 		if !success {
 			continue
 		}
@@ -56,13 +74,7 @@ func main() {
 
 		state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 
-		msg := state.ToMessage()
-
-		b, err := msg.Marshal()
-		if err != nil {
-			slog.Error("Failed to send update", "error", err)
-		}
-		pub.Send(b)
+		// send at beginning of next loop
 	}
 }
 
@@ -108,10 +120,24 @@ func (s *State) ToMessage() *capnp.Message {
 
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Context))
 	output.SetEstimatedRoadWidth(float32(estimateRoadWidth(s.CurrentWay.Way)))
+	output.SetVtscSpeed(s.VtscSpeed)
+
+	output.SetSuggestedSpeed(s.SuggestedSpeed())
 
 	logOutput(event, output)
 
 	return msg
+}
+
+func (s *State) SuggestedSpeed() float32 {
+	suggestedSpeed := float32(s.CurrentWay.Way.MaxSpeed())
+	if suggestedSpeed > 0 {
+		suggestedSpeed += LIMIT_OFFSET
+	}
+	if s.VtscSpeed > 0 && s.VtscSpeed < suggestedSpeed {
+		suggestedSpeed = s.VtscSpeed
+	}
+	return suggestedSpeed
 }
 
 func logOutput(event log.Event, mapdOut custom.MapdOut) {

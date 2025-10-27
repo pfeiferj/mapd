@@ -85,6 +85,7 @@ struct MapdOut @0xc2243c65e0340384 {
   estimatedRoadWidth @17 :Float32;
   roadContext @18 :RoadContext;
   distanceFromWayCenter @19 :Float32;
+  vtscSpeed @20 :Float32;
 }
 
 struct CustomReserved12 @0x9ccdc8676701b412 {

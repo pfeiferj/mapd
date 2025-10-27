@@ -19,4 +19,5 @@ type State struct {
 	LastSpeedLimitValue    float64
 	LastSpeedLimitWayName  string
 	NextSpeedLimit         NextSpeedLimit
+	VtscSpeed         		 float32
 }
