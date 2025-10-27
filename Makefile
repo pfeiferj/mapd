@@ -1,10 +1,13 @@
-build: capnp
+build: go-deps capnp
 	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
 
 format:
 	gofumpt -l -w .
 
-deps: capnp-deps format-deps
+deps: go-deps capnp-deps format-deps
+
+go-deps: go.mod
+	go get
 
 capnp-deps:
 	go install capnproto.org/go/capnp/v3/capnpc-go@latest
