@@ -14,7 +14,7 @@ import (
 
 func main() {
 	var err error
-	slog.SetLogLoggerLevel(slog.LevelInfo)
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	state := State{}
 
 	msgq := gomsgq.Msgq{}
@@ -31,8 +31,8 @@ func main() {
 	model := getModelSub()
 	defer model.Sub.Msgq.Close()
 
-	offline := readOffline(state.Data)
 	for {
+		offline := readOffline(state.Data)
 		msg := state.ToMessage()
 
 		b, err := msg.Marshal()
@@ -59,7 +59,6 @@ func main() {
 				continue
 			}
 		}
-		offline = readOffline(state.Data)
 
 		state.LastWay = state.CurrentWay
 		state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offline, location)
@@ -153,6 +152,8 @@ func logOutput(event log.Event, mapdOut custom.MapdOut) {
 		"advisorySpeed", mapdOut.AdvisorySpeed(),
 		"oneWay", mapdOut.OneWay(),
 		"lanes", mapdOut.Lanes(),
+		"vtscSpeed", mapdOut.VtscSpeed(),
+		"suggestedSpeed", mapdOut.SuggestedSpeed(),
 	)
 }
 

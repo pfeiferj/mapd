@@ -40,8 +40,8 @@ func getModelSub() (modelSub ModelSubscriber) {
 		panic(err)
 	}
 	sub := gomsgq.MsgqSubscriber{}
-	sub.Init(msgq)
 	sub.Conflate = true
+	sub.Init(msgq)
 
 	modelSub.Sub = sub
 	return modelSub

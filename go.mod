@@ -6,7 +6,7 @@ require (
 	capnproto.org/go/capnp/v3 v3.1.0-alpha.1
 	github.com/gofrs/flock v0.13.0
 	github.com/paulmach/osm v0.8.0
-	github.com/pfeiferj/gomsgq v0.1.1
+	github.com/pfeiferj/gomsgq v0.1.3
 	github.com/pkg/errors v0.9.1
 )
 
