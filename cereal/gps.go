@@ -1,4 +1,4 @@
-package main
+package cereal
 
 import (
 	"log/slog"
@@ -8,6 +8,7 @@ import (
 
 	"capnproto.org/go/capnp/v3"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/settings"
 )
 
 type GpsSubscriber struct {
@@ -59,9 +60,9 @@ func (g *GpsSubscriber) readGpsLocationExternal() (location log.GpsLocationData,
 	return location, true
 }
 
-func getGpsSub() (gpsSub GpsSubscriber) {
+func GetGpsSub() (gpsSub GpsSubscriber) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init("gpsLocation", DEFAULT_SEGMENT_SIZE)
+	err := msgq.Init("gpsLocation", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +70,7 @@ func getGpsSub() (gpsSub GpsSubscriber) {
 	sub.Init(msgq)
 
 	msgqExt := gomsgq.Msgq{}
-	err = msgqExt.Init("gpsLocationExternal", DEFAULT_SEGMENT_SIZE)
+	err = msgqExt.Init("gpsLocationExternal", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +78,7 @@ func getGpsSub() (gpsSub GpsSubscriber) {
 	subExt.Init(msgqExt)
 
 	for {
-		time.Sleep(LOOP_DELAY)
+		time.Sleep(settings.LOOP_DELAY)
 
 		if sub.Ready() {
 			err, err2 := subExt.Msgq.Close()

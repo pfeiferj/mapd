@@ -10,6 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/cereal"
+	"pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 func main() {
@@ -18,17 +21,17 @@ func main() {
 	state := State{}
 
 	msgq := gomsgq.Msgq{}
-	err = msgq.Init("mapdOut", DEFAULT_SEGMENT_SIZE)
+	err = msgq.Init("mapdOut", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}
 	pub := gomsgq.MsgqPublisher{}
 	pub.Init(msgq)
 
-	gps := getGpsSub()
+	gps := cereal.GetGpsSub()
 	defer gps.Sub.Msgq.Close()
 
-	model := getModelSub()
+	model := cereal.GetModelSub()
 	defer model.Sub.Msgq.Close()
 
 	for {
@@ -41,7 +44,7 @@ func main() {
 		}
 		pub.Send(b)
 
-		time.Sleep(LOOP_DELAY)
+		time.Sleep(settings.LOOP_DELAY)
 
 		modelData, success := model.Read()
 		if success {
@@ -62,13 +65,13 @@ func main() {
 
 		state.LastWay = state.CurrentWay
 		state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offline, location)
-		logde(errors.Wrap(err, "could not get current way"))
+		utils.Logde(errors.Wrap(err, "could not get current way"))
 
 		state.NextWays, err = NextWays(location, state.CurrentWay, offline, state.CurrentWay.OnWay.IsForward)
-		logde(errors.Wrap(err, "could not get next way"))
+		utils.Logde(errors.Wrap(err, "could not get next way"))
 
 		state.Curvatures, err = GetStateCurvatures(&state)
-		logde(errors.Wrap(err, "could not get curvatures from current state"))
+		utils.Logde(errors.Wrap(err, "could not get curvatures from current state"))
 		state.TargetVelocities = GetTargetVelocities(state.Curvatures)
 
 		state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
@@ -131,7 +134,7 @@ func (s *State) ToMessage() *capnp.Message {
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := float32(s.CurrentWay.Way.MaxSpeed())
 	if suggestedSpeed > 0 {
-		suggestedSpeed += LIMIT_OFFSET
+		suggestedSpeed += settings.LIMIT_OFFSET
 	}
 	if s.VtscSpeed > 0 && s.VtscSpeed < suggestedSpeed {
 		suggestedSpeed = s.VtscSpeed
@@ -159,10 +162,10 @@ func logOutput(event log.Event, mapdOut custom.MapdOut) {
 
 func readOffline(data []uint8) Offline {
 	msg, err := capnp.UnmarshalPacked(data)
-	logde(errors.Wrap(err, "could not unmarshal offline data"))
+	utils.Logde(errors.Wrap(err, "could not unmarshal offline data"))
 	if err == nil {
 		offline, err := ReadRootOffline(msg)
-		logde(errors.Wrap(err, "could not read offline message"))
+		utils.Logde(errors.Wrap(err, "could not read offline message"))
 		return offline
 	}
 	return Offline{}

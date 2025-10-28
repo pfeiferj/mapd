@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/settings"
 )
 
 func calcVtscSpeed(model log.ModelDataV2) float32 {
@@ -40,9 +41,9 @@ func calcVtscSpeed(model log.ModelDataV2) float32 {
 	}
 
 	maxCurve := maxLatA / (vEgo * vEgo)
-	vTarget := math.Sqrt(float64(VTSC_TARGET_LAT_A / maxCurve))
-	if vTarget < VTSC_MIN_TARGET_V {
-		vTarget = VTSC_MIN_TARGET_V
+	vTarget := math.Sqrt(float64(settings.VTSC_TARGET_LAT_A / maxCurve))
+	if vTarget < settings.VTSC_MIN_TARGET_V {
+		vTarget = settings.VTSC_MIN_TARGET_V
 	}
 
 	return float32(vTarget)

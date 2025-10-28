@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/utils"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -380,7 +381,7 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 
 	nodes, err := way.Nodes()
 	if err != nil {
-		logde(errors.Wrap(err, "could not read way nodes"))
+		utils.Logde(errors.Wrap(err, "could not read way nodes"))
 		return Coordinates{}, Coordinates{}
 	}
 
@@ -504,7 +505,7 @@ func getPossibleWays(offline Offline, location log.GpsLocationData) ([]Way, erro
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
 		onWay, err := OnWay(way, location, false)
-		logde(errors.Wrap(err, "Could not check if on way"))
+		utils.Logde(errors.Wrap(err, "Could not check if on way"))
 		if onWay.OnWay {
 			possibleWays = append(possibleWays, way)
 		}
@@ -564,7 +565,7 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 	}
 	nodes, err := nextWay.Nodes()
 	if err != nil || nodes.Len() < 2 {
-		logde(errors.Wrap(err, "could not read next way nodes"))
+		utils.Logde(errors.Wrap(err, "could not read next way nodes"))
 		return true
 	}
 

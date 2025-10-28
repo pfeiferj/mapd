@@ -1,4 +1,4 @@
-package main
+package params
 
 import (
 	"os"
@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gofrs/flock"
+	"pfeifer.dev/mapd/utils"
 )
 
 var (
@@ -37,7 +38,7 @@ func Exists(path string) (bool, error) {
 
 func GetBasePath() string {
 	exists, err := Exists("/data/media/0")
-	logde(errors.Wrap(err, "could not check if media directory exists"))
+	utils.Logde(errors.Wrap(err, "could not check if media directory exists"))
 	if exists {
 		return "/data/media/0/osm"
 	} else {
@@ -47,9 +48,9 @@ func GetBasePath() string {
 
 func EnsureParamDirectories() {
 	err := os.MkdirAll(ParamsPath, 0o775)
-	logde(errors.Wrap(err, "could not make params directory"))
+	utils.Logde(errors.Wrap(err, "could not make params directory"))
 	err = os.MkdirAll(MemParamsPath, 0o775)
-	logde(errors.Wrap(err, "could not make memory params directory"))
+	utils.Logde(errors.Wrap(err, "could not make memory params directory"))
 }
 
 func ResetParams() {
@@ -143,7 +144,7 @@ func PutParam(path string, data []byte) error {
 		retries += 1
 		if retries > 30 {
 			// try to force the lock to be removed
-			logie(os.Remove(filepath.Join(lock_dir, ".lock")))
+			utils.Logie(os.Remove(filepath.Join(lock_dir, ".lock")))
 		}
 		if retries > 50 {
 			return errors.New("could not obtain lock")
@@ -151,8 +152,8 @@ func PutParam(path string, data []byte) error {
 		// if we didn't obtain the lock let's try again after a short delay
 		time.Sleep(1 * time.Millisecond)
 	}
-	defer logwe(errors.Wrap(fileLock.Unlock(), "could not unlock params directory"))
-	defer logde(errors.Wrap(os.Remove(filepath.Join(lock_dir, ".lock")), "could not remove params lock file"))
+	defer utils.Logwe(errors.Wrap(fileLock.Unlock(), "could not unlock params directory"))
+	defer utils.Logde(errors.Wrap(os.Remove(filepath.Join(lock_dir, ".lock")), "could not remove params lock file"))
 
 	err = os.Rename(tmpName, path)
 	if err != nil {
@@ -189,7 +190,7 @@ func RemoveParam(path string) error {
 		retries += 1
 		if retries > 30 {
 			// try to force the lock to be removed
-			logde(os.Remove(filepath.Join(lock_dir, ".lock")))
+			utils.Logde(os.Remove(filepath.Join(lock_dir, ".lock")))
 		}
 		if retries > 50 {
 			return errors.New("could not obtain lock")
@@ -197,8 +198,8 @@ func RemoveParam(path string) error {
 		// if we didn't obtain the lock let's try again after a short delay
 		time.Sleep(1 * time.Millisecond)
 	}
-	defer logwe(errors.Wrap(fileLock.Unlock(), "could not unlock params directory"))
-	defer logde(errors.Wrap(os.Remove(filepath.Join(lock_dir, ".lock")), "could not remove params lock file"))
+	defer utils.Logwe(errors.Wrap(fileLock.Unlock(), "could not unlock params directory"))
+	defer utils.Logde(errors.Wrap(os.Remove(filepath.Join(lock_dir, ".lock")), "could not remove params lock file"))
 
 	os.Remove(path)
 

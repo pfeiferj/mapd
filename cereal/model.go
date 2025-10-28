@@ -1,10 +1,11 @@
-package main
+package cereal
 
 import (
 	"github.com/pfeiferj/gomsgq"
 
 	"capnproto.org/go/capnp/v3"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/settings"
 )
 
 type ModelSubscriber struct {
@@ -33,9 +34,9 @@ func (s *ModelSubscriber) Read() (model log.ModelDataV2, success bool) {
 	return model, true
 }
 
-func getModelSub() (modelSub ModelSubscriber) {
+func GetModelSub() (modelSub ModelSubscriber) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init("modelV2", DEFAULT_SEGMENT_SIZE)
+	err := msgq.Init("modelV2", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}

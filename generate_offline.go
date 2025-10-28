@@ -13,6 +13,8 @@ import (
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/utils"
+	"pfeifer.dev/mapd/params"
 )
 
 type TmpNode struct {
@@ -52,8 +54,8 @@ var (
 )
 
 func GetBaseOpPath() string {
-	exists, err := Exists("/data/media/0")
-	logde(err)
+	exists, err := params.Exists("/data/media/0")
+	utils.Logde(err)
 	if exists {
 		return "/data/media/0/osm"
 	} else {
@@ -65,7 +67,7 @@ var BOUNDS_DIR = fmt.Sprintf("%s/offline", GetBaseOpPath())
 
 func EnsureOfflineMapsDirectories() {
 	err := os.MkdirAll(BOUNDS_DIR, 0o775)
-	logwe(err)
+	utils.Logwe(err)
 }
 
 // Creates a file for a specific bounding box
@@ -116,7 +118,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 	slog.Info("Generating Offline Map")
 	EnsureOfflineMapsDirectories()
 	file, err := os.Open("./map.osm.pbf")
-	check(errors.Wrap(err, "could not open map pbf file"))
+	utils.Check(errors.Wrap(err, "could not open map pbf file"))
 	defer file.Close()
 
 	// The third parameter is the number of parallel decoders to use.
@@ -211,9 +213,9 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 
 		arena := capnp.MultiSegment([][]byte{})
 		msg, seg, err := capnp.NewMessage(arena)
-		check(errors.Wrap(err, "could not create capnp arena for offline data"))
+		utils.Check(errors.Wrap(err, "could not create capnp arena for offline data"))
 		rootOffline, err := NewRootOffline(seg)
-		check(errors.Wrap(err, "could not create capnp offline root"))
+		utils.Check(errors.Wrap(err, "could not create capnp offline root"))
 
 		for _, way := range scannedWays {
 			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat-OVERLAP_BOX_DEGREES, area.MinLon-OVERLAP_BOX_DEGREES, area.MaxLat+OVERLAP_BOX_DEGREES, area.MaxLon+OVERLAP_BOX_DEGREES)
@@ -224,7 +226,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 
 		slog.Info("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
-		check(errors.Wrap(err, "could not create ways in offline data"))
+		utils.Check(errors.Wrap(err, "could not create ways in offline data"))
 		rootOffline.SetMinLat(area.MinLat)
 		rootOffline.SetMinLon(area.MinLon)
 		rootOffline.SetMaxLat(area.MaxLat)
@@ -237,11 +239,11 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 			w.SetMaxLat(way.MaxLat)
 			w.SetMaxLon(way.MaxLon)
 			err := w.SetName(way.Name)
-			check(errors.Wrap(err, "could not set way name"))
+			utils.Check(errors.Wrap(err, "could not set way name"))
 			err = w.SetRef(way.Ref)
-			check(errors.Wrap(err, "could not set way ref"))
+			utils.Check(errors.Wrap(err, "could not set way ref"))
 			err = w.SetHazard(way.Hazard)
-			check(errors.Wrap(err, "could not set way hazard"))
+			utils.Check(errors.Wrap(err, "could not set way hazard"))
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetMaxSpeedForward(way.MaxSpeedForward)
 			w.SetMaxSpeedBackward(way.MaxSpeedBackward)
@@ -249,7 +251,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
-			check(errors.Wrap(err, "could not create way nodes"))
+			utils.Check(errors.Wrap(err, "could not create way nodes"))
 			for j, node := range way.Nodes {
 				n := nodes.At(j)
 				n.SetLatitude(node.Latitude)
@@ -258,18 +260,18 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 		}
 
 		data, err := msg.MarshalPacked()
-		check(errors.Wrap(err, "could not marshal offline data"))
+		utils.Check(errors.Wrap(err, "could not marshal offline data"))
 		err = CreateBoundsDir(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
-		check(errors.Wrap(err, "could not create directory for bounds file"))
+		utils.Check(errors.Wrap(err, "could not create directory for bounds file"))
 		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0o644)
-		check(errors.Wrap(err, "could not write offline data to file"))
+		utils.Check(errors.Wrap(err, "could not write offline data to file"))
 	}
 	f, err := os.Open(BOUNDS_DIR)
-	check(errors.Wrap(err, "could not open bounds directory"))
+	utils.Check(errors.Wrap(err, "could not open bounds directory"))
 	err = f.Sync()
-	check(errors.Wrap(err, "could not fsync bounds directory"))
+	utils.Check(errors.Wrap(err, "could not fsync bounds directory"))
 	err = f.Close()
-	check(errors.Wrap(err, "could not close bounds directory"))
+	utils.Check(errors.Wrap(err, "could not close bounds directory"))
 
 	slog.Info("Done Generating Offline Map")
 }
