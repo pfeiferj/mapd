@@ -9,7 +9,7 @@ import (
 )
 
 type ModelSubscriber struct {
-	Sub  gomsgq.MsgqSubscriber
+	Sub gomsgq.MsgqSubscriber
 }
 
 func (s *ModelSubscriber) Read() (model log.ModelDataV2, success bool) {

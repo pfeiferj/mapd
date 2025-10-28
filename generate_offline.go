@@ -13,9 +13,9 @@ import (
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"
 	"github.com/pkg/errors"
-	"pfeifer.dev/mapd/utils"
-	"pfeifer.dev/mapd/params"
 	"pfeifer.dev/mapd/cereal/offline"
+	"pfeifer.dev/mapd/params"
+	"pfeifer.dev/mapd/utils"
 )
 
 type TmpNode struct {

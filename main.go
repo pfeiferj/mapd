@@ -8,10 +8,10 @@ import (
 	"capnproto.org/go/capnp/v3"
 	"github.com/pfeiferj/gomsgq"
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
 )

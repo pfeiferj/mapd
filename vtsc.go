@@ -2,12 +2,12 @@ package main
 
 import (
 	"math"
+
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/settings"
 )
 
 func calcVtscSpeed(model log.ModelDataV2) float32 {
-	
 	xyztData, err := model.OrientationRate()
 	if err != nil {
 		return 0
@@ -26,7 +26,7 @@ func calcVtscSpeed(model log.ModelDataV2) float32 {
 		return 0
 	}
 
-	var predictedLatAccels = make([]float32, zOrientRate.Len())
+	predictedLatAccels := make([]float32, zOrientRate.Len())
 	maxLatA := float32(0)
 	vEgo := xVelocity.At(0)
 	if vEgo < 0.1 {

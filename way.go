@@ -95,11 +95,11 @@ type NextWayResult struct {
 }
 
 func estimateRoadWidth(way offline.Way) float64 {
-		lanes := way.Lanes()
-		if lanes == 0 {
-			lanes = 2
-		}
-		return float64(lanes) * LANE_WIDTH
+	lanes := way.Lanes()
+	if lanes == 0 {
+		lanes = 2
+	}
+	return float64(lanes) * LANE_WIDTH
 }
 
 func OnWay(way offline.Way, location log.GpsLocationData, extended bool) (OnWayResult, error) {
