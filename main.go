@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
@@ -35,7 +36,7 @@ func main() {
 	defer model.Sub.Msgq.Close()
 
 	for {
-		offline := readOffline(state.Data)
+		offlineMaps := readOffline(state.Data)
 		msg := state.ToMessage()
 
 		b, err := msg.Marshal()
@@ -55,7 +56,7 @@ func main() {
 		if !success {
 			continue
 		}
-		if !PointInBox(location.Latitude(), location.Longitude(), offline.MinLat(), offline.MinLon(), offline.MaxLat(), offline.MaxLon()) {
+		if !PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
 			state.Data, err = FindWaysAroundLocation(location.Latitude(), location.Longitude())
 			if err != nil {
 				slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
@@ -64,10 +65,10 @@ func main() {
 		}
 
 		state.LastWay = state.CurrentWay
-		state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offline, location)
+		state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
 		utils.Logde(errors.Wrap(err, "could not get current way"))
 
-		state.NextWays, err = NextWays(location, state.CurrentWay, offline, state.CurrentWay.OnWay.IsForward)
+		state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
 		utils.Logde(errors.Wrap(err, "could not get next way"))
 
 		state.Curvatures, err = GetStateCurvatures(&state)
@@ -160,15 +161,15 @@ func logOutput(event log.Event, mapdOut custom.MapdOut) {
 	)
 }
 
-func readOffline(data []uint8) Offline {
+func readOffline(data []uint8) offline.Offline {
 	msg, err := capnp.UnmarshalPacked(data)
 	utils.Logde(errors.Wrap(err, "could not unmarshal offline data"))
 	if err == nil {
-		offline, err := ReadRootOffline(msg)
+		offlineMaps, err := offline.ReadRootOffline(msg)
 		utils.Logde(errors.Wrap(err, "could not read offline message"))
-		return offline
+		return offlineMaps
 	}
-	return Offline{}
+	return offline.Offline{}
 }
 
 func newOutput() (*capnp.Message, log.Event, custom.MapdOut) {
@@ -256,7 +257,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 	return NextSpeedLimit{}
 }
 
-func RoadName(way Way) string {
+func RoadName(way offline.Way) string {
 	name, err := way.Name()
 	if err == nil {
 		if len(name) > 0 {
@@ -272,7 +273,7 @@ func RoadName(way Way) string {
 	return ""
 }
 
-func calculateWayDistance(way Way) (float64, error) {
+func calculateWayDistance(way offline.Way) (float64, error) {
 	nodes, err := way.Nodes()
 	if err != nil {
 		return 0, err

@@ -5,6 +5,7 @@ import (
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/cereal/offline"
 )
 
 var (
@@ -79,7 +80,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
 	}
 	num_points := nodes.Len()
-	all_nodes := []capnp.StructList[Coordinates]{nodes}
+	all_nodes := []capnp.StructList[offline.Coordinates]{nodes}
 	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
 	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way

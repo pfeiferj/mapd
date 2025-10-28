@@ -1,4 +1,4 @@
-build: go-deps capnp
+build: capnp go-deps
 	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
 
 format:
@@ -19,7 +19,7 @@ format-deps:
 
 GO_CAPNP_PATH ?= ../go-capnp/std
 
-capnp: cereal/car/car.capnp.go cereal/custom/custom.capnp.go cereal/legacy/legacy.capnp.go cereal/log/log.capnp.go
+capnp: cereal/car/car.capnp.go cereal/custom/custom.capnp.go cereal/legacy/legacy.capnp.go cereal/log/log.capnp.go cereal/offline/offline.capnp.go
 
 cereal/car/car.capnp.go: cereal/car/car.capnp
 	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/car/car.capnp
@@ -33,5 +33,5 @@ cereal/legacy/legacy.capnp.go: cereal/legacy/legacy.capnp
 cereal/log/log.capnp.go: cereal/log/log.capnp
 	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/log/log.capnp
 
-offline.capnp.go: offline.capnp
-	capnp compile -I $(GO_CAPNP_PATH) -ogo offline.capnp
+cereal/offline/offline.capnp.go: cereal/offline/offline.capnp
+	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/offline/offline.capnp

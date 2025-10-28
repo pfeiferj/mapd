@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/utils"
 	"pfeifer.dev/mapd/params"
+	"pfeifer.dev/mapd/cereal/offline"
 )
 
 type TmpNode struct {
@@ -214,7 +215,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 		arena := capnp.MultiSegment([][]byte{})
 		msg, seg, err := capnp.NewMessage(arena)
 		utils.Check(errors.Wrap(err, "could not create capnp arena for offline data"))
-		rootOffline, err := NewRootOffline(seg)
+		rootOffline, err := offline.NewRootOffline(seg)
 		utils.Check(errors.Wrap(err, "could not create capnp offline root"))
 
 		for _, way := range scannedWays {
