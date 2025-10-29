@@ -17,7 +17,19 @@ import (
 )
 
 func main() {
-	settings.Settings.Load()
+	settingsLoaded := false
+	for range 15 {
+		if settings.Settings.Load() {
+			settingsLoaded = true
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	if !settingsLoaded {
+		settings.Settings.Default()
+		settings.Settings.Save()
+	}
+
 	cli.Handle()
 
 	state := State{}
