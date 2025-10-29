@@ -37,7 +37,7 @@ func (s *MapdSubscriber) Read() (input custom.MapdIn, success bool) {
 
 func GetMapdSub() (mapdSub MapdSubscriber) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init("modelV2", settings.DEFAULT_SEGMENT_SIZE)
+	err := msgq.Init("mapdIn", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}

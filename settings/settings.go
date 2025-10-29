@@ -16,13 +16,13 @@ var (
 )
 
 type MapdSettings struct {
-	VtscTargetLatA                 float32 `json:"vtsc_target_lat_a"`
-	VtscMinTargetV                 float32 `json:"vtsc_min_target_v"`
-	SpeedLimitOffset               float32 `json:"speed_limit_offset"`
-	LogLevel                       string  `json:"log_level"`
 	VisionCurveSpeedControlEnabled bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled       bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled       bool    `json:"speed_limit_control_enabled"`
+	LogLevel                       string  `json:"log_level"`
+	VtscTargetLatA                 float32 `json:"vtsc_target_lat_a"`
+	VtscMinTargetV                 float32 `json:"vtsc_min_target_v"`
+	SpeedLimitOffset               float32 `json:"speed_limit_offset"`
 }
 
 func (s *MapdSettings) Default() {

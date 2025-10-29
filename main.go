@@ -13,12 +13,13 @@ import (
 	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
+	"pfeifer.dev/mapd/cli"
 )
 
 func main() {
 	settings.Settings.Load()
+	cli.Handle()
 
-	slog.SetLogLoggerLevel(slog.LevelInfo)
 	state := State{}
 
 	pub := cereal.GetMapdPub()

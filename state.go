@@ -38,8 +38,6 @@ func (s *State) SuggestedSpeed() float32 {
 }
 
 func (s *State) ToMessage() *capnp.Message {
-	newOutput()
-
 	msg, event, output := newOutput()
 
 	event.SetValid(true)
