@@ -83,8 +83,6 @@ func main() {
 	}
 }
 
-
-
 func logOutput(event log.Event, mapdOut custom.MapdOut) {
 	name, _ := mapdOut.WayName()
 	ref, _ := mapdOut.WayRef()

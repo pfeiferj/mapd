@@ -1,26 +1,28 @@
 package settings
 
 import (
-	"pfeifer.dev/mapd/params"
-	"pfeifer.dev/mapd/utils"
-	"pfeifer.dev/mapd/cereal/custom"
-
 	"encoding/json"
 	"log/slog"
 	"strings"
+
+	"pfeifer.dev/mapd/cereal/custom"
+	"pfeifer.dev/mapd/params"
+	"pfeifer.dev/mapd/utils"
 )
 
-var Settings = MapdSettings{}
-var loaded = false
+var (
+	Settings = MapdSettings{}
+	loaded   = false
+)
 
 type MapdSettings struct {
-	VtscTargetLatA float32 `json:"vtsc_target_lat_a"`
-	VtscMinTargetV float32 `json:"vtsc_min_target_v"`
-	SpeedLimitOffset float32 `json:"speed_limit_offset"`
-	LogLevel string `json:"log_level"`
-	VisionCurveSpeedControlEnabled bool `json:"vision_curve_speed_control_enabled"`
-	CurveSpeedControlEnabled bool `json:"curve_speed_control_enabled"`
-	SpeedLimitControlEnabled bool `json:"speed_limit_control_enabled"`
+	VtscTargetLatA                 float32 `json:"vtsc_target_lat_a"`
+	VtscMinTargetV                 float32 `json:"vtsc_min_target_v"`
+	SpeedLimitOffset               float32 `json:"speed_limit_offset"`
+	LogLevel                       string  `json:"log_level"`
+	VisionCurveSpeedControlEnabled bool    `json:"vision_curve_speed_control_enabled"`
+	CurveSpeedControlEnabled       bool    `json:"curve_speed_control_enabled"`
+	SpeedLimitControlEnabled       bool    `json:"speed_limit_control_enabled"`
 }
 
 func (s *MapdSettings) Default() {
@@ -67,7 +69,7 @@ func (s *MapdSettings) Save() {
 		utils.Loge(err)
 		return
 	}
-  err = params.PutParam(params.MAPD_SETTINGS, data)
+	err = params.PutParam(params.MAPD_SETTINGS, data)
 	if err != nil {
 		utils.Loge(err)
 		return

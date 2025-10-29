@@ -3,9 +3,9 @@ package main
 import (
 	"capnproto.org/go/capnp/v3"
 
+	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/settings"
-	"pfeifer.dev/mapd/cereal/custom"
 )
 
 type State struct {

@@ -1,13 +1,15 @@
 package cereal
 
 import (
-	"github.com/pfeiferj/gomsgq"
-	"pfeifer.dev/mapd/settings"
 	"log/slog"
+
+	"github.com/pfeiferj/gomsgq"
+
+	"pfeifer.dev/mapd/settings"
 )
 
 func GetMapdPub() gomsgq.MsgqPublisher {
-	slog.Info("is it global?", "v", settings.Settings.VtscMinTargetV) 
+	slog.Info("is it global?", "v", settings.Settings.VtscMinTargetV)
 	msgq := gomsgq.Msgq{}
 	err := msgq.Init("mapdOut", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
