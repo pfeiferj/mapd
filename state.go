@@ -27,11 +27,14 @@ type State struct {
 }
 
 func (s *State) SuggestedSpeed() float32 {
-	suggestedSpeed := float32(s.CurrentWay.Way.MaxSpeed())
-	if suggestedSpeed > 0 {
-		suggestedSpeed += settings.Settings.SpeedLimitOffset
+	suggestedSpeed := float32(0)
+	if settings.Settings.SpeedLimitControlEnabled {
+		suggestedSpeed = float32(s.CurrentWay.Way.MaxSpeed())
+		if suggestedSpeed > 0 {
+			suggestedSpeed += settings.Settings.SpeedLimitOffset
+		}
 	}
-	if s.VtscSpeed > 0 && s.VtscSpeed < suggestedSpeed {
+	if settings.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) {
 		suggestedSpeed = s.VtscSpeed
 	}
 	return suggestedSpeed
