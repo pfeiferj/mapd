@@ -46,7 +46,11 @@ enum MapdInputType {
     setSpeedLimitOffset @2;
     setSpeedLimitControl @3;
     setCurveSpeedControl @4;
-    setLogLevel @5;
+    setVisionCurveSpeedControl @5;
+    setLogLevel @6;
+    setVtscTargetLatA @7;
+    setVtscMinTargetV @8;
+    reloadSettings @9;
 }
 
 enum SpeedLimitOffsetType {
@@ -56,6 +60,9 @@ enum SpeedLimitOffsetType {
 
 struct MapdIn @0xcb9fd56c7057593a {
   type @0 :MapdInputType;
+  float @1 :Float32;
+  string @2 :Text;
+  bool @3 :Bool;
 }
 
 enum RoadContext {

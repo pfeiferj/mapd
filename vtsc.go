@@ -41,10 +41,10 @@ func calcVtscSpeed(model log.ModelDataV2) float32 {
 	}
 
 	maxCurve := maxLatA / (vEgo * vEgo)
-	vTarget := math.Sqrt(float64(settings.VTSC_TARGET_LAT_A / maxCurve))
-	if vTarget < settings.VTSC_MIN_TARGET_V {
-		vTarget = settings.VTSC_MIN_TARGET_V
+	vTarget := float32(math.Sqrt(float64(settings.Settings.VtscTargetLatA / maxCurve)))
+	if vTarget < settings.Settings.VtscMinTargetV {
+		vTarget = settings.Settings.VtscMinTargetV
 	}
 
-	return float32(vTarget)
+	return vTarget
 }
