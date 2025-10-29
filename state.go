@@ -37,6 +37,12 @@ func (s *State) SuggestedSpeed() float32 {
 	if settings.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) {
 		suggestedSpeed = s.VtscSpeed
 	}
+	if suggestedSpeed < 0 {
+		suggestedSpeed = 0
+	}
+	if suggestedSpeed > 40.23 {
+		suggestedSpeed = 40.23
+	}
 	return suggestedSpeed
 }
 
