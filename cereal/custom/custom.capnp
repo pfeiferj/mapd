@@ -51,6 +51,7 @@ enum MapdInputType {
     setVtscTargetLatA @7;
     setVtscMinTargetV @8;
     reloadSettings @9;
+    saveSettings @10;
 }
 
 enum SpeedLimitOffsetType {

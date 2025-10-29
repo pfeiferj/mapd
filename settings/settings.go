@@ -95,27 +95,27 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	switch input.Type() {
 	case custom.MapdInputType_reloadSettings:
 		s.Load()
+	case custom.MapdInputType_saveSettings:
+		go s.Save()
 	case custom.MapdInputType_setVtscMinTargetV:
 		s.VtscMinTargetV = input.Float()
-		s.Save()
 	case custom.MapdInputType_setVtscTargetLatA:
 		s.VtscTargetLatA = input.Float()
-		s.Save()
 	case custom.MapdInputType_setVisionCurveSpeedControl:
 		s.VisionCurveSpeedControlEnabled = input.Bool()
-		s.Save()
 	case custom.MapdInputType_setSpeedLimitControl:
 		s.SpeedLimitControlEnabled = input.Bool()
-		s.Save()
 	case custom.MapdInputType_setCurveSpeedControl:
 		s.CurveSpeedControlEnabled = input.Bool()
-		s.Save()
 	case custom.MapdInputType_setSpeedLimitOffset:
 		s.SpeedLimitOffset = input.Float()
-		s.Save()
 	case custom.MapdInputType_setLogLevel:
-		s.LogLevel = input.String()
+		logLevel, err := input.String_()
+		if err != nil {
+			utils.Loge(err)
+			return
+		}
+		s.LogLevel = logLevel
 		s.setLogLevel()
-		s.Save()
 	}
 }

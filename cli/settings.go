@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"strconv"
 
+	"capnproto.org/go/capnp/v3"
 	"github.com/manifoldco/promptui"
+	"github.com/pfeiferj/gomsgq"
+	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
-	"pfeifer.dev/mapd/cereal"
-	"capnproto.org/go/capnp/v3"
 )
 
 type SettingType int
@@ -151,7 +152,7 @@ var settingsList = SettingList{
 		},
 		{
 			Name: "Set Log Level",
-			MessageType: custom.MapdInputType_setVisionCurveSpeedControl,
+			MessageType: custom.MapdInputType_setLogLevel,
 			Type: String,
 			Options: []string{
 				"error",
@@ -186,6 +187,31 @@ func (s *SettingList) ToItems() []string {
 	return items
 }
 
+func save(pub gomsgq.MsgqPublisher){
+	arena := capnp.SingleSegment(nil)
+	msg, seg, err := capnp.NewMessage(arena)
+	if err != nil {
+		panic(err)
+	}
+	evt, err := log.NewRootEvent(seg)
+	if err != nil {
+		panic(err)
+	}
+	evt.SetValid(true)
+	input, err := evt.NewMapdIn()
+	if err != nil {
+		panic(err)
+	}
+
+	input.SetType(custom.MapdInputType_saveSettings)
+
+	data, err := msg.Marshal()
+	if err != nil {
+		panic(err)
+	}
+	pub.Send(data)
+}
+
 func settings() {
 	pub := cereal.GetMapdInputPub()
 
@@ -198,7 +224,7 @@ func settings() {
 		_, result, err := prompt.Run()
 
 		if err != nil {
-			fmt.Printf("Prompt failed %v\n", err)
+			fmt.Printf("Exiting %v\n", err)
 			return
 		}
 
@@ -210,6 +236,7 @@ func settings() {
 					panic(err)
 				}
 				pub.Send(data)
+				save(pub)
 				break
 			}
 		}

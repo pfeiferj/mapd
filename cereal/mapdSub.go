@@ -42,7 +42,6 @@ func GetMapdSub() (mapdSub MapdSubscriber) {
 		panic(err)
 	}
 	sub := gomsgq.MsgqSubscriber{}
-	sub.Conflate = true
 	sub.Init(msgq)
 
 	mapdSub.Sub = sub
