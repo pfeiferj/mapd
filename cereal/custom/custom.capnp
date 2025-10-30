@@ -52,6 +52,10 @@ enum MapdInputType {
     setVtscMinTargetV @8;
     reloadSettings @9;
     saveSettings @10;
+    setEnableSpeed @11;
+    setVtscUseEnableSpeed @12;
+    setCurveUseEnableSpeed @13;
+    setSpeedLimitUseEnableSpeed @14;
 }
 
 enum SpeedLimitOffsetType {

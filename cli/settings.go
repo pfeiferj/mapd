@@ -176,6 +176,26 @@ var settingsList = SettingList{
 			MessageType: custom.MapdInputType_setVtscMinTargetV,
 			Type: Float,
 		},
+		{
+			Name: "Set Enable Speed",
+			MessageType: custom.MapdInputType_setEnableSpeed,
+			Type: Float,
+		},
+		{
+			Name: "Set Speed Limit Use Enable Speed",
+			MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
+			Type: Bool,
+		},
+		{
+			Name: "Set Curve Use Enable Speed",
+			MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
+			Type: Bool,
+		},
+		{
+			Name: "Set Vision Use Enable Speed",
+			MessageType: custom.MapdInputType_setVtscUseEnableSpeed,
+			Type: Bool,
+		},
 	},
 }
 

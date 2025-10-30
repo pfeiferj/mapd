@@ -1,10 +1,13 @@
 package main
 
 import (
+	"math"
+
 	"capnproto.org/go/capnp/v3"
 
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/settings"
 )
 
@@ -24,20 +27,34 @@ type State struct {
 	LastSpeedLimitWayName  string
 	NextSpeedLimit         NextSpeedLimit
 	VtscSpeed              float32
+	CarSetSpeed            float32
+	CarVEgo                float32
+}
+
+func (s *State) checkEnableSpeed() bool {
+	if settings.Settings.EnableSpeed == 0 {
+		return true
+	}
+	return math.Abs(float64(s.CarSetSpeed - settings.Settings.EnableSpeed)) < settings.ENABLE_SPEED_RANGE
 }
 
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := float32(0)
-	if settings.Settings.SpeedLimitControlEnabled {
+	if settings.Settings.SpeedLimitControlEnabled && (!settings.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed()){
 		suggestedSpeed = float32(s.CurrentWay.Way.MaxSpeed())
 		if suggestedSpeed > 0 {
 			suggestedSpeed += settings.Settings.SpeedLimitOffset
 		}
 	}
-	if settings.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) {
+	if settings.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) && (!settings.Settings.VtscUseEnableSpeed || s.checkEnableSpeed()) {
 		suggestedSpeed = s.VtscSpeed
 	}
 	return suggestedSpeed
+}
+
+func (s *State) UpdateCarState(carData car.CarState) {
+	s.CarSetSpeed = carData.VCruise()
+	s.CarVEgo = carData.VEgo() * settings.KPH_TO_MS
 }
 
 func (s *State) ToMessage() *capnp.Message {

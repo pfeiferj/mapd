@@ -31,6 +31,9 @@ func main() {
 	gps := cereal.GetGpsSub()
 	defer gps.Sub.Msgq.Close()
 
+	car := cereal.GetCarSub()
+	defer car.Sub.Msgq.Close()
+
 	model := cereal.GetModelSub()
 	defer model.Sub.Msgq.Close()
 
@@ -50,10 +53,16 @@ func main() {
 
 		time.Sleep(settings.LOOP_DELAY)
 
+		carData, success := car.Read()
+		if success {
+			state.UpdateCarState(carData)
+		}
+
 		modelData, success := model.Read()
 		if success {
-			state.VtscSpeed = calcVtscSpeed(modelData)
+			state.VtscSpeed = calcVtscSpeed(modelData, &state)
 		}
+
 
 		location, success := gps.Read()
 		if !success {

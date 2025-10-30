@@ -7,7 +7,7 @@ import (
 	"pfeifer.dev/mapd/settings"
 )
 
-func calcVtscSpeed(model log.ModelDataV2) float32 {
+func calcVtscSpeed(model log.ModelDataV2, state *State) float32 {
 	xyztData, err := model.OrientationRate()
 	if err != nil {
 		return 0
@@ -28,7 +28,7 @@ func calcVtscSpeed(model log.ModelDataV2) float32 {
 
 	predictedLatAccels := make([]float32, zOrientRate.Len())
 	maxLatA := float32(0)
-	vEgo := xVelocity.At(0)
+	vEgo := state.CarVEgo
 	if vEgo < 0.1 {
 		vEgo = 0.1
 	}

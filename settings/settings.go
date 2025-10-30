@@ -19,10 +19,14 @@ type MapdSettings struct {
 	VisionCurveSpeedControlEnabled bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled       bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled       bool    `json:"speed_limit_control_enabled"`
+	VtscUseEnableSpeed             bool    `json:"vtc_use_enable_speed"`
+	SpeedLimitUseEnableSpeed       bool    `json:"speed_limit_use_enable_speed"`
+	CurveUseEnableSpeed            bool    `json:"curve_use_enable_speed"`
 	LogLevel                       string  `json:"log_level"`
 	VtscTargetLatA                 float32 `json:"vtsc_target_lat_a"`
 	VtscMinTargetV                 float32 `json:"vtsc_min_target_v"`
 	SpeedLimitOffset               float32 `json:"speed_limit_offset"`
+	EnableSpeed                    float32 `json:"enable_speed"`
 }
 
 func (s *MapdSettings) Default() {
@@ -33,6 +37,10 @@ func (s *MapdSettings) Default() {
 	s.VisionCurveSpeedControlEnabled = false
 	s.CurveSpeedControlEnabled = false
 	s.SpeedLimitControlEnabled = false
+	s.EnableSpeed = 0
+	s.VtscUseEnableSpeed = false
+	s.CurveUseEnableSpeed = false
+	s.SpeedLimitUseEnableSpeed = false
 }
 
 func (s *MapdSettings) Load() {
@@ -109,6 +117,14 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.CurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitOffset:
 		s.SpeedLimitOffset = input.Float()
+	case custom.MapdInputType_setEnableSpeed:
+		s.EnableSpeed = input.Float()
+	case custom.MapdInputType_setVtscUseEnableSpeed:
+		s.VtscUseEnableSpeed = input.Bool()
+	case custom.MapdInputType_setCurveUseEnableSpeed:
+		s.CurveUseEnableSpeed = input.Bool()
+	case custom.MapdInputType_setSpeedLimitUseEnableSpeed:
+		s.SpeedLimitUseEnableSpeed = input.Bool()
 	case custom.MapdInputType_setLogLevel:
 		logLevel, err := input.String_()
 		if err != nil {
