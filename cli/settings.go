@@ -183,7 +183,7 @@ var settingsList = SettingList{
 		},
 		{
 			Name: "Set Speed Limit Use Enable Speed",
-			MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
+			MessageType: custom.MapdInputType_setSpeedLimitUseEnableSpeed,
 			Type: Bool,
 		},
 		{
