@@ -12,7 +12,6 @@ import (
 
 var (
 	Settings = MapdSettings{}
-	loaded   = false
 )
 
 type MapdSettings struct {
@@ -43,32 +42,22 @@ func (s *MapdSettings) Default() {
 	s.SpeedLimitUseEnableSpeed = false
 }
 
-func (s *MapdSettings) Load() {
+func (s *MapdSettings) Load() (success bool) {
 	data, err := params.GetParam(params.MAPD_SETTINGS)
 	if err != nil {
-		if !loaded {
-			s.Default()
-			s.Save()
-		} else {
-			utils.Loge(err)
-			return
-		}
+		utils.Loge(err)
+		return false
 	}
 
 	err = json.Unmarshal(data, s)
 	if err != nil {
-		if !loaded {
-			s.Default()
-			s.Save()
-		} else {
-			utils.Loge(err)
-			return
-		}
+		utils.Loge(err)
+		return false
 	}
 
 	s.setLogLevel()
 
-	loaded = true
+	return true
 }
 
 func (s *MapdSettings) Save() {
