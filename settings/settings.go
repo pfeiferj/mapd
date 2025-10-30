@@ -8,6 +8,7 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/params"
 	"pfeifer.dev/mapd/utils"
+	"time"
 )
 
 var (
@@ -58,6 +59,21 @@ func (s *MapdSettings) Load() (success bool) {
 	s.setLogLevel()
 
 	return true
+}
+
+func (s *MapdSettings) LoadWithFallback() {
+	settingsLoaded := false
+	for range 15 {
+		if s.Load() {
+			settingsLoaded = true
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	if !settingsLoaded {
+		s.Default()
+		s.Save()
+	}
 }
 
 func (s *MapdSettings) Save() {

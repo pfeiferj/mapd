@@ -11,24 +11,13 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/settings"
+	ss "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
 	"pfeifer.dev/mapd/cli"
 )
 
 func main() {
-	settingsLoaded := false
-	for range 15 {
-		if settings.Settings.Load() {
-			settingsLoaded = true
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
-	if !settingsLoaded {
-		settings.Settings.Default()
-		settings.Settings.Save()
-	}
+	ss.Settings.LoadWithFallback()
 
 	cli.Handle()
 
@@ -52,7 +41,7 @@ func main() {
 	for {
 		input, success := sub.Read()
 		if success {
-			settings.Settings.Handle(input)
+			ss.Settings.Handle(input)
 		}
 		offlineMaps := readOffline(state.Data)
 		msg := state.ToMessage()
@@ -63,7 +52,7 @@ func main() {
 		}
 		pub.Send(b)
 
-		time.Sleep(settings.LOOP_DELAY)
+		time.Sleep(ss.LOOP_DELAY)
 
 		carData, success := car.Read()
 		if success {
