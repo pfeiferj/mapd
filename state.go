@@ -59,8 +59,8 @@ func (s *State) SuggestedSpeed() float32 {
 }
 
 func (s *State) UpdateCarState(carData car.CarState) {
-	s.CarSetSpeed = carData.VCruise()
-	s.CarVEgo = carData.VEgo() * settings.KPH_TO_MS
+	s.CarSetSpeed = carData.VCruise() * settings.KPH_TO_MS
+	s.CarVEgo = carData.VEgo()
 }
 
 func (s *State) ToMessage() *capnp.Message {
