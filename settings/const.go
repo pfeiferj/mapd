@@ -10,4 +10,5 @@ const (
 	MS_TO_KPH            = 3.6
 	KPH_TO_MS            = 1/3.6
 	ENABLE_SPEED_RANGE   = 0.2 // m/s
+	HOLD_LAST_SEEN_SPEED = true //TODO move to settings
 )

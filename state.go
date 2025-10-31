@@ -41,7 +41,10 @@ func (s *State) checkEnableSpeed() bool {
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := float32(0)
 	if settings.Settings.SpeedLimitControlEnabled && (!settings.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed()){
-		suggestedSpeed = float32(s.CurrentWay.Way.MaxSpeed())
+		suggestedSpeed = float32(s.MaxSpeed)
+		if suggestedSpeed == 0 && settings.HOLD_LAST_SEEN_SPEED {
+			suggestedSpeed = float32(s.LastSpeedLimitValue)
+		}
 		if suggestedSpeed > 0 {
 			suggestedSpeed += settings.Settings.SpeedLimitOffset
 		}

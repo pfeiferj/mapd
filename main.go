@@ -81,6 +81,13 @@ func main() {
 		state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
 		utils.Logde(errors.Wrap(err, "could not get current way"))
 
+		state.MaxSpeed = state.CurrentWay.Way.MaxSpeed()
+		if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
+			state.MaxSpeed = state.CurrentWay.Way.MaxSpeedForward()
+		} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
+			state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
+		}
+
 		state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
 		utils.Logde(errors.Wrap(err, "could not get next way"))
 
