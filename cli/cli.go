@@ -13,7 +13,8 @@ func Handle() {
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
 			{
-				Name:  "connect",
+				Name:  "interactive",
+				Aliases: []string{"i"},
 				Usage: "Send commands to an active mapd instance",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					interactive()
