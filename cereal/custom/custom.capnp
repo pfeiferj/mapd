@@ -40,6 +40,38 @@ struct CustomReserved8 @0xf416ec09499d9d19 {
 struct CustomReserved9 @0xa1680744031fdb2d {
 }
 
+struct CustomReserved10 @0xcb9fd56c7057593a {
+}
+
+
+struct CustomReserved11 @0xc2243c65e0340384 {
+}
+
+struct CustomReserved12 @0x9ccdc8676701b412 {
+}
+
+struct CustomReserved13 @0xcd96dafb67a082d0 {
+}
+
+struct CustomReserved14 @0xb057204d7deadf3f {
+}
+
+struct CustomReserved15 @0xbd443b539493bc68 {
+}
+
+struct CustomReserved16 @0xfc6241ed8877b611 {
+}
+
+enum MapdExtendedOutType {
+  paths @0;
+  settings @1;
+}
+
+struct MapdExtendedOut @0xa30662f84033036c {
+  type @0 :MapdExtendedOutType;
+  json @1 :Text;
+}
+
 enum MapdInputType {
     download @0;
     setTargetLateralAccel @1;
@@ -63,10 +95,10 @@ enum SpeedLimitOffsetType {
   percent @1;
 }
 
-struct MapdIn @0xcb9fd56c7057593a {
+struct MapdIn @0xc86a3d38d13eb3ef {
   type @0 :MapdInputType;
   float @1 :Float32;
-  string @2 :Text;
+  str @2 :Text;
   bool @3 :Bool;
 }
 
@@ -76,7 +108,7 @@ enum RoadContext {
   unknown @2;
 }
 
-struct MapdOut @0xc2243c65e0340384 {
+struct MapdOut @0xa4f1eb3323f5f582 {
   wayName @0 :Text;
   wayRef @1 :Text;
   roadName @2 :Text;
@@ -98,28 +130,5 @@ struct MapdOut @0xc2243c65e0340384 {
   roadContext @18 :RoadContext;
   distanceFromWayCenter @19 :Float32;
   vtscSpeed @20 :Float32;
-}
-
-struct CustomReserved12 @0x9ccdc8676701b412 {
-}
-
-struct CustomReserved13 @0xcd96dafb67a082d0 {
-}
-
-struct CustomReserved14 @0xb057204d7deadf3f {
-}
-
-struct CustomReserved15 @0xbd443b539493bc68 {
-}
-
-struct CustomReserved16 @0xfc6241ed8877b611 {
-}
-
-struct CustomReserved17 @0xa30662f84033036c {
-}
-
-struct CustomReserved18 @0xc86a3d38d13eb3ef {
-}
-
-struct CustomReserved19 @0xa4f1eb3323f5f582 {
+  curveSpeed @21 :Float32;
 }

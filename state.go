@@ -8,7 +8,7 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/car"
-	"pfeifer.dev/mapd/settings"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type State struct {
@@ -29,28 +29,33 @@ type State struct {
 	VtscSpeed              float32
 	CarSetSpeed            float32
 	CarVEgo                float32
+	CarAEgo                float32
+	CurveSpeed             float32
 }
 
 func (s *State) checkEnableSpeed() bool {
-	if settings.Settings.EnableSpeed == 0 {
+	if ms.Settings.EnableSpeed == 0 {
 		return true
 	}
-	return math.Abs(float64(s.CarSetSpeed - settings.Settings.EnableSpeed)) < settings.ENABLE_SPEED_RANGE
+	return math.Abs(float64(s.CarSetSpeed - ms.Settings.EnableSpeed)) < ms.ENABLE_SPEED_RANGE
 }
 
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := float32(0)
-	if settings.Settings.SpeedLimitControlEnabled && (!settings.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed()){
+	if ms.Settings.SpeedLimitControlEnabled && (!ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed()){
 		suggestedSpeed = float32(s.MaxSpeed)
-		if suggestedSpeed == 0 && settings.HOLD_LAST_SEEN_SPEED {
+		if suggestedSpeed == 0 && ms.HOLD_LAST_SEEN_SPEED {
 			suggestedSpeed = float32(s.LastSpeedLimitValue)
 		}
 		if suggestedSpeed > 0 {
-			suggestedSpeed += settings.Settings.SpeedLimitOffset
+			suggestedSpeed += ms.Settings.SpeedLimitOffset
 		}
 	}
-	if settings.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) && (!settings.Settings.VtscUseEnableSpeed || s.checkEnableSpeed()) {
+	if ms.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VtscUseEnableSpeed || s.checkEnableSpeed()) {
 		suggestedSpeed = s.VtscSpeed
+	}
+	if ms.Settings.CurveSpeedControlEnabled && s.CurveSpeed > 0 && (s.CurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.CurveUseEnableSpeed || s.checkEnableSpeed()) {
+		suggestedSpeed = s.CurveSpeed
 	}
 	if suggestedSpeed < 0 {
 		suggestedSpeed = 0
@@ -62,8 +67,9 @@ func (s *State) SuggestedSpeed() float32 {
 }
 
 func (s *State) UpdateCarState(carData car.CarState) {
-	s.CarSetSpeed = carData.VCruise() * settings.KPH_TO_MS
+	s.CarSetSpeed = carData.VCruise() * ms.KPH_TO_MS
 	s.CarVEgo = carData.VEgo()
+	s.CarAEgo = carData.AEgo()
 }
 
 func (s *State) ToMessage() *capnp.Message {
@@ -107,6 +113,7 @@ func (s *State) ToMessage() *capnp.Message {
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Context))
 	output.SetEstimatedRoadWidth(float32(estimateRoadWidth(s.CurrentWay.Way)))
 	output.SetVtscSpeed(s.VtscSpeed)
+	output.SetCurveSpeed(s.CurveSpeed)
 
 	output.SetSuggestedSpeed(s.SuggestedSpeed())
 

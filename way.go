@@ -9,6 +9,7 @@ import (
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/utils"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -99,12 +100,12 @@ func estimateRoadWidth(way offline.Way) float64 {
 	if lanes == 0 {
 		lanes = 2
 	}
-	return float64(lanes) * LANE_WIDTH
+	return float64(lanes) * ms.LANE_WIDTH
 }
 
 func OnWay(way offline.Way, location log.GpsLocationData, extended bool) (OnWayResult, error) {
 	res := OnWayResult{}
-	if location.Latitude() < way.MaxLat()+PADDING && location.Latitude() > way.MinLat()-PADDING && location.Longitude() < way.MaxLon()+PADDING && location.Longitude() > way.MinLon()-PADDING {
+	if location.Latitude() < way.MaxLat()+ms.PADDING && location.Latitude() > way.MinLat()-ms.PADDING && location.Longitude() < way.MaxLon()+ms.PADDING && location.Longitude() > way.MinLon()-ms.PADDING {
 		d, err := DistanceToWay(location.Latitude(), location.Longitude(), way)
 		res.Distance = d
 		if err != nil {
@@ -233,7 +234,7 @@ func calculateBearingAlignment(way offline.Way, location log.GpsLocationData) (f
 	wayBearing := Bearing(startLat, startLon, endLat, endLon)
 
 	// Calculate bearing delta
-	delta := math.Abs(float64(location.BearingDeg())*TO_RADIANS - wayBearing)
+	delta := math.Abs(float64(location.BearingDeg())*ms.TO_RADIANS - wayBearing)
 
 	// Normalize to 0-π range
 	if delta > math.Pi {
@@ -356,13 +357,13 @@ func DistanceToWay(latitude float64, longitude float64, way offline.Way) (Distan
 		return res, nil
 	}
 
-	latRad := latitude * TO_RADIANS
-	lonRad := longitude * TO_RADIANS
+	latRad := latitude * ms.TO_RADIANS
+	lonRad := longitude * ms.TO_RADIANS
 	for i := 0; i < nodes.Len()-1; i++ {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
 		lineLat, lineLon := PointOnLine(nodeStart.Latitude(), nodeStart.Longitude(), nodeEnd.Latitude(), nodeEnd.Longitude(), latitude, longitude)
-		distance := DistanceToPoint(latRad, lonRad, lineLat*TO_RADIANS, lineLon*TO_RADIANS)
+		distance := DistanceToPoint(latRad, lonRad, lineLat*ms.TO_RADIANS, lineLon*ms.TO_RADIANS)
 		if distance < minDistance {
 			minDistance = distance
 			minNodeStart = nodeStart
@@ -521,7 +522,7 @@ func IsForward(lineStart offline.Coordinates, lineEnd offline.Coordinates, beari
 	endLon := lineEnd.Longitude()
 
 	wayBearing := Bearing(startLat, startLon, endLat, endLon)
-	bearingDelta := math.Abs(bearing*TO_RADIANS - wayBearing)
+	bearingDelta := math.Abs(bearing*ms.TO_RADIANS - wayBearing)
 	return math.Cos(bearingDelta) >= 0
 }
 
@@ -836,7 +837,7 @@ func DistanceToEndOfWay(latitude float64, longitude float64, way offline.Way, is
 	}
 	lat := distanceResult.LineEnd.Latitude()
 	lon := distanceResult.LineEnd.Longitude()
-	dist := DistanceToPoint(latitude*TO_RADIANS, longitude*TO_RADIANS, lat*TO_RADIANS, lon*TO_RADIANS)
+	dist := DistanceToPoint(latitude*ms.TO_RADIANS, longitude*ms.TO_RADIANS, lat*ms.TO_RADIANS, lon*ms.TO_RADIANS)
 	stopFiltering := false
 	nodes, err := way.Nodes()
 	if err != nil {
@@ -856,7 +857,7 @@ func DistanceToEndOfWay(latitude float64, longitude float64, way offline.Way, is
 		if !stopFiltering {
 			continue
 		}
-		dist += DistanceToPoint(lat*TO_RADIANS, lon*TO_RADIANS, nLat*TO_RADIANS, nLon*TO_RADIANS)
+		dist += DistanceToPoint(lat*ms.TO_RADIANS, lon*ms.TO_RADIANS, nLat*ms.TO_RADIANS, nLon*ms.TO_RADIANS)
 		lat = nLat
 		lon = nLon
 	}

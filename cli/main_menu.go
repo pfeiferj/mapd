@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"time"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
@@ -15,15 +16,26 @@ type mainState int
 const (
 	showMenu mainState = iota
 	showSettings
+	showOutput
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
+
+type TickMsg time.Time
+
+func tickEvery() tea.Cmd {
+    return tea.Every(50 * time.Millisecond, func(t time.Time) tea.Msg {
+        return TickMsg(t)
+    })
+}
 
 type uiModel struct {
 	list list.Model
 	state mainState
 	settings settingsModel
+	output outputModel
 	pub *gomsgq.MsgqPublisher
+	sub *cereal.MapdOutSubscriber
 }
 type item struct {
 	title, desc string
@@ -38,19 +50,20 @@ func initialModel() uiModel {
 	items := []list.Item{
 		item{title: "Settings", desc: "Modify settings of an active instance of mapd", state: showSettings},
 		item{title: "Download", desc: "Trigger a download of maps in an active instance of mapd"},
-		item{title: "Watch", desc: "Watch the live output from mapd"},
+		item{title: "Watch", desc: "Watch the live output from mapd", state: showOutput},
 	}
 
 	listDelegate := list.NewDefaultDelegate()
-	pub := cereal.GetMapdInputPub()
-	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub}
+	pub := cereal.GetMapdCliPub()
+	sub := cereal.GetMapdOutSub()
+	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub}
 	m.list.Title = "Mapd Actions"
 	return m
 }
 
 func (m uiModel) Init() tea.Cmd {
     // Just return `nil`, which means "no I/O right now, please."
-    return nil
+    return tickEvery()
 }
 
 func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -68,6 +81,9 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 		m.settings, _ = m.settings.Update(msg, &m)
+	case TickMsg:
+		m.output, _ = m.output.Update(msg, &m)
+		return m, tickEvery()
 	}
 
 
@@ -75,6 +91,8 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.state {
 	case showSettings:
 		m.settings, cmd = m.settings.Update(msg, &m)
+	case showOutput:
+		m.output, cmd = m.output.Update(msg, &m)
 	default:
 		m.list, cmd = m.list.Update(msg)
 	}
@@ -85,6 +103,8 @@ func (m uiModel) View() string {
 	switch m.state {
 	case showSettings:
 		return m.settings.View()
+	case showOutput:
+		return m.output.View()
 	}
 	return docStyle.Render(m.list.View())
 }

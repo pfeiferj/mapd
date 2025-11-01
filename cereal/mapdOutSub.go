@@ -9,11 +9,11 @@ import (
 	"pfeifer.dev/mapd/settings"
 )
 
-type MapdSubscriber struct {
+type MapdOutSubscriber struct {
 	Sub gomsgq.MsgqSubscriber
 }
 
-func (s *MapdSubscriber) Read() (input custom.MapdIn, success bool) {
+func (s *MapdOutSubscriber) Read() (input custom.MapdOut, success bool) {
 	data := s.Sub.Read()
 	if len(data) == 0 {
 		return input, false
@@ -28,20 +28,21 @@ func (s *MapdSubscriber) Read() (input custom.MapdIn, success bool) {
 		return input, false
 	}
 
-	input, err = event.MapdIn()
+	input, err = event.MapdOut()
 	if err != nil {
 		return input, false
 	}
 	return input, true
 }
 
-func GetMapdSub(name string) (mapdSub MapdSubscriber) {
+func GetMapdOutSub() (mapdSub MapdOutSubscriber) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init(name, settings.DEFAULT_SEGMENT_SIZE)
+	err := msgq.Init("mapdOut", settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}
 	sub := gomsgq.MsgqSubscriber{}
+	sub.Conflate = true
 	sub.Init(msgq)
 
 	mapdSub.Sub = sub

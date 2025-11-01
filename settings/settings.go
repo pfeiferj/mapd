@@ -131,7 +131,7 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_setSpeedLimitUseEnableSpeed:
 		s.SpeedLimitUseEnableSpeed = input.Bool()
 	case custom.MapdInputType_setLogLevel:
-		logLevel, err := input.String_()
+		logLevel, err := input.Str()
 		if err != nil {
 			utils.Loge(err)
 			return

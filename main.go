@@ -11,13 +11,13 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
-	ss "pfeifer.dev/mapd/settings"
+	ms "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
 	"pfeifer.dev/mapd/cli"
 )
 
 func main() {
-	ss.Settings.LoadWithFallback()
+	ms.Settings.LoadWithFallback()
 
 	cli.Handle()
 
@@ -26,8 +26,11 @@ func main() {
 	pub := cereal.GetMapdPub()
 	defer pub.Msgq.Close()
 
-	sub := cereal.GetMapdSub()
+	sub := cereal.GetMapdSub("mapdIn")
 	defer sub.Sub.Msgq.Close()
+
+	cli := cereal.GetMapdSub("mapdCli")
+	defer cli.Sub.Msgq.Close()
 
 	gps := cereal.GetGpsSub()
 	defer gps.Sub.Msgq.Close()
@@ -41,8 +44,13 @@ func main() {
 	for {
 		input, success := sub.Read()
 		if success {
-			ss.Settings.Handle(input)
+			ms.Settings.Handle(input)
 		}
+		cliInput, success := cli.Read()
+		if success {
+			ms.Settings.Handle(cliInput)
+		}
+
 		offlineMaps := readOffline(state.Data)
 		msg := state.ToMessage()
 
@@ -52,7 +60,7 @@ func main() {
 		}
 		pub.Send(b)
 
-		time.Sleep(ss.LOOP_DELAY)
+		time.Sleep(ms.LOOP_DELAY)
 
 		carData, success := car.Read()
 		if success {
@@ -69,6 +77,7 @@ func main() {
 		if !success {
 			continue
 		}
+		state.Location = location
 		if !PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
 			state.Data, err = FindWaysAroundLocation(location.Latitude(), location.Longitude())
 			if err != nil {
@@ -87,6 +96,7 @@ func main() {
 		} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
 			state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
 		}
+		slog.Debug("we calculated a max speed")
 
 		state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
 		utils.Logde(errors.Wrap(err, "could not get next way"))
@@ -94,6 +104,7 @@ func main() {
 		state.Curvatures, err = GetStateCurvatures(&state)
 		utils.Logde(errors.Wrap(err, "could not get curvatures from current state"))
 		state.TargetVelocities = GetTargetVelocities(state.Curvatures)
+		UpdateCurveSpeed(&state)
 
 		state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 
@@ -102,21 +113,22 @@ func main() {
 }
 
 func logOutput(event log.Event, mapdOut custom.MapdOut) {
-	name, _ := mapdOut.WayName()
-	ref, _ := mapdOut.WayRef()
-	hazard, _ := mapdOut.Hazard()
-	slog.Debug("mapdOut",
-		"valid", event.Valid(),
-		"wayName", name,
-		"wayRef", ref,
-		"speedLimit", mapdOut.SpeedLimit(),
-		"hazard", hazard,
-		"advisorySpeed", mapdOut.AdvisorySpeed(),
-		"oneWay", mapdOut.OneWay(),
-		"lanes", mapdOut.Lanes(),
-		"vtscSpeed", mapdOut.VtscSpeed(),
-		"suggestedSpeed", mapdOut.SuggestedSpeed(),
-	)
+	//name, _ := mapdOut.WayName()
+	//ref, _ := mapdOut.WayRef()
+	//hazard, _ := mapdOut.Hazard()
+	//slog.Debug("mapdOut",
+	//	"valid", event.Valid(),
+	//	"wayName", name,
+	//	"wayRef", ref,
+	//	"speedLimit", mapdOut.SpeedLimit(),
+	//	"hazard", hazard,
+	//	"advisorySpeed", mapdOut.AdvisorySpeed(),
+	//	"oneWay", mapdOut.OneWay(),
+	//	"lanes", mapdOut.Lanes(),
+	//	"vtscSpeed", mapdOut.VtscSpeed(),
+	//	"curveSpeed", mapdOut.CurveSpeed(),
+	//	"suggestedSpeed", mapdOut.SuggestedSpeed(),
+	//)
 }
 
 func readOffline(data []uint8) offline.Offline {
@@ -246,10 +258,10 @@ func calculateWayDistance(way offline.Way) (float64, error) {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
 		distance := DistanceToPoint(
-			nodeStart.Latitude()*TO_RADIANS,
-			nodeStart.Longitude()*TO_RADIANS,
-			nodeEnd.Latitude()*TO_RADIANS,
-			nodeEnd.Longitude()*TO_RADIANS,
+			nodeStart.Latitude()*ms.TO_RADIANS,
+			nodeStart.Longitude()*ms.TO_RADIANS,
+			nodeEnd.Latitude()*ms.TO_RADIANS,
+			nodeEnd.Longitude()*ms.TO_RADIANS,
 		)
 		totalDistance += distance
 	}

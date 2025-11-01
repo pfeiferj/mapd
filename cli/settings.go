@@ -10,7 +10,134 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"capnproto.org/go/capnp/v3"
+	ms "pfeifer.dev/mapd/settings"
 )
+
+var settingsList = []list.Item{
+	settingsItem{
+		title: "Speed Limit Control Enabled",
+		desc: "When enabled mapd will use the speed limit to determine a suggested speed",
+		MessageType: custom.MapdInputType_setSpeedLimitControl,
+		Type: Enable,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Curve Speed Control Enabled",
+		desc: "When enabled mapd will use map based curvature calculations to determine a suggested speed",
+		MessageType: custom.MapdInputType_setCurveSpeedControl,
+		Type: Enable,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Vision Curve Speed Control Enabled",
+		desc: "When enabled mapd will use vision model based curvature calculations to determine a suggested speed",
+		MessageType: custom.MapdInputType_setVisionCurveSpeedControl,
+		Type: Enable,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Set Log Level",
+		desc: "Modify how verbose logging will be for the mapd system",
+		MessageType: custom.MapdInputType_setLogLevel,
+		Type: Options,
+		state: settingsInput,
+		options: []list.Item{
+			settingsItem {title: "error"},
+			settingsItem {title: "warn"},
+			settingsItem {title: "info"},
+			settingsItem {title: "debug"},
+		},
+	},
+	settingsItem{
+		title: "Speed Limit Offset",
+		desc: "The offset that gets applied to a speed limit to determine a target speed",
+		MessageType: custom.MapdInputType_setSpeedLimitOffset,
+		Type: Speed,
+		state: unitsInput,
+	},
+	settingsItem{
+		title: "Vision Target Lateral Acceleration",
+		desc: "The maximum lateral acceleration used in the Vision Curve Control speed calculations",
+		MessageType: custom.MapdInputType_setVtscTargetLatA,
+		Type: Float,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Vision Minimum Target Velocity",
+		desc: "The minimum speed that Vision Curve Control will request to drive",
+		MessageType: custom.MapdInputType_setVtscMinTargetV,
+		Type: Speed,
+		state: unitsInput,
+	},
+	settingsItem{
+		title: "Mapd Enable Speed",
+		desc: "The speed you can set your cruise control to that will then cause mapd features to engage",
+		MessageType: custom.MapdInputType_setEnableSpeed,
+		Type: Speed,
+		state: unitsInput,
+	},
+	settingsItem{
+		title: "Use Enable Speed For Speed Limit",
+		desc: "Determines whether the Mapd Enable Speed controls enabling of Speed Limit Control",
+		MessageType: custom.MapdInputType_setSpeedLimitUseEnableSpeed,
+		Type: Bool,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Use Enable Speed for Curve Speed Control",
+		desc: "Determines whether the Mapd Enable Speed controls enabling of Curve Speed Control",
+		MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
+		Type: Bool,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Use Enable Speed for Vision Curve Speed Control",
+		desc: "Determines whether the Mapd Enable Speed controls enabling of Vision Curve Speed Control",
+		MessageType: custom.MapdInputType_setVtscUseEnableSpeed,
+		Type: Bool,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Save Settings",
+		desc: "Persists any updates to the settings across reboots",
+		state: saveSettings,
+	},
+	settingsItem{
+		title: "Return to Main Menu",
+		desc: "Exit settings configuration and return to the initial actions menu",
+		state: settingsExit,
+	},
+}
+
+var enableList = []list.Item{
+	settingsItem{
+		title: "Enable",
+	},
+	settingsItem{
+		title: "Disable",
+	},
+}
+
+var boolList = []list.Item{
+	settingsItem{
+		title: "Yes",
+	},
+	settingsItem{
+		title: "No",
+	},
+}
+
+var unitsList = []list.Item{
+	settingsItem{
+		title: "m/s",
+	},
+	settingsItem{
+		title: "mph",
+	},
+	settingsItem{
+		title: "kph",
+	},
+}
 
 type SettingType int
 
@@ -18,6 +145,17 @@ const (
 	String SettingType = iota
 	Float
 	Bool
+	Speed
+	Enable
+	Options
+)
+
+type SpeedUnit int
+
+const (
+	Ms SpeedUnit = iota
+	Mph
+	Kph
 )
 
 type settingsState int
@@ -25,6 +163,7 @@ const (
 	showSettingsMenu settingsState = iota
 	settingsExit
 	settingsInput
+	unitsInput
 	saveSettings
 )
 
@@ -33,7 +172,7 @@ type settingsItem struct {
 	state settingsState
 	MessageType custom.MapdInputType
 	Type SettingType
-
+	options []list.Item
 }
 
 func (i settingsItem) Title() string       { return i.title }
@@ -46,11 +185,7 @@ type settingsModel struct {
 	textInput textinput.Model
 	selectedItem settingsItem
 	prompt string
-}
-
-func (m settingsModel) Init() tea.Cmd {
-    // Just return `nil`, which means "no I/O right now, please."
-    return nil
+	speedUnit SpeedUnit
 }
 
 func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd) {
@@ -65,7 +200,24 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				m.state = showSettingsMenu
 				mm.state = showMenu
 			case settingsInput:
+				if m.selectedItem.Type == Enable {
+					m.list.Title = m.selectedItem.Title()
+					m.list.SetItems(enableList)
+					m.list.ResetSelected()
+				}
+				if m.selectedItem.Type == Options {
+					m.list.Title = m.selectedItem.Title()
+					m.list.SetItems(m.selectedItem.options)
+					m.list.ResetSelected()
+				}
+				if m.selectedItem.Type == Bool {
+					m.list.Title = m.selectedItem.Title()
+					m.list.SetItems(boolList)
+					m.list.ResetSelected()
+				}
 				m.prompt = m.selectedItem.Title()
+				m.textInput.Reset()
+				m.textInput.Focus()
 			case saveSettings:
 				m.state = showSettingsMenu
 				mm.state = showMenu
@@ -91,11 +243,26 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 					panic(err)
 				}
 				mm.pub.Send(data)
-
+			case unitsInput:
+				m.list.SetItems(unitsList)
+				m.list.Title = "Select Units"
+				m.list.ResetSelected()
 			}
 			return m, nil
-		}
-		if msg.Type == tea.KeyEnter && m.state == settingsInput {
+		} else if msg.Type == tea.KeyEnter && m.state == unitsInput {
+			switch m.list.SelectedItem().(settingsItem).title {
+			case "m/s":
+				m.speedUnit = Ms
+			case "mph":
+				m.speedUnit = Mph
+			case "kph":
+				m.speedUnit = Kph
+			}
+			m.state = settingsInput
+			m.prompt = m.selectedItem.title
+			m.textInput.Reset()
+			m.textInput.Focus()
+		} else if msg.Type == tea.KeyEnter && m.state == settingsInput {
 			m.state = showSettingsMenu
 
 			arena := capnp.SingleSegment(nil)
@@ -119,15 +286,15 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 
 			switch m.selectedItem.Type {
 			case String:
-				err := input.SetString_(result)
+				err := input.SetStr(result)
 				if err != nil {
 					panic(err)
 				}
 			case Bool:
-				switch result {
-				case "true":
+				switch m.list.SelectedItem().(settingsItem).title {
+				case "Yes":
 					input.SetBool(true)
-				case "false":
+				case "No":
 					input.SetBool(false)
 				}
 			case Float:
@@ -136,132 +303,95 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 					panic(err)
 				}
 				input.SetFloat(float32(val))
+			case Enable:
+				switch m.list.SelectedItem().(settingsItem).title {
+				case "Enable":
+					input.SetBool(true)
+				case "Disable":
+					input.SetBool(false)
+				}
+			case Options:
+				err = input.SetStr(m.list.SelectedItem().(settingsItem).title)
+				if err != nil {
+					panic(err)
+				}
+			case Speed:
+				val, err := strconv.ParseFloat(result, 32)
+				if err != nil {
+					panic(err)
+				}
+				switch m.speedUnit {
+				case Mph:
+					val = val * ms.MPH_TO_MS
+				case Kph:
+					val = val * ms.KPH_TO_MS
+				}
+				input.SetFloat(float32(val))
 			}
 			data, err := msg.Marshal()
 			if err != nil {
 				panic(err)
 			}
 			mm.pub.Send(data)
+			m.list.SetItems(settingsList)
+			m.list.ResetSelected()
+			m.list.Title = "Mapd Settings"
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
+		m.textInput.Width = msg.Width-h
+		m.textInput.CharLimit = 256
 	}
 
 
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
+	switch m.state {
+	case settingsInput:
+		switch m.selectedItem.Type {
+		case Enable:
+			m.list, cmd = m.list.Update(msg)
+		case Bool:
+			m.list, cmd = m.list.Update(msg)
+		case Options:
+			m.list, cmd = m.list.Update(msg)
+		default: 
+			m.textInput, cmd = m.textInput.Update(msg)
+		}
+	default:
+		m.list, cmd = m.list.Update(msg)
+	}
 	return m, cmd
 }
 
 func (m settingsModel) View() string {
 	switch m.state {
 	case settingsInput:
-		return docStyle.Render(fmt.Sprintf(
-			"%s\n\n%s\n\n%s",
-			m.prompt,
-			m.textInput.View(),
-			"(esc to quit)",
-			) + "\n")
+		switch m.selectedItem.Type {
+		case Enable:
+			return docStyle.Render(m.list.View())
+		case Bool:
+			return docStyle.Render(m.list.View())
+		case Options:
+			return docStyle.Render(m.list.View())
+		default: 
+			return docStyle.Render(fmt.Sprintf(
+				"%s\n\n%s\n\n%s",
+				m.prompt,
+				m.textInput.View(),
+				"(esc to quit)",
+				) + "\n")
+		}
 	default:
 		return docStyle.Render(m.list.View())
 	}
 }
 
-func getSettingsModel() settingsModel {
-	items := []list.Item{
-		settingsItem{
-			title: "Speed Limit Control Enabled",
-			desc: "When enabled mapd will use the speed limit to determine a suggested speed",
-			MessageType: custom.MapdInputType_setSpeedLimitControl,
-			Type: Bool,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Curve Speed Control Enabled",
-			desc: "When enabled mapd will use map based curvature calculations to determine a suggested speed",
-			MessageType: custom.MapdInputType_setCurveSpeedControl,
-			Type: Bool,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Vision Curve Speed Control Enabled",
-			desc: "When enabled mapd will use vision model based curvature calculations to determine a suggested speed",
-			MessageType: custom.MapdInputType_setVisionCurveSpeedControl,
-			Type: Bool,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Set Log Level",
-			desc: "Modify how verbose logging will be for the mapd system",
-			MessageType: custom.MapdInputType_setLogLevel,
-			Type: String,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Speed Limit Offset",
-			desc: "The offset that gets applied to a speed limit to determine a target speed",
-			MessageType: custom.MapdInputType_setSpeedLimitOffset,
-			Type: Float,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Vision Target Lateral Acceleration",
-			desc: "The maximum lateral acceleration used in the Vision Curve Control speed calculations",
-			MessageType: custom.MapdInputType_setVtscTargetLatA,
-			Type: Float,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Vision Minimum Target Velocity",
-			desc: "The minimum speed that Vision Curve Control will request to drive",
-			MessageType: custom.MapdInputType_setVtscMinTargetV,
-			Type: Float,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Mapd Enable Speed",
-			desc: "The speed you can set your cruise control to that will then cause mapd features to engage",
-			MessageType: custom.MapdInputType_setEnableSpeed,
-			Type: Float,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Use Enable Speed For Speed Limit",
-			desc: "Determines whether the Mapd Enable Speed controls enabling of Speed Limit Control",
-			MessageType: custom.MapdInputType_setSpeedLimitUseEnableSpeed,
-			Type: Bool,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Use Enable Speed for Curve Speed Control",
-			desc: "Determines whether the Mapd Enable Speed controls enabling of Curve Speed Control",
-			MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
-			Type: Bool,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Use Enable Speed for Vision Curve Speed Control",
-			desc: "Determines whether the Mapd Enable Speed controls enabling of Vision Curve Speed Control",
-			MessageType: custom.MapdInputType_setVtscUseEnableSpeed,
-			Type: Bool,
-			state: settingsInput,
-		},
-		settingsItem{
-			title: "Save Settings",
-			desc: "Persists any updates to the settings across reboots",
-			state: saveSettings,
-		},
-		settingsItem{
-			title: "Return to Main Menu",
-			desc: "Exit settings configuration and return to the initial actions menu",
-			state: settingsExit,
-		},
-	}
 
+func getSettingsModel() settingsModel {
 	listDelegate := list.NewDefaultDelegate()
-	m := settingsModel{list: list.New(items, listDelegate, 0, 0)}
+	m := settingsModel{list: list.New(settingsList, listDelegate, 0, 0), textInput: textinput.New()}
 	m.list.Title = "Mapd Settings"
 	return m
 }
