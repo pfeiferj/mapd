@@ -33,6 +33,8 @@ type MapdSettings struct {
 	CurveTargetOffset              float32 `json:"curve_target_offset"`
 	DefaultLaneWidth               float32 `json:"default_lane_width"`
 	CurveTargetLatA                float32 `json:"curve_target_lat_a"`
+	SlowDownForNextSpeedLimit      bool    `json:"slow_down_for_next_speed_limit"`
+	SpeedUpForNextSpeedLimit       bool    `json:"speed_up_for_next_speed_limit"`
 }
 
 func (s *MapdSettings) Default() {
@@ -53,6 +55,8 @@ func (s *MapdSettings) Default() {
 	s.CurveTargetOffset = 1.5
 	s.DefaultLaneWidth = 3.7
 	s.CurveTargetLatA = 2.0
+	s.SpeedUpForNextSpeedLimit = false
+	s.SlowDownForNextSpeedLimit = true
 }
 
 func (s *MapdSettings) Recommended() {
@@ -73,6 +77,8 @@ func (s *MapdSettings) Recommended() {
 	s.CurveTargetOffset = 1.5
 	s.DefaultLaneWidth = 3.7
 	s.CurveTargetLatA = 2.0
+	s.SpeedUpForNextSpeedLimit = true
+	s.SlowDownForNextSpeedLimit = true
 }
 
 func (s *MapdSettings) Load() (success bool) {

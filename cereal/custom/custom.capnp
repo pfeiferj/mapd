@@ -96,6 +96,8 @@ enum MapdInputType {
   setCurveTargetLatA @20;
   loadDefaultSettings @21;
   loadRecommendedSettings @22;
+  setSlowDownForNextSpeedLimit @23;
+  setSpeedUpForNextSpeedLimit @24;
 }
 
 enum SpeedLimitOffsetType {

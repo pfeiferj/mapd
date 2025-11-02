@@ -36,24 +36,25 @@ var settingsList = []list.Item{
 		state: settingsInput,
 	},
 	settingsItem{
-		title: "Set Log Level",
-		desc: "Modify how verbose logging will be for the mapd system",
-		MessageType: custom.MapdInputType_setLogLevel,
-		Type: Options,
-		state: settingsInput,
-		options: []list.Item{
-			settingsItem {title: "error"},
-			settingsItem {title: "warn"},
-			settingsItem {title: "info"},
-			settingsItem {title: "debug"},
-		},
-	},
-	settingsItem{
 		title: "Speed Limit Offset",
 		desc: "The offset that gets applied to a speed limit to determine a target speed",
 		MessageType: custom.MapdInputType_setSpeedLimitOffset,
 		Type: Speed,
 		state: unitsInput,
+	},
+	settingsItem{
+		title: "Slow Down For Next Speed Limit",
+		desc: "Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is lower than the current limit",
+		MessageType: custom.MapdInputType_setSlowDownForNextSpeedLimit,
+		Type: Bool,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Speed Up For Next Speed Limit",
+		desc: "Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is higher than the current limit",
+		MessageType: custom.MapdInputType_setSpeedUpForNextSpeedLimit,
+		Type: Bool,
+		state: settingsInput,
 	},
 	settingsItem{
 		title: "Vision Target Lateral Acceleration (m/s^2)",
@@ -138,6 +139,19 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setDefaultLaneWidth,
 		Type: Float,
 		state: settingsInput,
+	},
+	settingsItem{
+		title: "Set Log Level",
+		desc: "Modify how verbose logging will be for the mapd system",
+		MessageType: custom.MapdInputType_setLogLevel,
+		Type: Options,
+		state: settingsInput,
+		options: []list.Item{
+			settingsItem {title: "error"},
+			settingsItem {title: "warn"},
+			settingsItem {title: "info"},
+			settingsItem {title: "debug"},
+		},
 	},
 	settingsItem{
 		title: "Load Default Settings",

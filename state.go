@@ -49,6 +49,20 @@ func (s *State) SuggestedSpeed() float32 {
 		}
 		if suggestedSpeed > 0 {
 			suggestedSpeed += ms.Settings.SpeedLimitOffset
+
+			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
+			timeToNextSpeedLimit := suggestedSpeed / float32(s.NextSpeedLimit.Distance)
+			speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(suggestedSpeed))
+			timeToAdjust := ms.Settings.CurveTargetAccel / float32(speedLimitDiff)
+			if timeToAdjust < 1.5 { //deal with infrequent position updates
+				timeToAdjust = 1.5
+			}
+
+			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
+				suggestedSpeed = float32(offsetNextSpeedLimit)
+			} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
+				suggestedSpeed = float32(offsetNextSpeedLimit)
+			}
 		}
 	}
 	if ms.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VtscUseEnableSpeed || s.checkEnableSpeed()) {
