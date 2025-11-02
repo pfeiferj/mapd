@@ -50,18 +50,20 @@ func (s *State) SuggestedSpeed() float32 {
 		if suggestedSpeed > 0 {
 			suggestedSpeed += ms.Settings.SpeedLimitOffset
 
-			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-			timeToNextSpeedLimit := suggestedSpeed / float32(s.NextSpeedLimit.Distance)
-			speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(suggestedSpeed))
-			timeToAdjust := ms.Settings.CurveTargetAccel / float32(speedLimitDiff)
-			if timeToAdjust < 1.5 { //deal with infrequent position updates
-				timeToAdjust = 1.5
-			}
+			if s.NextSpeedLimit.Speedlimit > 0 {
+				offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
+				timeToNextSpeedLimit := float32(s.NextSpeedLimit.Distance) / suggestedSpeed
+				speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(suggestedSpeed))
+				timeToAdjust := float32(speedLimitDiff) / ms.Settings.CurveTargetAccel
+				if timeToAdjust < 2 { //deal with infrequent position updates
+					timeToAdjust = 2
+				}
 
-			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
-				suggestedSpeed = float32(offsetNextSpeedLimit)
-			} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
-				suggestedSpeed = float32(offsetNextSpeedLimit)
+				if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
+					suggestedSpeed = float32(offsetNextSpeedLimit)
+				} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
+					suggestedSpeed = float32(offsetNextSpeedLimit)
+				}
 			}
 		}
 	}

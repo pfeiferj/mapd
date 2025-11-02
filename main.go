@@ -172,7 +172,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 	if state.CurrentWay.Way.HasNodes() {
 		distToEnd, err := DistanceToEndOfWay(state.Location.Latitude(), state.Location.Longitude(), state.CurrentWay.Way, state.CurrentWay.OnWay.IsForward)
 		if err == nil && distToEnd > 0 {
-			cumulativeDistance = distToEnd
+			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance
 		}
 	}
 
@@ -195,7 +195,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 
 			wayName := RoadName(nextWay.Way)
 			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
-				smoothedDistance := state.LastSpeedLimitDistance*0.8 + cumulativeDistance*0.2
+				smoothedDistance := state.LastSpeedLimitDistance*0.2 + cumulativeDistance*0.8
 
 				if math.Abs(smoothedDistance-state.LastSpeedLimitDistance) < 50 {
 					result.Distance = smoothedDistance
