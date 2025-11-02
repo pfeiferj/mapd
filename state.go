@@ -52,7 +52,7 @@ func (s *State) SuggestedSpeed() float32 {
 
 			if s.NextSpeedLimit.Speedlimit > 0 {
 				offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-				timeToNextSpeedLimit := float32(s.NextSpeedLimit.Distance) / suggestedSpeed
+				timeToNextSpeedLimit := float32(math.Abs(s.NextSpeedLimit.Distance / float64(suggestedSpeed))) + 1
 				speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(suggestedSpeed))
 				timeToAdjust := float32(speedLimitDiff) / ms.Settings.CurveTargetAccel
 				if timeToAdjust < 2 { //deal with infrequent position updates
