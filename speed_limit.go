@@ -30,3 +30,10 @@ func ParseMaxSpeed(maxspeed string) float64 {
 
 	return 0
 }
+
+type NextSpeedLimit struct {
+	Latitude   float64
+	Longitude  float64
+	Speedlimit float64
+	Distance   float64
+}

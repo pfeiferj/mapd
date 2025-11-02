@@ -73,21 +73,29 @@ struct MapdExtendedOut @0xa30662f84033036c {
 }
 
 enum MapdInputType {
-    download @0;
-    setTargetLateralAccel @1;
-    setSpeedLimitOffset @2;
-    setSpeedLimitControl @3;
-    setCurveSpeedControl @4;
-    setVisionCurveSpeedControl @5;
-    setLogLevel @6;
-    setVtscTargetLatA @7;
-    setVtscMinTargetV @8;
-    reloadSettings @9;
-    saveSettings @10;
-    setEnableSpeed @11;
-    setVtscUseEnableSpeed @12;
-    setCurveUseEnableSpeed @13;
-    setSpeedLimitUseEnableSpeed @14;
+  download @0;
+  setTargetLateralAccel @1;
+  setSpeedLimitOffset @2;
+  setSpeedLimitControl @3;
+  setCurveSpeedControl @4;
+  setVisionCurveSpeedControl @5;
+  setLogLevel @6;
+  setVtscTargetLatA @7;
+  setVtscMinTargetV @8;
+  reloadSettings @9;
+  saveSettings @10;
+  setEnableSpeed @11;
+  setVtscUseEnableSpeed @12;
+  setCurveUseEnableSpeed @13;
+  setSpeedLimitUseEnableSpeed @14;
+  setHoldLastSeenSpeedLimit @15;
+  setCurveTargetJerk @16;
+  setCurveTargetAccel @17;
+  setCurveTargetOffset @18;
+  setDefaultLaneWidth @19;
+  setCurveTargetLatA @20;
+  loadDefaultSettings @21;
+  loadRecommendedSettings @22;
 }
 
 enum SpeedLimitOffsetType {

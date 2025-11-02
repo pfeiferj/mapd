@@ -44,7 +44,7 @@ func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := float32(0)
 	if ms.Settings.SpeedLimitControlEnabled && (!ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed()){
 		suggestedSpeed = float32(s.MaxSpeed)
-		if suggestedSpeed == 0 && ms.HOLD_LAST_SEEN_SPEED {
+		if suggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
 			suggestedSpeed = float32(s.LastSpeedLimitValue)
 		}
 		if suggestedSpeed > 0 {
@@ -60,8 +60,8 @@ func (s *State) SuggestedSpeed() float32 {
 	if suggestedSpeed < 0 {
 		suggestedSpeed = 0
 	}
-	if suggestedSpeed > 40.23 {
-		suggestedSpeed = 40.23
+	if suggestedSpeed > 90 * ms.MPH_TO_MS {
+		suggestedSpeed = 90 * ms.MPH_TO_MS
 	}
 	return suggestedSpeed
 }

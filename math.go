@@ -175,7 +175,7 @@ func GetTargetVelocities(curvatures []Curvature) (velocities []Velocity) {
 		if curv.Curvature == 0 {
 			continue
 		}
-		velocities[i].Velocity = math.Pow(ms.TARGET_LAT_ACCEL/curv.Curvature, 1.0/2)
+		velocities[i].Velocity = math.Pow(float64(ms.Settings.CurveTargetLatA)/curv.Curvature, 1.0/2)
 		velocities[i].Latitude = curv.Latitude
 		velocities[i].Longitude = curv.Longitude
 	}

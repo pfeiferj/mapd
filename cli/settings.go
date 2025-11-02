@@ -56,7 +56,7 @@ var settingsList = []list.Item{
 		state: unitsInput,
 	},
 	settingsItem{
-		title: "Vision Target Lateral Acceleration",
+		title: "Vision Target Lateral Acceleration (m/s^2)",
 		desc: "The maximum lateral acceleration used in the Vision Curve Control speed calculations",
 		MessageType: custom.MapdInputType_setVtscTargetLatA,
 		Type: Float,
@@ -96,6 +96,58 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setVtscUseEnableSpeed,
 		Type: Bool,
 		state: settingsInput,
+	},
+	settingsItem{
+		title: "Hold Last Seen Speed Limit",
+		desc: "When enabled mapd will use the last seen speed limit if it cannot determine a current speed limit",
+		MessageType: custom.MapdInputType_setHoldLastSeenSpeedLimit,
+		Type: Bool,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Curve Target Jerk (m/s^3)",
+		desc: "The target amount of jerk to use when determining curve speed activation distance",
+		MessageType: custom.MapdInputType_setCurveTargetJerk,
+		Type: Float,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Curve Target Accel (m/s^2)",
+		desc: "The target amount of acceleration to use when determining curve speed activation distance",
+		MessageType: custom.MapdInputType_setCurveTargetAccel,
+		Type: Float,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Curve Target Offset (s)",
+		desc: "An offset for the time before a curve to reach the target curve speed",
+		MessageType: custom.MapdInputType_setCurveTargetOffset,
+		Type: Float,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Curve Target Lateral Acceleration (m/s^2)",
+		desc: "The maximum lateral acceleration used in the Curve Control speed calculations",
+		MessageType: custom.MapdInputType_setCurveTargetLatA,
+		Type: Float,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Default Lane Width",
+		desc: "The default lane width to use when determining if we are currently on a road",
+		MessageType: custom.MapdInputType_setDefaultLaneWidth,
+		Type: Float,
+		state: settingsInput,
+	},
+	settingsItem{
+		title: "Load Default Settings",
+		desc: "Loads the default settings",
+		state: defaultSettings,
+	},
+	settingsItem{
+		title: "Load Recommended Settings",
+		desc: "Loads the recommended settings",
+		state: recommendedSettings,
 	},
 	settingsItem{
 		title: "Save Settings",
@@ -165,6 +217,8 @@ const (
 	settingsInput
 	unitsInput
 	saveSettings
+	defaultSettings
+	recommendedSettings
 )
 
 type settingsItem struct {
@@ -219,8 +273,8 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				m.textInput.Reset()
 				m.textInput.Focus()
 			case saveSettings:
-				m.state = showSettingsMenu
-				mm.state = showMenu
+				m.saveSettings(mm)
+			case defaultSettings:
 				arena := capnp.SingleSegment(nil)
 				msg, seg, err := capnp.NewMessage(arena)
 				if err != nil {
@@ -236,13 +290,40 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 					panic(err)
 				}
 
-				input.SetType(custom.MapdInputType_saveSettings)
+				input.SetType(custom.MapdInputType_loadDefaultSettings)
 
 				data, err := msg.Marshal()
 				if err != nil {
 					panic(err)
 				}
 				mm.pub.Send(data)
+
+				m.saveSettings(mm)
+			case recommendedSettings:
+				arena := capnp.SingleSegment(nil)
+				msg, seg, err := capnp.NewMessage(arena)
+				if err != nil {
+					panic(err)
+				}
+				evt, err := log.NewRootEvent(seg)
+				if err != nil {
+					panic(err)
+				}
+				evt.SetValid(true)
+				input, err := evt.NewMapdIn()
+				if err != nil {
+					panic(err)
+				}
+
+				input.SetType(custom.MapdInputType_loadRecommendedSettings)
+
+				data, err := msg.Marshal()
+				if err != nil {
+					panic(err)
+				}
+				mm.pub.Send(data)
+
+				m.saveSettings(mm)
 			case unitsInput:
 				m.list.SetItems(unitsList)
 				m.list.Title = "Select Units"
@@ -363,6 +444,33 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 		m.list, cmd = m.list.Update(msg)
 	}
 	return m, cmd
+}
+
+func (m *settingsModel) saveSettings(mm *uiModel) {
+	m.state = showSettingsMenu
+	mm.state = showMenu
+	arena := capnp.SingleSegment(nil)
+	msg, seg, err := capnp.NewMessage(arena)
+	if err != nil {
+		panic(err)
+	}
+	evt, err := log.NewRootEvent(seg)
+	if err != nil {
+		panic(err)
+	}
+	evt.SetValid(true)
+	input, err := evt.NewMapdIn()
+	if err != nil {
+		panic(err)
+	}
+
+	input.SetType(custom.MapdInputType_saveSettings)
+
+	data, err := msg.Marshal()
+	if err != nil {
+		panic(err)
+	}
+	mm.pub.Send(data)
 }
 
 func (m settingsModel) View() string {

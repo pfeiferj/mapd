@@ -55,13 +55,13 @@ func UpdateCurveSpeed(s *State) {
 		if tv.Velocity > float64(s.CarVEgo) {
 			continue
 		}
-		a_diff := s.CarAEgo - ms.TARGET_ACCEL
-		accel_t := math.Abs(float64(a_diff / ms.TARGET_JERK))
-		min_accel_v := calculate_velocity(float32(accel_t), ms.TARGET_JERK, s.CarAEgo, s.CarVEgo)
+		a_diff := s.CarAEgo - ms.Settings.CurveTargetAccel
+		accel_t := math.Abs(float64(a_diff / ms.Settings.CurveTargetJerk))
+		min_accel_v := calculate_velocity(float32(accel_t), ms.Settings.CurveTargetJerk, s.CarAEgo, s.CarVEgo)
 		max_d := float32(0)
 		if float32(tv.Velocity) > min_accel_v {
 			// calculate time needed based on target jerk
-			a := float32(0.5 * ms.TARGET_JERK)
+			a := float32(0.5 * ms.Settings.CurveTargetJerk)
 			b := s.CarAEgo
 			c := s.CarVEgo - float32(tv.Velocity)
 			t_a := -1 * (float32(math.Sqrt(float64(b*b - 4 * a * c))) + b) / 2 * a
@@ -73,17 +73,17 @@ func UpdateCurveSpeed(s *State) {
 				continue
 			}
 
-			max_d = calculate_distance(t, ms.TARGET_JERK, s.CarAEgo, s.CarVEgo)
+			max_d = calculate_distance(t, ms.Settings.CurveTargetJerk, s.CarAEgo, s.CarVEgo)
 		} else {
-			max_d = calculate_distance(float32(accel_t), ms.TARGET_JERK, s.CarAEgo, s.CarVEgo)
+			max_d = calculate_distance(float32(accel_t), ms.Settings.CurveTargetJerk, s.CarAEgo, s.CarVEgo)
 			// calculate additional time needed based on target accel
-			t := math.Abs(float64((min_accel_v - float32(tv.Velocity)) / ms.TARGET_ACCEL))
-			max_d += calculate_distance(float32(t), 0, ms.TARGET_ACCEL, min_accel_v)
+			t := math.Abs(float64((min_accel_v - float32(tv.Velocity)) / ms.Settings.CurveTargetAccel))
+			max_d += calculate_distance(float32(t), 0, ms.Settings.CurveTargetAccel, min_accel_v)
 
 		}
 
-		slog.Debug("", "a", d, "b", max_d + float32(tv.Velocity) * ms.TARGET_OFFSET)
-		if float32(d) < max_d + float32(tv.Velocity) * ms.TARGET_OFFSET {
+		slog.Debug("", "a", d, "b", max_d + float32(tv.Velocity) * ms.Settings.CurveTargetOffset)
+		if float32(d) < max_d + float32(tv.Velocity) * ms.Settings.CurveTargetOffset {
 			slog.Debug("valid v!", "v", tv.Velocity)
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)

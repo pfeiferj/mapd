@@ -100,7 +100,7 @@ func estimateRoadWidth(way offline.Way) float64 {
 	if lanes == 0 {
 		lanes = 2
 	}
-	return float64(lanes) * ms.LANE_WIDTH
+	return float64(lanes) * float64(ms.Settings.DefaultLaneWidth)
 }
 
 func OnWay(way offline.Way, location log.GpsLocationData, extended bool) (OnWayResult, error) {
