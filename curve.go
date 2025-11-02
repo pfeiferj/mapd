@@ -2,7 +2,6 @@ package main
 
 import (
 	"math"
-	"fmt"
 
 	ms "pfeifer.dev/mapd/settings"
 )
@@ -48,7 +47,6 @@ func UpdateCurveSpeed(s *State) {
 	}
 
 	minValidV := float32(1000)
-	fmt.Printf("%v", forwardDistances)
 	for i, d := range forwardDistances {
 		tv := forwardPoints[i]
 		if tv.Velocity > float64(s.CarVEgo) {
