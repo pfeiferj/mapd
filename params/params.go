@@ -18,6 +18,16 @@ var (
 	BasePath      string = GetBasePath()
 )
 
+func GetBaseOpPath() string {
+	exists, err := Exists("/data/media/0")
+	utils.Logde(err)
+	if exists {
+		return "/data/media/0/osm"
+	} else {
+		return "."
+	}
+}
+
 // Params
 var (
 	LAST_GPS_POSITION = ParamPath("LastGPSPosition", false)

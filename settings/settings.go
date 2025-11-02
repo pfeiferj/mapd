@@ -178,6 +178,13 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Default()
 	case custom.MapdInputType_loadRecommendedSettings:
 		s.Recommended()
+	case custom.MapdInputType_download:
+		path, err := input.Str()
+		if err != nil {
+			utils.Loge(err)
+			return
+		}
+		Download(path)
 	case custom.MapdInputType_setLogLevel:
 		logLevel, err := input.Str()
 		if err != nil {

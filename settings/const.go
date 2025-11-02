@@ -18,4 +18,8 @@ const (
 	TO_DEGREES           = 180 / math.Pi
 	QUERY_RADIUS         = float64(3000)       // meters
 	PADDING              = 10 / R * TO_DEGREES // 10 meters in degrees
+	GROUP_AREA_BOX_DEGREES = 2
+	AREA_BOX_DEGREES       = float64(1.0 / 4) // Must be 1.0 divided by an integer number
+	OVERLAP_BOX_DEGREES    = float64(0.01)
+	WAYS_PER_FILE          = 2000
 )

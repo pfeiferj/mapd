@@ -1,5 +1,5 @@
 {
-  "default": {
+  "nation": {
     "AF": {
       "full_name": "Afghanistan",
       "bounding_box": {
@@ -1475,7 +1475,7 @@
         "max_lon": -66.96,
         "max_lat": 49.5
       },
-      "submenu": "us_states"
+      "submenu": "us_state"
     },
     "UZ": {
       "full_name": "Uzbekistan",
@@ -1559,7 +1559,7 @@
       }
     }
   },
-  "us_states": {
+  "us_state": {
     "AL": {
       "full_name": "Alabama",
       "bounding_box": {
