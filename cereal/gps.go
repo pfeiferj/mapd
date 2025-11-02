@@ -77,7 +77,7 @@ func GetGpsSub() (gpsSub GpsSubscriber) {
 	subExt := gomsgq.MsgqSubscriber{}
 	subExt.Init(msgqExt)
 
-	for {
+	for range 60 {
 		time.Sleep(settings.LOOP_DELAY)
 
 		if sub.Ready() {
@@ -108,4 +108,15 @@ func GetGpsSub() (gpsSub GpsSubscriber) {
 			return gpsSub
 		}
 	}
+	err, err2 := subExt.Msgq.Close()
+	if err != nil {
+		panic(err)
+	}
+	if err2 != nil {
+		panic(err2)
+	}
+	slog.Info("Using gpsLocation")
+	gpsSub.Sub = sub
+	gpsSub.Read = gpsSub.readGpsLocation
+	return gpsSub
 }

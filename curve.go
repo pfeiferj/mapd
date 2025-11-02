@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log/slog"
 	"math"
 	"fmt"
 
@@ -82,9 +81,7 @@ func UpdateCurveSpeed(s *State) {
 
 		}
 
-		slog.Debug("", "a", d, "b", max_d + float32(tv.Velocity) * ms.Settings.CurveTargetOffset)
 		if float32(d) < max_d + float32(tv.Velocity) * ms.Settings.CurveTargetOffset {
-			slog.Debug("valid v!", "v", tv.Velocity)
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)
 			}
@@ -95,6 +92,5 @@ func UpdateCurveSpeed(s *State) {
 	} else {
 		s.CurveSpeed = minValidV
 	}
-	slog.Debug("done calculating curve speed", "curve speed", s.CurveSpeed)
 }
 

@@ -96,7 +96,6 @@ func main() {
 		} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
 			state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
 		}
-		slog.Debug("we calculated a max speed")
 
 		state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
 		utils.Logde(errors.Wrap(err, "could not get next way"))

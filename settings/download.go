@@ -101,6 +101,7 @@ func AddLocationDetailsToProgress(path string) {
 }
 
 func Download(paths string) {
+	slog.Info("download", "paths", paths)
 	progress = DownloadProgress{
 		LocationsToDownload: []string{},
 		LocationDetails:     map[string]*DownloadLocationDetail{},

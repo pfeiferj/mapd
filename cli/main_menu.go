@@ -16,6 +16,7 @@ type mainState int
 const (
 	showMenu mainState = iota
 	showSettings
+	showDownload
 	showOutput
 )
 
@@ -34,6 +35,7 @@ type uiModel struct {
 	state mainState
 	settings settingsModel
 	output outputModel
+	download downloadModel
 	pub *gomsgq.MsgqPublisher
 	sub *cereal.MapdOutSubscriber
 }
@@ -49,14 +51,14 @@ func (i item) FilterValue() string { return i.title }
 func initialModel() uiModel {
 	items := []list.Item{
 		item{title: "Settings", desc: "Modify settings of an active instance of mapd", state: showSettings},
-		item{title: "Download", desc: "Trigger a download of maps in an active instance of mapd"},
+		item{title: "Download", desc: "Trigger a download of maps in an active instance of mapd", state: showDownload},
 		item{title: "Watch", desc: "Watch the live output from mapd", state: showOutput},
 	}
 
 	listDelegate := list.NewDefaultDelegate()
 	pub := cereal.GetMapdCliPub()
 	sub := cereal.GetMapdOutSub()
-	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub}
+	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub, download: getDownloadModel()}
 	m.list.Title = "Mapd Actions"
 	return m
 }
@@ -81,6 +83,8 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 		m.settings, _ = m.settings.Update(msg, &m)
+		m.download, _ = m.download.Update(msg, &m)
+		m.output, _ = m.output.Update(msg, &m)
 	case TickMsg:
 		m.output, _ = m.output.Update(msg, &m)
 		return m, tickEvery()
@@ -93,6 +97,8 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settings, cmd = m.settings.Update(msg, &m)
 	case showOutput:
 		m.output, cmd = m.output.Update(msg, &m)
+	case showDownload:
+		m.download, cmd = m.download.Update(msg, &m)
 	default:
 		m.list, cmd = m.list.Update(msg)
 	}
@@ -105,6 +111,8 @@ func (m uiModel) View() string {
 		return m.settings.View()
 	case showOutput:
 		return m.output.View()
+	case showDownload:
+		return m.download.View()
 	}
 	return docStyle.Render(m.list.View())
 }
