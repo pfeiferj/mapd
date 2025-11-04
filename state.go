@@ -5,10 +5,11 @@ import (
 
 	"capnproto.org/go/capnp/v3"
 
+	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
-	"pfeifer.dev/mapd/cereal/car"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 type State struct {
@@ -31,6 +32,7 @@ type State struct {
 	CarVEgo                float32
 	CarAEgo                float32
 	CurveSpeed             float32
+	NextSpeedLimitMA       utils.MovingAverage
 }
 
 func (s *State) checkEnableSpeed() bool {
@@ -50,20 +52,21 @@ func (s *State) SuggestedSpeed() float32 {
 		if suggestedSpeed > 0 {
 			suggestedSpeed += ms.Settings.SpeedLimitOffset
 
-			if s.NextSpeedLimit.Speedlimit > 0 {
-				offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-				timeToNextSpeedLimit := float32(math.Abs(s.NextSpeedLimit.Distance / float64(suggestedSpeed))) + 1
-				speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(suggestedSpeed))
-				timeToAdjust := float32(speedLimitDiff) / ms.Settings.CurveTargetAccel
-				if timeToAdjust < 2 { //deal with infrequent position updates
-					timeToAdjust = 2
-				}
+		}
+		if s.NextSpeedLimit.Speedlimit > 0 {
+			calcSpeed := suggestedSpeed
+			if calcSpeed == 0 {
+				calcSpeed = s.CarVEgo
+			}
+			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
+			timeToNextSpeedLimit := float32(math.Abs(s.NextSpeedLimit.Distance / float64(calcSpeed)))
+			speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(calcSpeed)) + 2
+			timeToAdjust := float32(math.Abs(speedLimitDiff / float64(ms.Settings.CurveTargetAccel)))
 
-				if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
-					suggestedSpeed = float32(offsetNextSpeedLimit)
-				} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
-					suggestedSpeed = float32(offsetNextSpeedLimit)
-				}
+			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
+				suggestedSpeed = float32(offsetNextSpeedLimit)
+			} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
+				suggestedSpeed = float32(offsetNextSpeedLimit)
 			}
 		}
 	}

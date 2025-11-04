@@ -2,7 +2,6 @@ package main
 
 import (
 	"log/slog"
-	"math"
 	"time"
 
 	"capnproto.org/go/capnp/v3"
@@ -22,6 +21,8 @@ func main() {
 	cli.Handle()
 
 	state := State{}
+
+	state.NextSpeedLimitMA.Init(5)
 
 	pub := cereal.GetMapdPub()
 	defer pub.Msgq.Close()
@@ -195,11 +196,9 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 
 			wayName := RoadName(nextWay.Way)
 			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
-				smoothedDistance := state.LastSpeedLimitDistance*0.2 + cumulativeDistance*0.8
-
-				if math.Abs(smoothedDistance-state.LastSpeedLimitDistance) < 50 {
-					result.Distance = smoothedDistance
-				}
+				diff := state.LastSpeedLimitDistance - cumulativeDistance
+				smoothed_diff := state.NextSpeedLimitMA.Update(diff)
+				result.Distance = state.LastSpeedLimitDistance - smoothed_diff
 
 				slog.Debug("Smoothed speed limit distance",
 					"raw_distance", cumulativeDistance,
@@ -208,6 +207,8 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 					"way", wayName,
 				)
 
+			} else {
+				state.NextSpeedLimitMA.Reset()
 			}
 			state.LastSpeedLimitDistance = result.Distance
 			state.LastSpeedLimitValue = nextMaxSpeed
