@@ -10,8 +10,10 @@ const (
 	LOOP_DELAY           = 50 * time.Millisecond
 	MS_TO_KPH            = 3.6
 	MS_TO_MPH            = 2.237
+	MS_TO_KNOTS          = 1.944
 	KPH_TO_MS            = 1/MS_TO_KPH
 	MPH_TO_MS            = 1/MS_TO_MPH
+	KNOTS_TO_MS          = 1/MS_TO_KNOTS
 	ENABLE_SPEED_RANGE   = 0.2 // m/s
 	R                    = 6373000.0 // approximate radius of earth in meters
 	TO_RADIANS           = math.Pi / 180
