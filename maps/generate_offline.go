@@ -1,4 +1,4 @@
-package main
+package maps
 
 import (
 	"context"
@@ -8,14 +8,15 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/paulmach/osm"
 	"github.com/paulmach/osm/osmpbf"
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/params"
 	"pfeifer.dev/mapd/utils"
+	"pfeifer.dev/mapd/params"
 )
 
 type TmpNode struct {
@@ -47,43 +48,44 @@ type Area struct {
 	Ways   []TmpWay
 }
 
+type OfflineSettings struct {
+	MinLat float64
+	MinLon float64
+	MaxLat float64
+	MaxLon float64
+	OutputDirectory string
+	InputFile string
+	GenerateEmptyFiles bool
+	Overlap float64
+}
+
 var (
 	GROUP_AREA_BOX_DEGREES = 2
 	AREA_BOX_DEGREES       = float64(1.0 / 4) // Must be 1.0 divided by an integer number
-	OVERLAP_BOX_DEGREES    = float64(0.01)
 	WAYS_PER_FILE          = 2000
+	DEFAULT_SETTINGS       = OfflineSettings{
+		OutputDirectory: fmt.Sprintf("%s/offline", params.GetBaseOpPath()),
+	}
 )
 
-func GetBaseOpPath() string {
-	exists, err := params.Exists("/data/media/0")
-	utils.Logde(err)
-	if exists {
-		return "/data/media/0/osm"
-	} else {
-		return "."
-	}
-}
-
-var BOUNDS_DIR = fmt.Sprintf("%s/offline", GetBaseOpPath())
-
-func EnsureOfflineMapsDirectories() {
-	err := os.MkdirAll(BOUNDS_DIR, 0o775)
+func EnsureOfflineMapsDirectories(s OfflineSettings) {
+	err := os.MkdirAll(s.OutputDirectory, 0o775)
 	utils.Logwe(err)
 }
 
 // Creates a file for a specific bounding box
-func GenerateBoundsFileName(minLat float64, minLon float64, maxLat float64, maxLon float64) string {
-	group_lat_directory := int(math.Floor(minLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	group_lon_directory := int(math.Floor(minLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	dir := fmt.Sprintf("%s/%d/%d", BOUNDS_DIR, group_lat_directory, group_lon_directory)
-	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, minLat, minLon, maxLat, maxLon)
+func GenerateBoundsFileName(a Area, s OfflineSettings) string {
+	group_lat_directory := int(math.Floor(a.MinLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+	group_lon_directory := int(math.Floor(a.MinLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, group_lat_directory, group_lon_directory)
+	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, a.MinLat, a.MinLon, a.MaxLat, a.MaxLon)
 }
 
 // Creates a file for a specific bounding box
-func CreateBoundsDir(minLat float64, minLon float64, maxLat float64, maxLon float64) error {
-	group_lat_directory := int(math.Floor(minLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	group_lon_directory := int(math.Floor(minLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	dir := fmt.Sprintf("%s/%d/%d", BOUNDS_DIR, group_lat_directory, group_lon_directory)
+func CreateBoundsDir(a Area, s OfflineSettings) error {
+	group_lat_directory := int(math.Floor(a.MinLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+	group_lon_directory := int(math.Floor(a.MinLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
+	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, group_lat_directory, group_lon_directory)
 	err := os.MkdirAll(dir, 0o775)
 	return errors.Wrap(err, "could not create bounds directory")
 }
@@ -99,7 +101,7 @@ func Overlapping(axMin float64, ayMin float64, axMax float64, ayMax float64, bxM
 }
 
 // Generates bounding boxes for storing ways
-func GenerateAreas() []Area {
+func generateAreas() []Area {
 	areas := make([]Area, int((361/AREA_BOX_DEGREES)*(181/AREA_BOX_DEGREES)))
 	index := 0
 	for i := float64(-90); i < 90; i += AREA_BOX_DEGREES {
@@ -115,9 +117,9 @@ func GenerateAreas() []Area {
 	return areas
 }
 
-func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int, generateEmptyFiles bool) {
+func GenerateOffline(s OfflineSettings) {
 	slog.Info("Generating Offline Map")
-	EnsureOfflineMapsDirectories()
+	EnsureOfflineMapsDirectories(s)
 	file, err := os.Open("./map.osm.pbf")
 	utils.Check(errors.Wrap(err, "could not open map pbf file"))
 	defer file.Close()
@@ -128,7 +130,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 	defer scanner.Close()
 
 	scannedWays := []TmpWay{}
-	areas := GenerateAreas()
+	areas := generateAreas()
 	index := 0
 	allMinLat := float64(90)
 	allMinLon := float64(180)
@@ -203,12 +205,12 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 
 	slog.Info("Finding Bounds")
 	for _, area := range areas {
-		if area.MinLat < float64(minGenLat)-OVERLAP_BOX_DEGREES || area.MinLon < float64(minGenLon)-OVERLAP_BOX_DEGREES || area.MaxLat > float64(maxGenLat)+OVERLAP_BOX_DEGREES || area.MaxLon > float64(maxGenLon)+OVERLAP_BOX_DEGREES {
+		if area.MinLat < s.MinLat || area.MinLon < s.MinLon || area.MaxLat > s.MaxLat || area.MaxLon > s.MaxLon {
 			continue
 		}
 
-		haveWays := Overlapping(allMinLat, allMinLon, allMaxLat, allMaxLon, area.MinLat-OVERLAP_BOX_DEGREES, area.MinLon-OVERLAP_BOX_DEGREES, area.MaxLat+OVERLAP_BOX_DEGREES, area.MaxLon+OVERLAP_BOX_DEGREES)
-		if !haveWays && !generateEmptyFiles {
+		haveWays := Overlapping(s.MinLat, s.MinLon, s.MaxLat, s.MaxLon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+		if !haveWays && !s.GenerateEmptyFiles {
 			continue
 		}
 
@@ -219,7 +221,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 		utils.Check(errors.Wrap(err, "could not create capnp offline root"))
 
 		for _, way := range scannedWays {
-			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat-OVERLAP_BOX_DEGREES, area.MinLon-OVERLAP_BOX_DEGREES, area.MaxLat+OVERLAP_BOX_DEGREES, area.MaxLon+OVERLAP_BOX_DEGREES)
+			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat-s.Overlap, area.MinLon-s.Overlap, area.MaxLat+s.Overlap, area.MaxLon+s.Overlap)
 			if overlaps {
 				area.Ways = append(area.Ways, way)
 			}
@@ -232,7 +234,7 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 		rootOffline.SetMinLon(area.MinLon)
 		rootOffline.SetMaxLat(area.MaxLat)
 		rootOffline.SetMaxLon(area.MaxLon)
-		rootOffline.SetOverlap(OVERLAP_BOX_DEGREES)
+		rootOffline.SetOverlap(s.Overlap)
 		for i, way := range area.Ways {
 			w := ways.At(i)
 			w.SetMinLat(way.MinLat)
@@ -262,12 +264,12 @@ func GenerateOffline(minGenLat int, minGenLon int, maxGenLat int, maxGenLon int,
 
 		data, err := msg.MarshalPacked()
 		utils.Check(errors.Wrap(err, "could not marshal offline data"))
-		err = CreateBoundsDir(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+		err = CreateBoundsDir(area, s)
 		utils.Check(errors.Wrap(err, "could not create directory for bounds file"))
-		err = os.WriteFile(GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon), data, 0o644)
+		err = os.WriteFile(GenerateBoundsFileName(area, s), data, 0o644)
 		utils.Check(errors.Wrap(err, "could not write offline data to file"))
 	}
-	f, err := os.Open(BOUNDS_DIR)
+	f, err := os.Open(s.OutputDirectory)
 	utils.Check(errors.Wrap(err, "could not open bounds directory"))
 	err = f.Sync()
 	utils.Check(errors.Wrap(err, "could not fsync bounds directory"))
@@ -281,17 +283,43 @@ func PointInBox(ax float64, ay float64, bxMin float64, byMin float64, bxMax floa
 	return ax > bxMin && ax < bxMax && ay > byMin && ay < byMax
 }
 
-var AREAS = GenerateAreas()
+var AREAS = generateAreas()
 
 func FindWaysAroundLocation(lat float64, lon float64) ([]byte, error) {
 	for _, area := range AREAS {
 		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
 		if inBox {
-			boundsName := GenerateBoundsFileName(area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+			boundsName := GenerateBoundsFileName(area, DEFAULT_SETTINGS)
 			slog.Info("Loading bounds file", "filename", boundsName)
 			data, err := os.ReadFile(boundsName)
 			return data, errors.Wrap(err, "could not read current offline data file")
 		}
 	}
 	return []uint8{}, nil
+}
+
+func ParseMaxSpeed(maxspeed string) float64 {
+	splitSpeed := strings.Split(maxspeed, " ")
+	if len(splitSpeed) == 0 {
+		return 0
+	}
+
+	numeric, err := strconv.ParseUint(splitSpeed[0], 10, 64)
+	if err != nil {
+		return 0
+	}
+
+	if len(splitSpeed) == 1 {
+		return 0.277778 * float64(numeric)
+	}
+
+	if splitSpeed[1] == "kph" || splitSpeed[1] == "km/h" || splitSpeed[1] == "kmh" {
+		return 0.277778 * float64(numeric)
+	} else if splitSpeed[1] == "mph" {
+		return 0.44704 * float64(numeric)
+	} else if splitSpeed[1] == "knots" {
+		return 0.514444 * float64(numeric)
+	}
+
+	return 0
 }

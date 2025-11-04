@@ -10,15 +10,16 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
+	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
 	"pfeifer.dev/mapd/cli"
 )
 
 func main() {
-	ms.Settings.LoadWithFallback()
-
 	cli.Handle()
+
+	ms.Settings.LoadWithFallback()
 
 	state := State{}
 
@@ -80,8 +81,8 @@ func main() {
 			continue
 		}
 		state.Location = location
-		if !PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
-			state.Data, err = FindWaysAroundLocation(location.Latitude(), location.Longitude())
+		if !maps.PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
+			state.Data, err = maps.FindWaysAroundLocation(location.Latitude(), location.Longitude())
 			if err != nil {
 				slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 				continue

@@ -9,6 +9,7 @@ import (
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/utils"
+	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -602,7 +603,7 @@ func NextWay(way offline.Way, offlineMaps offline.Offline, isForward bool) (Next
 		}
 	}
 
-	if !PointInBox(matchNode.Latitude(), matchNode.Longitude(), offlineMaps.MinLat()-offlineMaps.Overlap(), offlineMaps.MinLon()-offlineMaps.Overlap(), offlineMaps.MaxLat()+offlineMaps.Overlap(), offlineMaps.MaxLon()+offlineMaps.Overlap()) {
+	if !maps.PointInBox(matchNode.Latitude(), matchNode.Longitude(), offlineMaps.MinLat()-offlineMaps.Overlap(), offlineMaps.MinLon()-offlineMaps.Overlap(), offlineMaps.MaxLat()+offlineMaps.Overlap(), offlineMaps.MaxLon()+offlineMaps.Overlap()) {
 		return NextWayResult{}, nil
 	}
 
