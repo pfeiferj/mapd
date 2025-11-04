@@ -22,7 +22,8 @@ func main() {
 
 	state := State{}
 
-	state.NextSpeedLimitMA.Init(5)
+	state.NextSpeedLimitMA.Init(3)
+	state.VisionCurveMA.Init(20)
 
 	pub := cereal.GetMapdPub()
 	defer pub.Msgq.Close()

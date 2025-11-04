@@ -46,5 +46,11 @@ func calcVtscSpeed(model log.ModelDataV2, state *State) float32 {
 		vTarget = ms.Settings.VisionCurveMinTargetV
 	}
 
+	if vTarget < 0 {
+		vTarget = 0
+	} else if vTarget > 90 * ms.MPH_TO_MS {
+		vTarget = 90 * ms.MPH_TO_MS
+	}
+	vTarget = float32(state.VisionCurveMA.Update(float64(vTarget)))
 	return vTarget
 }

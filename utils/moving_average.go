@@ -28,6 +28,7 @@ func (a *MovingAverage) Update(val float64) float64 {
 		for i := range a.values {
 			a.values[i] = corrected
 		}
+		a.initialized = true
 		a.Estimate = corrected
 		return corrected
 	}

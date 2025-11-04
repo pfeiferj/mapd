@@ -33,6 +33,7 @@ type State struct {
 	CarAEgo                float32
 	CurveSpeed             float32
 	NextSpeedLimitMA       utils.MovingAverage
+	VisionCurveMA          utils.MovingAverage
 }
 
 func (s *State) checkEnableSpeed() bool {
