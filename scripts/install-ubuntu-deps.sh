@@ -5,4 +5,6 @@ apt install -y \
   capnproto \
   zlib1g-dev \
   git \
+  rclone \
+  osmium-tool \
   golang

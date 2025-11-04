@@ -17,4 +17,4 @@ RUN make
 RUN useradd app
 USER app
 
-CMD ["/usr/local/app/build/mapd"]
+CMD ["./docker_entry.sh"]
