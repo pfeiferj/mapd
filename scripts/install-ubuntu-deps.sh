@@ -7,4 +7,5 @@ apt install -y \
   git \
   rclone \
   osmium-tool \
+  docker \
   golang

@@ -1,10 +1,17 @@
 build: capnp go-deps
 	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
 
+build-docker:
+	docker buildx build --platform linux/amd64,linux/arm64 .
+
 format:
 	gofumpt -l -w .
 
-deps: go-deps capnp-deps format-deps
+deps: go-deps capnp-deps format-deps docker-deps
+
+docker-deps:
+	./scripts/install-docker.sh
+	docker run --privileged --rm tonistiigi/binfmt --install all
 
 go-deps: go.mod
 	go get
