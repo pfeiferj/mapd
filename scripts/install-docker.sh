@@ -13,3 +13,9 @@ echo \
 sudo apt-get update
 
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+echo '{"features": {"containerd-snapshotter": true}}' | \
+  sudo tee /etc/docker/daemon.json > /dev/null
+
+sudo docker run --privileged --rm tonistiigi/binfmt --install all
+sudo systemctl restart docker

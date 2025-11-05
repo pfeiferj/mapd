@@ -1,5 +1,5 @@
-sudo apt update
-sudo apt install -y \
+apt update
+apt install -y \
   build-essential \
   wget \
   capnproto \
@@ -7,5 +7,4 @@ sudo apt install -y \
   git \
   rclone \
   osmium-tool \
-  docker \
   golang
