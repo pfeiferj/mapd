@@ -17,9 +17,13 @@ import (
 )
 
 func main() {
+	settingsLoaded := ms.Settings.Load() // try loading settings before cli
+
 	cli.Handle()
 
-	ms.Settings.LoadWithFallback()
+	if !settingsLoaded {
+		ms.Settings.LoadWithRetries(5)
+	}
 
 	state := State{}
 

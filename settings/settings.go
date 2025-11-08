@@ -82,6 +82,7 @@ func (s *MapdSettings) Recommended() {
 }
 
 func (s *MapdSettings) Load() (success bool) {
+	s.Default() // set defaults so settings not already in param are defaulted
 	data, err := params.GetParam(params.MAPD_SETTINGS)
 	if err != nil {
 		utils.Loge(err)
@@ -99,19 +100,14 @@ func (s *MapdSettings) Load() (success bool) {
 	return true
 }
 
-func (s *MapdSettings) LoadWithFallback() {
-	settingsLoaded := false
-	for range 15 {
+func (s *MapdSettings) LoadWithRetries(tries int) {
+	for range tries {
 		if s.Load() {
-			settingsLoaded = true
 			break
 		}
 		time.Sleep(1 * time.Second)
 	}
-	if !settingsLoaded {
-		s.Default()
-		s.Save()
-	}
+	s.Save()
 }
 
 func (s *MapdSettings) Save() {
