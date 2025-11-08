@@ -47,20 +47,26 @@ func UpdateCurveSpeed(s *State) {
 	}
 
 	minValidV := float32(1000)
+	calcSpeed := s.CarVEgo
+	if s.MapCurveTriggerSpeed > 0 && s.MapCurveTriggerSpeed > s.CarVEgo {
+		calcSpeed = s.MapCurveTriggerSpeed
+	} else {
+		s.MapCurveTriggerSpeed = 0
+	}
 	for i, d := range forwardDistances {
 		tv := forwardPoints[i]
-		if tv.Velocity > float64(s.CarVEgo) {
+		if tv.Velocity > float64(calcSpeed) {
 			continue
 		}
 		a_diff := s.CarAEgo - ms.Settings.CurveTargetAccel
 		accel_t := math.Abs(float64(a_diff / ms.Settings.CurveTargetJerk))
-		min_accel_v := calculate_velocity(float32(accel_t), ms.Settings.CurveTargetJerk, s.CarAEgo, s.CarVEgo)
+		min_accel_v := calculate_velocity(float32(accel_t), ms.Settings.CurveTargetJerk, s.CarAEgo, calcSpeed)
 		max_d := float32(0)
 		if float32(tv.Velocity) > min_accel_v {
 			// calculate time needed based on target jerk
 			a := float32(0.5 * ms.Settings.CurveTargetJerk)
 			b := s.CarAEgo
-			c := s.CarVEgo - float32(tv.Velocity)
+			c := calcSpeed - float32(tv.Velocity)
 			t_a := -1 * (float32(math.Sqrt(float64(b*b - 4 * a * c))) + b) / 2 * a
 			t := (float32(math.Sqrt(float64(b*b - 4 * a * c))) - b) / 2 * a
 			if !math.IsNaN(float64(t_a)) && t_a > 0 {
@@ -87,8 +93,12 @@ func UpdateCurveSpeed(s *State) {
 	}
 	if minValidV == float32(1000) {
 		s.CurveSpeed = 0
+		s.MapCurveTriggerSpeed = 0
 	} else {
 		s.CurveSpeed = minValidV
+		if s.MapCurveTriggerSpeed == 0 {
+			s.MapCurveTriggerSpeed = s.CarVEgo
+		}
 	}
 }
 

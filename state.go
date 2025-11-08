@@ -34,6 +34,7 @@ type State struct {
 	CurveSpeed             float32
 	NextSpeedLimitMA       utils.MovingAverage
 	VisionCurveMA          utils.MovingAverage
+	MapCurveTriggerSpeed   float32
 }
 
 func (s *State) checkEnableSpeed() bool {
