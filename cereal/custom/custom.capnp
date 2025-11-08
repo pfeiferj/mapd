@@ -98,6 +98,7 @@ enum MapdInputType {
   loadRecommendedSettings @22;
   setSlowDownForNextSpeedLimit @23;
   setSpeedUpForNextSpeedLimit @24;
+  setHoldSpeedLimitWhileChangingSetSpeed @25;
 }
 
 enum SpeedLimitOffsetType {

@@ -16,25 +16,26 @@ var (
 )
 
 type MapdSettings struct {
-	VisionCurveSpeedControlEnabled bool    `json:"vision_curve_speed_control_enabled"`
-	CurveSpeedControlEnabled       bool    `json:"curve_speed_control_enabled"`
-	SpeedLimitControlEnabled       bool    `json:"speed_limit_control_enabled"`
-	VtscUseEnableSpeed             bool    `json:"vtc_use_enable_speed"`
-	SpeedLimitUseEnableSpeed       bool    `json:"speed_limit_use_enable_speed"`
-	CurveUseEnableSpeed            bool    `json:"curve_use_enable_speed"`
-	LogLevel                       string  `json:"log_level"`
-	VisionCurveTargetLatA          float32 `json:"vision_curve_target_lat_a"`
-	VisionCurveMinTargetV          float32 `json:"vision_curve_min_target_v"`
-	SpeedLimitOffset               float32 `json:"speed_limit_offset"`
-	EnableSpeed                    float32 `json:"enable_speed"`
-	HoldLastSeenSpeedLimit         bool    `json:"hold_last_seen_speed_limit"`
-	CurveTargetJerk                float32 `json:"curve_target_jerk"`
-	CurveTargetAccel               float32 `json:"curve_target_accel"`
-	CurveTargetOffset              float32 `json:"curve_target_offset"`
-	DefaultLaneWidth               float32 `json:"default_lane_width"`
-	CurveTargetLatA                float32 `json:"curve_target_lat_a"`
-	SlowDownForNextSpeedLimit      bool    `json:"slow_down_for_next_speed_limit"`
-	SpeedUpForNextSpeedLimit       bool    `json:"speed_up_for_next_speed_limit"`
+	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
+	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
+	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
+	VtscUseEnableSpeed                  bool    `json:"vtc_use_enable_speed"`
+	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
+	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
+	LogLevel                            string  `json:"log_level"`
+	VisionCurveTargetLatA               float32 `json:"vision_curve_target_lat_a"`
+	VisionCurveMinTargetV               float32 `json:"vision_curve_min_target_v"`
+	SpeedLimitOffset                    float32 `json:"speed_limit_offset"`
+	EnableSpeed                         float32 `json:"enable_speed"`
+	HoldLastSeenSpeedLimit              bool    `json:"hold_last_seen_speed_limit"`
+	CurveTargetJerk                     float32 `json:"curve_target_jerk"`
+	CurveTargetAccel                    float32 `json:"curve_target_accel"`
+	CurveTargetOffset                   float32 `json:"curve_target_offset"`
+	DefaultLaneWidth                    float32 `json:"default_lane_width"`
+	CurveTargetLatA                     float32 `json:"curve_target_lat_a"`
+	SlowDownForNextSpeedLimit           bool    `json:"slow_down_for_next_speed_limit"`
+	SpeedUpForNextSpeedLimit            bool    `json:"speed_up_for_next_speed_limit"`
+	HoldSpeedLimitWhileChangingSetSpeed bool `json:"hold_speed_limit_while_changing_set_speed"`
 }
 
 func (s *MapdSettings) Default() {
@@ -57,6 +58,7 @@ func (s *MapdSettings) Default() {
 	s.CurveTargetLatA = 2.0
 	s.SpeedUpForNextSpeedLimit = false
 	s.SlowDownForNextSpeedLimit = true
+	s.HoldSpeedLimitWhileChangingSetSpeed = true
 }
 
 func (s *MapdSettings) Recommended() {
@@ -79,6 +81,7 @@ func (s *MapdSettings) Recommended() {
 	s.CurveTargetLatA = 2.0
 	s.SpeedUpForNextSpeedLimit = true
 	s.SlowDownForNextSpeedLimit = true
+	s.HoldSpeedLimitWhileChangingSetSpeed = true
 }
 
 func (s *MapdSettings) Load() (success bool) {
@@ -176,6 +179,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.DefaultLaneWidth = input.Float()
 	case custom.MapdInputType_setCurveTargetLatA:
 		s.CurveTargetLatA = input.Float()
+	case custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed:
+		s.HoldSpeedLimitWhileChangingSetSpeed = input.Bool()
 	case custom.MapdInputType_loadDefaultSettings:
 		s.Default()
 	case custom.MapdInputType_loadRecommendedSettings:

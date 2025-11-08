@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"time"
 
 	"capnproto.org/go/capnp/v3"
 
@@ -13,50 +14,53 @@ import (
 )
 
 type State struct {
-	Data                   []uint8
-	CurrentWay             CurrentWay
-	LastWay                CurrentWay
-	NextWays               []NextWayResult
-	Location               log.GpsLocationData
-	LastLocation           log.GpsLocationData
-	StableWayCounter       int
-	Curvatures             []Curvature
-	TargetVelocities       []Velocity
-	MaxSpeed               float64
-	LastSpeedLimitDistance float64
-	LastSpeedLimitValue    float64
-	LastSpeedLimitWayName  string
-	NextSpeedLimit         NextSpeedLimit
-	VtscSpeed              float32
-	CarSetSpeed            float32
-	CarVEgo                float32
-	CarAEgo                float32
-	CurveSpeed             float32
-	NextSpeedLimitMA       utils.MovingAverage
-	VisionCurveMA          utils.MovingAverage
-	MapCurveTriggerSpeed   float32
+	Data                    []uint8
+	CurrentWay              CurrentWay
+	LastWay                 CurrentWay
+	NextWays                []NextWayResult
+	Location                log.GpsLocationData
+	LastLocation            log.GpsLocationData
+	StableWayCounter        int
+	Curvatures              []Curvature
+	TargetVelocities        []Velocity
+	MaxSpeed                float64
+	LastSpeedLimitDistance  float64
+	LastSpeedLimitValue     float64
+	LastSpeedLimitWayName   string
+	NextSpeedLimit          NextSpeedLimit
+	VtscSpeed               float32
+	CarSetSpeed             float32
+	TimeLastSetSpeedAdjust  time.Time
+	CarVEgo                 float32
+	CarAEgo                 float32
+	CurveSpeed              float32
+	NextSpeedLimitMA        utils.MovingAverage
+	VisionCurveMA           utils.MovingAverage
+	MapCurveTriggerSpeed    float32
 }
 
 func (s *State) checkEnableSpeed() bool {
 	if ms.Settings.EnableSpeed == 0 {
 		return true
-	}
+	}	
 	return math.Abs(float64(s.CarSetSpeed - ms.Settings.EnableSpeed)) < ms.ENABLE_SPEED_RANGE
 }
 
 func (s *State) SuggestedSpeed() float32 {
-	suggestedSpeed := float32(0)
-	if ms.Settings.SpeedLimitControlEnabled && (!ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed()){
-		suggestedSpeed = float32(s.MaxSpeed)
-		if suggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
-			suggestedSpeed = float32(s.LastSpeedLimitValue)
+	suggestedSpeed := float32(ms.MAX_OP_SPEED)
+	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500 * time.Millisecond 
+
+	if ms.Settings.SpeedLimitControlEnabled {
+		slSuggestedSpeed := float32(s.MaxSpeed)
+		if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
+			slSuggestedSpeed = float32(s.LastSpeedLimitValue)
 		}
-		if suggestedSpeed > 0 {
-			suggestedSpeed += ms.Settings.SpeedLimitOffset
+		if slSuggestedSpeed > 0 {
+			slSuggestedSpeed += ms.Settings.SpeedLimitOffset
 
 		}
 		if s.NextSpeedLimit.Speedlimit > 0 {
-			calcSpeed := suggestedSpeed
+			calcSpeed := slSuggestedSpeed
 			if calcSpeed == 0 {
 				calcSpeed = s.CarVEgo
 			}
@@ -66,9 +70,17 @@ func (s *State) SuggestedSpeed() float32 {
 			timeToAdjust := float32(math.Abs(speedLimitDiff / float64(ms.Settings.CurveTargetAccel)))
 
 			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
-				suggestedSpeed = float32(offsetNextSpeedLimit)
+				slSuggestedSpeed = float32(offsetNextSpeedLimit)
 			} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
-				suggestedSpeed = float32(offsetNextSpeedLimit)
+				slSuggestedSpeed = float32(offsetNextSpeedLimit)
+			}
+		}
+
+		if suggestedSpeed > slSuggestedSpeed {
+			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
+				suggestedSpeed = slSuggestedSpeed
+			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo - 1 < slSuggestedSpeed {
+				suggestedSpeed = slSuggestedSpeed
 			}
 		}
 	}
@@ -81,14 +93,15 @@ func (s *State) SuggestedSpeed() float32 {
 	if suggestedSpeed < 0 {
 		suggestedSpeed = 0
 	}
-	if suggestedSpeed > 90 * ms.MPH_TO_MS {
-		suggestedSpeed = 90 * ms.MPH_TO_MS
-	}
 	return suggestedSpeed
 }
 
 func (s *State) UpdateCarState(carData car.CarState) {
-	s.CarSetSpeed = carData.VCruise() * ms.KPH_TO_MS
+	carSetSpeed := carData.VCruise() * ms.KPH_TO_MS
+	if s.CarSetSpeed != carSetSpeed {
+		s.CarSetSpeed = carSetSpeed
+		s.TimeLastSetSpeedAdjust = time.Now()
+	}
 	s.CarVEgo = carData.VEgo()
 	s.CarAEgo = carData.AEgo()
 }

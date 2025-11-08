@@ -99,6 +99,13 @@ var settingsList = []list.Item{
 		state: settingsInput,
 	},
 	settingsItem{
+		title: "Hold Speed Limit While Changing Set Speed",
+		desc: "When enabled mapd will suggest using the speed limit while the cruise control speed is changing. This prevents speeding up while trying to reach the enable speed",
+		MessageType: custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed,
+		Type: Bool,
+		state: settingsInput,
+	},
+	settingsItem{
 		title: "Hold Last Seen Speed Limit",
 		desc: "When enabled mapd will use the last seen speed limit if it cannot determine a current speed limit",
 		MessageType: custom.MapdInputType_setHoldLastSeenSpeedLimit,

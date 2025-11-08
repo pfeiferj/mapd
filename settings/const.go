@@ -24,4 +24,5 @@ const (
 	AREA_BOX_DEGREES       = float64(1.0 / 4) // Must be 1.0 divided by an integer number
 	OVERLAP_BOX_DEGREES    = float64(0.01)
 	WAYS_PER_FILE          = 2000
+	MAX_OP_SPEED          = 90 * MPH_TO_MS
 )
