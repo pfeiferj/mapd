@@ -1,7 +1,7 @@
 build: capnp go-deps
 	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
 
-build-docker:
+docker:
 	sudo docker buildx build --platform linux/amd64,linux/arm64 .
 
 format:
