@@ -59,6 +59,9 @@ event of a conflict with the fork, the forks only options are to either adjust
 their code to remove the conflict, or maintain their own fork of mapd that
 updates mapd's definitions to not conflict.
 
+## openpilot fork integration
+openpilot fork integration is described in
+[docs/integration.md](./docs/integration.md).
 
 
 ## Disclaimers and Acknowledgements
