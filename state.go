@@ -6,6 +6,7 @@ import (
 
 	"capnproto.org/go/capnp/v3"
 
+	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
@@ -114,7 +115,7 @@ func (s *State) UpdateCarState(carData car.CarState) {
 }
 
 func (s *State) ToMessage() *capnp.Message {
-	msg, event, output := newOutput()
+	msg, event, output := cereal.NewOutput()
 
 	event.SetValid(true)
 
@@ -157,8 +158,6 @@ func (s *State) ToMessage() *capnp.Message {
 	output.SetCurveSpeed(s.CurveSpeed)
 
 	output.SetSuggestedSpeed(s.SuggestedSpeed())
-
-	logOutput(event, output)
 
 	return msg
 }
