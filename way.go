@@ -6,6 +6,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/cereal/log"
+	"pfeifer.dev/mapd/cereal/offline"
+	"pfeifer.dev/mapd/maps"
+	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -57,7 +62,7 @@ type OnWayResult struct {
 }
 
 type WayCandidate struct {
-	Way              Way
+	Way              offline.Way
 	OnWayResult      OnWayResult
 	BearingAlignment float64 // sin(bearing_delta) - lower is better
 	DistanceToWay    float64
@@ -66,50 +71,58 @@ type WayCandidate struct {
 }
 
 type DistanceResult struct {
-	LineStart Coordinates
-	LineEnd   Coordinates
-	Distance  float64
+	LineStart      offline.Coordinates
+	LineEnd        offline.Coordinates
+	LineLat        float64
+	LineLon        float64
+	Distance       float64
+	DistanceOnPath float64
 }
 
 // Updated CurrentWay struct with stability fields
 type CurrentWay struct {
-	Way               Way
+	Way               offline.Way
 	Distance          DistanceResult
 	OnWay             OnWayResult
-	StartPosition     Coordinates
-	EndPosition       Coordinates
+	StartPosition     offline.Coordinates
+	EndPosition       offline.Coordinates
 	ConfidenceCounter int
 	LastChangeTime    time.Time
 	StableDistance    float64
+	Context           RoadContext
 }
 
 type NextWayResult struct {
-	Way           Way
+	Way           offline.Way
 	IsForward     bool
-	StartPosition Coordinates
-	EndPosition   Coordinates
+	StartPosition offline.Coordinates
+	EndPosition   offline.Coordinates
 }
 
-func OnWay(way Way, pos Position, extended bool) (OnWayResult, error) {
+func estimateRoadWidth(way offline.Way) float64 {
+	lanes := way.Lanes()
+	if lanes == 0 {
+		lanes = 2
+	}
+	return float64(lanes) * float64(ms.Settings.DefaultLaneWidth)
+}
+
+func OnWay(way offline.Way, location log.GpsLocationData, extended bool) (OnWayResult, error) {
 	res := OnWayResult{}
-	if pos.Latitude < way.MaxLat()+PADDING && pos.Latitude > way.MinLat()-PADDING && pos.Longitude < way.MaxLon()+PADDING && pos.Longitude > way.MinLon()-PADDING {
-		d, err := DistanceToWay(pos, way)
+	if location.Latitude() < way.MaxLat()+ms.PADDING && location.Latitude() > way.MinLat()-ms.PADDING && location.Longitude() < way.MaxLon()+ms.PADDING && location.Longitude() > way.MinLon()-ms.PADDING {
+		d, err := DistanceToWay(location.Latitude(), location.Longitude(), way)
 		res.Distance = d
 		if err != nil {
 			res.OnWay = false
 			return res, errors.Wrap(err, "could not get distance to way")
 		}
-		lanes := way.Lanes()
-		if lanes == 0 {
-			lanes = 2
-		}
-		road_width_estimate := float64(lanes) * LANE_WIDTH
+		road_width_estimate := estimateRoadWidth(way)
 		max_dist := 5 + road_width_estimate
 		if extended {
 			max_dist = max_dist * 2
 		}
 
-		context := determineRoadContext(way, pos)
+		context := determineRoadContext(way)
 		if context == CONTEXT_FREEWAY {
 			max_dist = max_dist * 1.5
 		} else if context == CONTEXT_CITY {
@@ -118,7 +131,7 @@ func OnWay(way Way, pos Position, extended bool) (OnWayResult, error) {
 
 		if d.Distance < max_dist {
 			res.OnWay = true
-			res.IsForward = IsForward(d.LineStart, d.LineEnd, pos.Bearing)
+			res.IsForward = IsForward(d.LineStart, d.LineEnd, float64(location.BearingDeg()))
 			if !res.IsForward && way.OneWay() {
 				res.OnWay = false
 			}
@@ -129,7 +142,7 @@ func OnWay(way Way, pos Position, extended bool) (OnWayResult, error) {
 	return res, nil
 }
 
-func determineRoadContext(way Way, pos Position) RoadContext {
+func determineRoadContext(way offline.Way) RoadContext {
 	lanes := way.Lanes()
 	name, _ := way.Name()
 	ref, _ := way.Ref()
@@ -150,7 +163,7 @@ func determineRoadContext(way Way, pos Position) RoadContext {
 	return CONTEXT_UNKNOWN
 }
 
-func isFreeway(way Way) bool {
+func isFreeway(way offline.Way) bool {
 	lanes := way.Lanes()
 	name, _ := way.Name()
 	ref, _ := way.Ref()
@@ -176,7 +189,7 @@ func isFreeway(way Way) bool {
 }
 
 // Get highway hierarchy rank for a way
-func getHighwayRank(way Way) int {
+func getHighwayRank(way offline.Way) int {
 	name, _ := way.Name()
 	ref, _ := way.Ref()
 	lanes := way.Lanes()
@@ -211,8 +224,8 @@ func getHighwayRank(way Way) int {
 	return HIGHWAY_RANK["unclassified"]
 }
 
-func calculateBearingAlignment(way Way, pos Position) (float64, error) {
-	d, err := DistanceToWay(pos, way)
+func calculateBearingAlignment(way offline.Way, location log.GpsLocationData) (float64, error) {
+	d, err := DistanceToWay(location.Latitude(), location.Longitude(), way)
 	if err != nil {
 		return 1.0, err
 	}
@@ -225,7 +238,7 @@ func calculateBearingAlignment(way Way, pos Position) (float64, error) {
 	wayBearing := Bearing(startLat, startLon, endLat, endLon)
 
 	// Calculate bearing delta
-	delta := math.Abs(pos.Bearing*TO_RADIANS - wayBearing)
+	delta := math.Abs(float64(location.BearingDeg())*ms.TO_RADIANS - wayBearing)
 
 	// Normalize to 0-π range
 	if delta > math.Pi {
@@ -234,9 +247,9 @@ func calculateBearingAlignment(way Way, pos Position) (float64, error) {
 	return math.Sin(delta), nil
 }
 
-func selectBestWayAdvanced(possibleWays []Way, pos Position, currentWay Way, context RoadContext, gpsAccuracy float64) Way {
+func selectBestWayAdvanced(possibleWays []offline.Way, location log.GpsLocationData, currentWay offline.Way, context RoadContext) offline.Way {
 	if len(possibleWays) == 0 {
-		return Way{}
+		return offline.Way{}
 	}
 	if len(possibleWays) == 1 {
 		return possibleWays[0]
@@ -246,7 +259,7 @@ func selectBestWayAdvanced(possibleWays []Way, pos Position, currentWay Way, con
 	bestScore := float64(-1000)
 
 	for _, way := range possibleWays {
-		onWay, err := OnWay(way, pos, false)
+		onWay, err := OnWay(way, location, false)
 		if err != nil || !onWay.OnWay {
 			continue
 		}
@@ -256,7 +269,7 @@ func selectBestWayAdvanced(possibleWays []Way, pos Position, currentWay Way, con
 		hierarchyRank := getHighwayRank(way)
 		score += float64(100 - hierarchyRank)
 
-		bearingAlignment, err := calculateBearingAlignment(way, pos)
+		bearingAlignment, err := calculateBearingAlignment(way, location)
 		if err == nil {
 			score += (1.0 - bearingAlignment) * 50
 		}
@@ -286,7 +299,7 @@ func selectBestWayAdvanced(possibleWays []Way, pos Position, currentWay Way, con
 	return bestWay
 }
 
-func getRoadPriority(way Way, context RoadContext) int {
+func getRoadPriority(way offline.Way, context RoadContext) int {
 	lanes := way.Lanes()
 	name, _ := way.Name()
 	ref, _ := way.Ref()
@@ -335,10 +348,10 @@ func getRoadPriority(way Way, context RoadContext) int {
 	return priority
 }
 
-func DistanceToWay(pos Position, way Way) (DistanceResult, error) {
+func DistanceToWay(latitude float64, longitude float64, way offline.Way) (DistanceResult, error) {
 	res := DistanceResult{}
-	var minNodeStart Coordinates
-	var minNodeEnd Coordinates
+	var minNodeStart offline.Coordinates
+	var minNodeEnd offline.Coordinates
 	minDistance := math.MaxFloat64
 	nodes, err := way.Nodes()
 	if err != nil {
@@ -348,38 +361,53 @@ func DistanceToWay(pos Position, way Way) (DistanceResult, error) {
 		return res, nil
 	}
 
-	latRad := pos.Latitude * TO_RADIANS
-	lonRad := pos.Longitude * TO_RADIANS
+	latRad := latitude * ms.TO_RADIANS
+	lonRad := longitude * ms.TO_RADIANS
+	minLineLat := latitude
+	minLineLon := longitude
+	minIdx := 0
 	for i := 0; i < nodes.Len()-1; i++ {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
-		lineLat, lineLon := PointOnLine(nodeStart.Latitude(), nodeStart.Longitude(), nodeEnd.Latitude(), nodeEnd.Longitude(), pos.Latitude, pos.Longitude)
-		distance := DistanceToPoint(latRad, lonRad, lineLat*TO_RADIANS, lineLon*TO_RADIANS)
+		lineLat, lineLon := PointOnLine(nodeStart.Latitude(), nodeStart.Longitude(), nodeEnd.Latitude(), nodeEnd.Longitude(), latitude, longitude)
+		distance := DistanceToPoint(latRad, lonRad, lineLat*ms.TO_RADIANS, lineLon*ms.TO_RADIANS)
 		if distance < minDistance {
 			minDistance = distance
 			minNodeStart = nodeStart
 			minNodeEnd = nodeEnd
+			minLineLat = lineLat
+			minLineLon = lineLon
+			minIdx = i
 		}
 	}
+	onWayDistance := DistanceToPoint(minNodeStart.Latitude()*ms.TO_RADIANS, lonRad*ms.TO_RADIANS, minLineLat*ms.TO_RADIANS, minLineLon*ms.TO_RADIANS)
+	for i := range minIdx {
+		nodeStart := nodes.At(i)
+		nodeEnd := nodes.At(i + 1)
+		onWayDistance += DistanceToPoint(nodeStart.Latitude()*ms.TO_RADIANS, nodeStart.Longitude()*ms.TO_RADIANS, nodeEnd.Latitude()*ms.TO_RADIANS, nodeEnd.Longitude()*ms.TO_RADIANS)
+	}
+
 	res.Distance = minDistance
 	res.LineStart = minNodeStart
 	res.LineEnd = minNodeEnd
+	res.LineLat = minLineLat
+	res.LineLon = minLineLon
 	return res, nil
 }
 
-func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
+func GetWayStartEnd(way offline.Way, isForward bool) (offline.Coordinates, offline.Coordinates) {
 	if !way.HasNodes() {
-		return Coordinates{}, Coordinates{}
+		return offline.Coordinates{}, offline.Coordinates{}
 	}
 
 	nodes, err := way.Nodes()
 	if err != nil {
-		logde(errors.Wrap(err, "could not read way nodes"))
-		return Coordinates{}, Coordinates{}
+		utils.Logde(errors.Wrap(err, "could not read way nodes"))
+		return offline.Coordinates{}, offline.Coordinates{}
 	}
 
 	if nodes.Len() == 0 {
-		return Coordinates{}, Coordinates{}
+		return offline.Coordinates{}, offline.Coordinates{}
 	}
 
 	if nodes.Len() == 1 {
@@ -392,14 +420,14 @@ func GetWayStartEnd(way Way, isForward bool) (Coordinates, Coordinates) {
 	return nodes.At(nodes.Len() - 1), nodes.At(0)
 }
 
-func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offline, pos Position, lastPos Position, gpsAccuracy float64) (CurrentWay, error) {
+func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offline.Offline, location log.GpsLocationData) (CurrentWay, error) {
 	currentContext := CONTEXT_UNKNOWN
 	if currentWay.Way.HasNodes() {
-		currentContext = determineRoadContext(currentWay.Way, pos)
+		currentContext = determineRoadContext(currentWay.Way)
 	}
 
 	if currentWay.Way.HasNodes() {
-		onWay, err := OnWay(currentWay.Way, pos, false)
+		onWay, err := OnWay(currentWay.Way, location, false)
 		if err == nil && onWay.OnWay {
 			stickThreshold := 15.0
 			if currentContext == CONTEXT_FREEWAY {
@@ -421,13 +449,14 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 					ConfidenceCounter: currentWay.ConfidenceCounter + 1,
 					LastChangeTime:    currentWay.LastChangeTime,
 					StableDistance:    newStableDistance,
+					Context:           determineRoadContext(currentWay.Way),
 				}, nil
 			}
 		}
 	}
 
 	for _, nextWay := range nextWays {
-		onWay, err := OnWay(nextWay.Way, pos, false)
+		onWay, err := OnWay(nextWay.Way, location, false)
 		if err == nil && onWay.OnWay {
 			start, end := GetWayStartEnd(nextWay.Way, onWay.IsForward)
 			return CurrentWay{
@@ -439,15 +468,16 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 				ConfidenceCounter: 1,
 				LastChangeTime:    time.Now(),
 				StableDistance:    onWay.Distance.Distance,
+				Context:           determineRoadContext(nextWay.Way),
 			}, nil
 		}
 	}
 
-	possibleWays, err := getPossibleWays(offline, pos)
+	possibleWays, err := getPossibleWays(offline, location)
 	if err == nil && len(possibleWays) > 0 {
-		selectedWay := selectBestWayAdvanced(possibleWays, pos, currentWay.Way, currentContext, gpsAccuracy)
+		selectedWay := selectBestWayAdvanced(possibleWays, location, currentWay.Way, currentContext)
 		if selectedWay.HasNodes() {
-			selectedOnWay, err := OnWay(selectedWay, pos, false)
+			selectedOnWay, err := OnWay(selectedWay, location, false)
 			if err == nil && selectedOnWay.OnWay {
 				start, end := GetWayStartEnd(selectedWay, selectedOnWay.IsForward)
 				return CurrentWay{
@@ -459,13 +489,14 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 					ConfidenceCounter: 1,
 					LastChangeTime:    time.Now(),
 					StableDistance:    selectedOnWay.Distance.Distance,
+					Context:           determineRoadContext(selectedWay),
 				}, nil
 			}
 		}
 	}
 
 	if currentWay.Way.HasNodes() {
-		onWay, err := OnWay(currentWay.Way, pos, true)
+		onWay, err := OnWay(currentWay.Way, location, true)
 		if err == nil && onWay.OnWay {
 			start, end := GetWayStartEnd(currentWay.Way, onWay.IsForward)
 			return CurrentWay{
@@ -477,6 +508,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 				ConfidenceCounter: currentWay.ConfidenceCounter,
 				LastChangeTime:    currentWay.LastChangeTime,
 				StableDistance:    currentWay.StableDistance,
+				Context:           determineRoadContext(currentWay.Way),
 			}, nil
 		}
 	}
@@ -484,17 +516,17 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline Offl
 	return CurrentWay{}, errors.New("could not find a current way")
 }
 
-func getPossibleWays(offline Offline, pos Position) ([]Way, error) {
-	possibleWays := []Way{}
-	ways, err := offline.Ways()
+func getPossibleWays(offlineMaps offline.Offline, location log.GpsLocationData) ([]offline.Way, error) {
+	possibleWays := []offline.Way{}
+	ways, err := offlineMaps.Ways()
 	if err != nil {
 		return possibleWays, errors.Wrap(err, "could not get other ways")
 	}
 
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
-		onWay, err := OnWay(way, pos, false)
-		logde(errors.Wrap(err, "Could not check if on way"))
+		onWay, err := OnWay(way, location, false)
+		utils.Logde(errors.Wrap(err, "Could not check if on way"))
 		if onWay.OnWay {
 			possibleWays = append(possibleWays, way)
 		}
@@ -502,20 +534,20 @@ func getPossibleWays(offline Offline, pos Position) ([]Way, error) {
 	return possibleWays, nil
 }
 
-func IsForward(lineStart Coordinates, lineEnd Coordinates, bearing float64) bool {
+func IsForward(lineStart offline.Coordinates, lineEnd offline.Coordinates, bearing float64) bool {
 	startLat := lineStart.Latitude()
 	startLon := lineStart.Longitude()
 	endLat := lineEnd.Latitude()
 	endLon := lineEnd.Longitude()
 
 	wayBearing := Bearing(startLat, startLon, endLat, endLon)
-	bearingDelta := math.Abs(bearing*TO_RADIANS - wayBearing)
+	bearingDelta := math.Abs(bearing*ms.TO_RADIANS - wayBearing)
 	return math.Cos(bearingDelta) >= 0
 }
 
-func MatchingWays(currentWay Way, offline Offline, matchNode Coordinates) ([]Way, error) {
-	matchingWays := []Way{}
-	ways, err := offline.Ways()
+func MatchingWays(currentWay offline.Way, offlineMaps offline.Offline, matchNode offline.Coordinates) ([]offline.Way, error) {
+	matchingWays := []offline.Way{}
+	ways, err := offlineMaps.Ways()
 	if err != nil {
 		return matchingWays, errors.Wrap(err, "could not read ways from offline")
 	}
@@ -548,13 +580,13 @@ func MatchingWays(currentWay Way, offline Offline, matchNode Coordinates) ([]Way
 	return matchingWays, nil
 }
 
-func NextIsForward(nextWay Way, matchNode Coordinates) bool {
+func NextIsForward(nextWay offline.Way, matchNode offline.Coordinates) bool {
 	if !nextWay.HasNodes() {
 		return true
 	}
 	nodes, err := nextWay.Nodes()
 	if err != nil || nodes.Len() < 2 {
-		logde(errors.Wrap(err, "could not read next way nodes"))
+		utils.Logde(errors.Wrap(err, "could not read next way nodes"))
 		return true
 	}
 
@@ -566,7 +598,7 @@ func NextIsForward(nextWay Way, matchNode Coordinates) bool {
 	return true
 }
 
-func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
+func NextWay(way offline.Way, offlineMaps offline.Offline, isForward bool) (NextWayResult, error) {
 	nodes, err := way.Nodes()
 	if err != nil {
 		return NextWayResult{}, errors.Wrap(err, "could not read way nodes")
@@ -575,8 +607,8 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		return NextWayResult{}, nil
 	}
 
-	var matchNode Coordinates
-	var matchBearingNode Coordinates
+	var matchNode offline.Coordinates
+	var matchBearingNode offline.Coordinates
 	if isForward {
 		matchNode = nodes.At(nodes.Len() - 1)
 		if nodes.Len() > 1 {
@@ -589,11 +621,11 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		}
 	}
 
-	if !PointInBox(matchNode.Latitude(), matchNode.Longitude(), offline.MinLat()-offline.Overlap(), offline.MinLon()-offline.Overlap(), offline.MaxLat()+offline.Overlap(), offline.MaxLon()+offline.Overlap()) {
+	if !maps.PointInBox(matchNode.Latitude(), matchNode.Longitude(), offlineMaps.MinLat()-offlineMaps.Overlap(), offlineMaps.MinLon()-offlineMaps.Overlap(), offlineMaps.MaxLat()+offlineMaps.Overlap(), offlineMaps.MaxLon()+offlineMaps.Overlap()) {
 		return NextWayResult{}, nil
 	}
 
-	matchingWays, err := MatchingWays(way, offline, matchNode)
+	matchingWays, err := MatchingWays(way, offlineMaps, matchNode)
 	if err != nil {
 		return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not check for next ways")
 	}
@@ -602,9 +634,9 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		return NextWayResult{StartPosition: matchNode}, nil
 	}
 
-	context := determineRoadContext(way, Position{Latitude: matchNode.Latitude(), Longitude: matchNode.Longitude()})
+	context := determineRoadContext(way)
 	if context == CONTEXT_FREEWAY {
-		filteredWays := []Way{}
+		filteredWays := []offline.Way{}
 		for _, mWay := range matchingWays {
 			name, _ := mWay.Name()
 			nameUpper := strings.ToUpper(name)
@@ -628,7 +660,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 
 	name, _ := way.Name()
 	if len(name) > 0 {
-		candidates := []Way{}
+		candidates := []offline.Way{}
 		for _, mWay := range matchingWays {
 			mName, err := mWay.Name()
 			if err != nil {
@@ -661,7 +693,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 
 	ref, _ := way.Ref()
 	if len(ref) > 0 {
-		candidates := []Way{}
+		candidates := []offline.Way{}
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
@@ -694,7 +726,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 
 	if len(ref) > 0 {
 		refs := strings.Split(ref, ";")
-		candidates := []Way{}
+		candidates := []offline.Way{}
 		for _, mWay := range matchingWays {
 			mRef, err := mWay.Ref()
 			if err != nil {
@@ -732,7 +764,7 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 		}
 	}
 
-	validWays := []Way{}
+	validWays := []offline.Way{}
 	for _, mWay := range matchingWays {
 		isForward := NextIsForward(mWay, matchNode)
 		if !isForward && mWay.OneWay() {
@@ -769,13 +801,13 @@ func NextWay(way Way, offline Offline, isForward bool) (NextWayResult, error) {
 	return NextWayResult{StartPosition: matchNode}, nil
 }
 
-func isValidConnection(way Way, matchNode, bearingNode Coordinates, maxCurvature float64) bool {
+func isValidConnection(way offline.Way, matchNode, bearingNode offline.Coordinates, maxCurvature float64) bool {
 	nodes, err := way.Nodes()
 	if err != nil || nodes.Len() < 2 {
 		return false
 	}
 
-	var nextBearingNode Coordinates
+	var nextBearingNode offline.Coordinates
 	if matchNode.Latitude() == nodes.At(0).Latitude() && matchNode.Longitude() == nodes.At(0).Longitude() {
 		nextBearingNode = nodes.At(1)
 	} else {
@@ -786,7 +818,7 @@ func isValidConnection(way Way, matchNode, bearingNode Coordinates, maxCurvature
 	return math.Abs(curv) <= maxCurvature
 }
 
-func selectBestCandidate(candidates []Way, matchNode Coordinates, context RoadContext) Way {
+func selectBestCandidate(candidates []offline.Way, matchNode offline.Coordinates, context RoadContext) offline.Way {
 	if len(candidates) == 1 {
 		return candidates[0]
 	}
@@ -817,14 +849,14 @@ func selectBestCandidate(candidates []Way, matchNode Coordinates, context RoadCo
 	return bestWay
 }
 
-func DistanceToEndOfWay(pos Position, way Way, isForward bool) (float64, error) {
-	distanceResult, err := DistanceToWay(pos, way)
+func DistanceToEndOfWay(latitude float64, longitude float64, way offline.Way, isForward bool) (float64, error) {
+	distanceResult, err := DistanceToWay(latitude, longitude, way)
 	if err != nil {
 		return 0, err
 	}
 	lat := distanceResult.LineEnd.Latitude()
 	lon := distanceResult.LineEnd.Longitude()
-	dist := DistanceToPoint(pos.Latitude*TO_RADIANS, pos.Longitude*TO_RADIANS, lat*TO_RADIANS, lon*TO_RADIANS)
+	dist := DistanceToPoint(latitude*ms.TO_RADIANS, longitude*ms.TO_RADIANS, lat*ms.TO_RADIANS, lon*ms.TO_RADIANS)
 	stopFiltering := false
 	nodes, err := way.Nodes()
 	if err != nil {
@@ -844,40 +876,40 @@ func DistanceToEndOfWay(pos Position, way Way, isForward bool) (float64, error) 
 		if !stopFiltering {
 			continue
 		}
-		dist += DistanceToPoint(lat*TO_RADIANS, lon*TO_RADIANS, nLat*TO_RADIANS, nLon*TO_RADIANS)
+		dist += DistanceToPoint(lat*ms.TO_RADIANS, lon*ms.TO_RADIANS, nLat*ms.TO_RADIANS, nLon*ms.TO_RADIANS)
 		lat = nLat
 		lon = nLon
 	}
 	return dist, nil
 }
 
-func NextWays(pos Position, currentWay CurrentWay, offline Offline, isForward bool) ([]NextWayResult, error) {
+func NextWays(location log.GpsLocationData, currentWay CurrentWay, offlineMaps offline.Offline, isForward bool) ([]NextWayResult, error) {
 	nextWays := []NextWayResult{}
 	dist := 0.0
 	wayIdx := currentWay.Way
 	forward := isForward
-	startPos := pos
+	startLat := location.Latitude()
+	startLon := location.Longitude()
 	for dist < float64(MIN_WAY_DIST) {
-		d, err := DistanceToEndOfWay(startPos, wayIdx, forward)
+		d, err := DistanceToEndOfWay(startLat, startLon, wayIdx, forward)
 		if err != nil || d <= 0 {
 			break
 		}
 		dist += d
-		nw, err := NextWay(wayIdx, offline, forward)
+		nw, err := NextWay(wayIdx, offlineMaps, forward)
 		if err != nil {
 			break
 		}
 		nextWays = append(nextWays, nw)
 		wayIdx = nw.Way
-		startPos = Position{
-			Latitude:  nw.StartPosition.Latitude(),
-			Longitude: nw.StartPosition.Longitude(),
-		}
+
+		startLat = nw.StartPosition.Latitude()
+		startLon = nw.StartPosition.Longitude()
 		forward = nw.IsForward
 	}
 
 	if len(nextWays) == 0 {
-		nextWay, err := NextWay(currentWay.Way, offline, isForward)
+		nextWay, err := NextWay(currentWay.Way, offlineMaps, isForward)
 		if err != nil {
 			return []NextWayResult{}, err
 		}

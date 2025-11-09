@@ -3,6 +3,8 @@ package main
 import (
 	"strconv"
 	"strings"
+
+	ms "pfeifer.dev/mapd/settings"
 )
 
 func ParseMaxSpeed(maxspeed string) float64 {
@@ -17,16 +19,23 @@ func ParseMaxSpeed(maxspeed string) float64 {
 	}
 
 	if len(splitSpeed) == 1 {
-		return 0.277778 * float64(numeric)
+		return ms.KPH_TO_MS * float64(numeric)
 	}
 
 	if splitSpeed[1] == "kph" || splitSpeed[1] == "km/h" || splitSpeed[1] == "kmh" {
-		return 0.277778 * float64(numeric)
+		return ms.KPH_TO_MS * float64(numeric)
 	} else if splitSpeed[1] == "mph" {
-		return 0.44704 * float64(numeric)
+		return ms.MPH_TO_MS * float64(numeric)
 	} else if splitSpeed[1] == "knots" {
-		return 0.514444 * float64(numeric)
+		return ms.KNOTS_TO_MS * float64(numeric)
 	}
 
 	return 0
+}
+
+type NextSpeedLimit struct {
+	Latitude   float64
+	Longitude  float64
+	Speedlimit float64
+	Distance   float64
 }

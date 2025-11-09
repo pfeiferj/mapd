@@ -15,7 +15,7 @@ do
     echo "$i $j $max_lon $max_lat"
     ./extract_box.sh $i $j $max_lon $max_lat
     ./add_locations.sh
-    ./mapd --generate --minlat $j --minlon $i --maxlat $max_lat --maxlon $max_lon
+    ./mapd generate --minlat $j --minlon $i --maxlat $max_lat --maxlon $max_lon
     ./compress_offline.sh
     ./upload_offline.sh
     ./upload_small_offline.sh

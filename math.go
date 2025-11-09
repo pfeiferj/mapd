@@ -5,23 +5,15 @@ import (
 
 	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/cereal/offline"
+	ms "pfeifer.dev/mapd/settings"
 )
 
-var (
-	R                = 6373000.0           // approximate radius of earth in meters
-	LANE_WIDTH       = 3.7                 // meters
-	QUERY_RADIUS     = float64(3000)       // meters
-	PADDING          = 10 / R * TO_DEGREES // 10 meters in degrees
-	TO_RADIANS       = math.Pi / 180
-	TO_DEGREES       = 180 / math.Pi
-	TARGET_LAT_ACCEL = 2.0 // m/s^2
-)
-
-func Dot(ax float64, ay float64, bx float64, by float64) float64 {
+func Dot(ax float64, ay float64, bx float64, by float64) (product float64) {
 	return (ax * bx) + (ay * by)
 }
 
-func PointOnLine(startLat float64, startLon float64, endLat float64, endLon float64, lat float64, lon float64) (float64, float64) {
+func PointOnLine(startLat float64, startLon float64, endLat float64, endLon float64, lat float64, lon float64) (latitude float64, longitude float64) {
 	aplat := lat - startLat
 	aplon := lon - startLon
 
@@ -37,32 +29,32 @@ func PointOnLine(startLat float64, startLon float64, endLat float64, endLon floa
 		t = 1
 	}
 
-	latitude := startLat + t*ablat
-	longitude := startLon + t*ablon
+	latitude = startLat + t*ablat
+	longitude = startLon + t*ablon
 
 	return latitude, longitude
 }
 
 // arguments should be in radians
-func DistanceToPoint(ax float64, ay float64, bx float64, by float64) float64 {
+func DistanceToPoint(ax float64, ay float64, bx float64, by float64) (meters float64) {
 	a := math.Sin((bx-ax)/2)*math.Sin((bx-ax)/2) + math.Cos(ax)*math.Cos(bx)*math.Sin((by-ay)/2)*math.Sin((by-ay)/2)
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
-	return R * c // in metres
+	return ms.R * c // in metres
 }
 
-func Vector(latA float64, lonA float64, latB float64, lonB float64) (float64, float64) {
+func Vector(latA float64, lonA float64, latB float64, lonB float64) (x float64, y float64) {
 	dlon := lonB - lonA
-	x := math.Sin(dlon) * math.Cos(latB)
-	y := math.Cos(latA)*math.Sin(latB) - (math.Sin(latA) * math.Cos(latB) * math.Cos(dlon))
+	x = math.Sin(dlon) * math.Cos(latB)
+	y = math.Cos(latA)*math.Sin(latB) - (math.Sin(latA) * math.Cos(latB) * math.Cos(dlon))
 	return x, y
 }
 
-func Bearing(latA float64, lonA float64, latB float64, lonB float64) float64 {
-	latA = latA * TO_RADIANS
-	latB = latB * TO_RADIANS
-	lonA = lonA * TO_RADIANS
-	lonB = lonB * TO_RADIANS
+func Bearing(latA float64, lonA float64, latB float64, lonB float64) (radians float64) {
+	latA = latA * ms.TO_RADIANS
+	latB = latB * ms.TO_RADIANS
+	lonA = lonA * ms.TO_RADIANS
+	lonB = lonB * ms.TO_RADIANS
 	x, y := Vector(latA, lonA, latB, lonB)
 	return math.Atan2(x, y)
 }
@@ -79,7 +71,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
 	}
 	num_points := nodes.Len()
-	all_nodes := []capnp.StructList[Coordinates]{nodes}
+	all_nodes := []capnp.StructList[offline.Coordinates]{nodes}
 	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
 	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way
@@ -144,14 +136,14 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		}
 		// also include nodes within 15 meters
 		for i := merge_or_split_node - 3; i >= 0; i-- {
-			if DistanceToPoint(x_points[merge_or_split_node]*TO_RADIANS, y_points[merge_or_split_node]*TO_RADIANS, x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS) > 15 {
+			if DistanceToPoint(x_points[merge_or_split_node]*ms.TO_RADIANS, y_points[merge_or_split_node]*ms.TO_RADIANS, x_points[i]*ms.TO_RADIANS, y_points[i]*ms.TO_RADIANS) > 15 {
 				break
 			}
 			curvatures[i] = 0.0015
 		}
 		// also include forward nodes within 15 meters
 		for i := merge_or_split_node; i < len(curvatures); i++ {
-			if DistanceToPoint(x_points[merge_or_split_node]*TO_RADIANS, y_points[merge_or_split_node]*TO_RADIANS, x_points[i]*TO_RADIANS, y_points[i]*TO_RADIANS) > 15 {
+			if DistanceToPoint(x_points[merge_or_split_node]*ms.TO_RADIANS, y_points[merge_or_split_node]*ms.TO_RADIANS, x_points[i]*ms.TO_RADIANS, y_points[i]*ms.TO_RADIANS) > 15 {
 				break
 			}
 			curvatures[i] = 0.0015
@@ -177,25 +169,25 @@ type Velocity struct {
 	Velocity  float64 `json:"velocity"`
 }
 
-func GetTargetVelocities(curvatures []Curvature) []Velocity {
-	velocities := make([]Velocity, len(curvatures))
+func GetTargetVelocities(curvatures []Curvature) (velocities []Velocity) {
+	velocities = make([]Velocity, len(curvatures))
 	for i, curv := range curvatures {
 		if curv.Curvature == 0 {
 			continue
 		}
-		velocities[i].Velocity = math.Pow(TARGET_LAT_ACCEL/curv.Curvature, 1.0/2)
+		velocities[i].Velocity = math.Pow(float64(ms.Settings.CurveTargetLatA)/curv.Curvature, 1.0/2)
 		velocities[i].Latitude = curv.Latitude
 		velocities[i].Longitude = curv.Longitude
 	}
 	return velocities
 }
 
-func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) ([]float64, error) {
+func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) (average_curvatures []float64, err error) {
 	if len(curvatures) < 3 {
 		return []float64{}, errors.New("not enough curvatures to average")
 	}
 
-	average_curvatures := make([]float64, len(curvatures)-2)
+	average_curvatures = make([]float64, len(curvatures)-2)
 
 	for i := 0; i < len(curvatures)-2; i++ {
 		a := curvatures[i]
@@ -216,12 +208,12 @@ func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) ([]float6
 	return average_curvatures, nil
 }
 
-func GetCurvatures(x_points []float64, y_points []float64) ([]float64, []float64, error) {
+func GetCurvatures(x_points []float64, y_points []float64) (curvatures []float64, arc_lengths []float64, err error) {
 	if len(x_points) < 3 {
 		return []float64{}, []float64{}, errors.New("not enough points to calculate curvatures")
 	}
-	curvatures := make([]float64, len(x_points)-2)
-	arc_lengths := make([]float64, len(x_points)-2)
+	curvatures = make([]float64, len(x_points)-2)
+	arc_lengths = make([]float64, len(x_points)-2)
 
 	for i := 0; i < len(x_points)-2; i++ {
 		curvature, arc_length, _ := GetCurvature(x_points[i], y_points[i], x_points[i+1], y_points[i+1], x_points[i+2], y_points[i+2])
@@ -233,10 +225,10 @@ func GetCurvatures(x_points []float64, y_points []float64) ([]float64, []float64
 	return curvatures, arc_lengths, nil
 }
 
-func GetCurvature(x_a float64, y_a float64, x_b float64, y_b float64, x_c float64, y_c float64) (float64, float64, float64) {
-	length_a := DistanceToPoint(x_a*TO_RADIANS, y_a*TO_RADIANS, x_b*TO_RADIANS, y_b*TO_RADIANS)
-	length_b := DistanceToPoint(x_a*TO_RADIANS, y_a*TO_RADIANS, x_c*TO_RADIANS, y_c*TO_RADIANS)
-	length_c := DistanceToPoint(x_b*TO_RADIANS, y_b*TO_RADIANS, x_c*TO_RADIANS, y_c*TO_RADIANS)
+func GetCurvature(x_a float64, y_a float64, x_b float64, y_b float64, x_c float64, y_c float64) (curvature float64, arc_length float64, angle float64) {
+	length_a := DistanceToPoint(x_a*ms.TO_RADIANS, y_a*ms.TO_RADIANS, x_b*ms.TO_RADIANS, y_b*ms.TO_RADIANS)
+	length_b := DistanceToPoint(x_a*ms.TO_RADIANS, y_a*ms.TO_RADIANS, x_c*ms.TO_RADIANS, y_c*ms.TO_RADIANS)
+	length_c := DistanceToPoint(x_b*ms.TO_RADIANS, y_b*ms.TO_RADIANS, x_c*ms.TO_RADIANS, y_c*ms.TO_RADIANS)
 
 	sp := (length_a + length_b + length_c) / 2
 
@@ -246,11 +238,11 @@ func GetCurvature(x_a float64, y_a float64, x_b float64, y_b float64, x_c float6
 		return 0, 0, 0
 	}
 
-	curvature := (4 * area) / (length_a * length_b * length_c)
+	curvature = (4 * area) / (length_a * length_b * length_c)
 
 	radius := 1.0 / curvature
 
-	angle := math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
-	arc_length := radius * angle
+	angle = math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
+	arc_length = radius * angle
 	return curvature, arc_length, angle
 }
