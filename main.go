@@ -27,7 +27,8 @@ func main() {
 
 	state := State{}
 
-	state.NextSpeedLimitMA.Init(3)
+	state.NextSpeedLimitMA.Init(10)
+	state.CarStateUpdateTimeMA.Init(100)
 	state.VisionCurveMA.Init(20)
 
 	pub := cereal.GetMapdPub()
@@ -49,12 +50,12 @@ func main() {
 	defer model.Sub.Msgq.Close()
 
 	for {
-		input, success := sub.Read()
-		if success {
+		input, inputSuccess := sub.Read()
+		if inputSuccess {
 			ms.Settings.Handle(input)
 		}
-		cliInput, success := cli.Read()
-		if success {
+		cliInput, cliSuccess := cli.Read()
+		if cliSuccess {
 			ms.Settings.Handle(cliInput)
 		}
 
@@ -69,53 +70,60 @@ func main() {
 
 		time.Sleep(ms.LOOP_DELAY)
 
-		carData, success := car.Read()
-		if success {
+		carData, carStateSuccess := car.Read()
+		if carStateSuccess {
 			state.UpdateCarState(carData)
+			state.TimeLastCarState = time.Now()
 		}
 
-		modelData, success := model.Read()
-		if success {
+		modelData, modelSuccess := model.Read()
+		if modelSuccess {
+			state.TimeLastModel = time.Now()
 			state.VtscSpeed = calcVtscSpeed(modelData, &state)
 		}
 
 
-		location, success := gps.Read()
-		if !success {
-			continue
-		}
-		state.Location = location
-		if !maps.PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
-			state.Data, err = maps.FindWaysAroundLocation(location.Latitude(), location.Longitude())
-			if err != nil {
-				slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
-				continue
+		location, gpsSuccess := gps.Read()
+		if gpsSuccess {
+			state.TimeLastPosition = time.Now()
+			state.DistanceSinceLastPosition = 0
+			state.Location = location
+			if !maps.PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
+				state.Data, err = maps.FindWaysAroundLocation(location.Latitude(), location.Longitude())
+				if err != nil {
+					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
+					continue
+				}
 			}
+
+			state.LastWay = state.CurrentWay
+			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
+			utils.Logde(errors.Wrap(err, "could not get current way"))
+
+			state.MaxSpeed = state.CurrentWay.Way.MaxSpeed()
+			if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
+				state.MaxSpeed = state.CurrentWay.Way.MaxSpeedForward()
+			} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
+				state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
+			}
+
+			state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
+			utils.Logde(errors.Wrap(err, "could not get next way"))
+
+			state.Curvatures, err = GetStateCurvatures(&state)
+			utils.Logde(errors.Wrap(err, "could not get curvatures from current state"))
+			state.TargetVelocities = GetTargetVelocities(state.Curvatures)
+			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 		}
 
-		state.LastWay = state.CurrentWay
-		state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
-		utils.Logde(errors.Wrap(err, "could not get current way"))
-
-		state.MaxSpeed = state.CurrentWay.Way.MaxSpeed()
-		if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
-			state.MaxSpeed = state.CurrentWay.Way.MaxSpeedForward()
-		} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
-			state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
+		if gpsSuccess || carStateSuccess {
+			UpdateCurveSpeed(&state)
+			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 		}
-
-		state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
-		utils.Logde(errors.Wrap(err, "could not get next way"))
-
-		state.Curvatures, err = GetStateCurvatures(&state)
-		utils.Logde(errors.Wrap(err, "could not get curvatures from current state"))
-		state.TargetVelocities = GetTargetVelocities(state.Curvatures)
-		UpdateCurveSpeed(&state)
-
-		state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 
 		// send at beginning of next loop
 	}
+
 }
 
 func logOutput(event log.Event, mapdOut custom.MapdOut) {
@@ -179,7 +187,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 	if state.CurrentWay.Way.HasNodes() {
 		distToEnd, err := DistanceToEndOfWay(state.Location.Latitude(), state.Location.Longitude(), state.CurrentWay.Way, state.CurrentWay.OnWay.IsForward)
 		if err == nil && distToEnd > 0 {
-			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance
+			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - float64(state.DistanceSinceLastPosition)
 		}
 	}
 
@@ -203,7 +211,10 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 			wayName := RoadName(nextWay.Way)
 			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
 				diff := state.LastSpeedLimitDistance - cumulativeDistance
-				smoothed_diff := state.NextSpeedLimitMA.Update(diff)
+				smoothed_diff := diff
+				if state.DistanceSinceLastPosition == 0 {
+					smoothed_diff = state.NextSpeedLimitMA.Update(diff)
+				}
 				result.Distance = state.LastSpeedLimitDistance - smoothed_diff
 
 				slog.Debug("Smoothed speed limit distance",

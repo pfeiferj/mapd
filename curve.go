@@ -20,8 +20,7 @@ func calculate_distance(t float32, target_jerk float32, a_ego float32, v_ego flo
 
 func UpdateCurveSpeed(s *State) {
 	var distances = make([]float64, len(s.TargetVelocities))
-	min_dist := float64(10000)
-	min_idx := 0
+	match_idx := -1
 	for i, tv := range s.TargetVelocities {
 		d := DistanceToPoint(
 			s.Location.Latitude() * ms.TO_RADIANS,
@@ -31,25 +30,36 @@ func UpdateCurveSpeed(s *State) {
 			)
 
 		distances[i] = d
-		if d < min_dist {
-			min_dist = d
-			min_idx = i
+
+		// find index of the most recent node we have driven past based on which node was used to calculate if we are on the way
+		if tv.Latitude == s.CurrentWay.Distance.LineStart.Latitude() && tv.Longitude == s.CurrentWay.Distance.LineStart.Longitude() && match_idx == 0 {
+			match_idx = i + 1
+		}
+		if tv.Latitude == s.CurrentWay.Distance.LineEnd.Latitude() && tv.Longitude == s.CurrentWay.Distance.LineEnd.Longitude() && match_idx == 0 {
+			match_idx = i + 1
 		}
 	}
-	forwardSize := len(s.TargetVelocities) - min_idx
+	if match_idx == -1 {
+		match_idx = 0
+	}
+	forwardSize := len(s.TargetVelocities) - match_idx
 	var forwardPoints = make([]Velocity, forwardSize)
 	var forwardDistances = make([]float64, forwardSize)
 	
 
 	for i := range forwardSize {
-		forwardPoints[i] = s.TargetVelocities[i + min_idx]
-		forwardDistances[i] = distances[i + min_idx]
+		forwardPoints[i] = s.TargetVelocities[i + match_idx]
+		forwardDistances[i] = distances[i + match_idx] - float64(s.DistanceSinceLastPosition)
+		if forwardDistances[i] <= 0 {
+			forwardDistances[i] = distances[i + match_idx]
+		}
 	}
 
 	minValidV := float32(1000)
 	calcSpeed := s.CarVEgo
 	if s.MapCurveTriggerSpeed > 0 && s.MapCurveTriggerSpeed > s.CarVEgo {
 		calcSpeed = s.MapCurveTriggerSpeed
+
 	} else {
 		s.MapCurveTriggerSpeed = 0
 	}

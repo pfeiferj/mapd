@@ -73,7 +73,10 @@ type WayCandidate struct {
 type DistanceResult struct {
 	LineStart offline.Coordinates
 	LineEnd   offline.Coordinates
+	LineLat   float64
+	LineLon   float64
 	Distance  float64
+	DistanceOnPath  float64
 }
 
 // Updated CurrentWay struct with stability fields
@@ -360,6 +363,9 @@ func DistanceToWay(latitude float64, longitude float64, way offline.Way) (Distan
 
 	latRad := latitude * ms.TO_RADIANS
 	lonRad := longitude * ms.TO_RADIANS
+	minLineLat := latitude
+	minLineLon := longitude
+	minIdx := 0
 	for i := 0; i < nodes.Len()-1; i++ {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
@@ -369,11 +375,23 @@ func DistanceToWay(latitude float64, longitude float64, way offline.Way) (Distan
 			minDistance = distance
 			minNodeStart = nodeStart
 			minNodeEnd = nodeEnd
+			minLineLat = lineLat
+			minLineLon = lineLon
+			minIdx = i
 		}
 	}
+	onWayDistance := DistanceToPoint(minNodeStart.Latitude() * ms.TO_RADIANS, lonRad * ms.TO_RADIANS, minLineLat*ms.TO_RADIANS, minLineLon*ms.TO_RADIANS)
+	for i := range minIdx {
+		nodeStart := nodes.At(i)
+		nodeEnd := nodes.At(i + 1)
+		onWayDistance += DistanceToPoint(nodeStart.Latitude() * ms.TO_RADIANS, nodeStart.Longitude() * ms.TO_RADIANS, nodeEnd.Latitude() * ms.TO_RADIANS, nodeEnd.Longitude() * ms.TO_RADIANS)
+	}
+	
 	res.Distance = minDistance
 	res.LineStart = minNodeStart
 	res.LineEnd = minNodeEnd
+	res.LineLat = minLineLat
+	res.LineLon = minLineLon
 	return res, nil
 }
 

@@ -14,29 +14,34 @@ import (
 )
 
 type State struct {
-	Data                    []uint8
-	CurrentWay              CurrentWay
-	LastWay                 CurrentWay
-	NextWays                []NextWayResult
-	Location                log.GpsLocationData
-	LastLocation            log.GpsLocationData
-	StableWayCounter        int
-	Curvatures              []Curvature
-	TargetVelocities        []Velocity
-	MaxSpeed                float64
-	LastSpeedLimitDistance  float64
-	LastSpeedLimitValue     float64
-	LastSpeedLimitWayName   string
-	NextSpeedLimit          NextSpeedLimit
-	VtscSpeed               float32
-	CarSetSpeed             float32
-	TimeLastSetSpeedAdjust  time.Time
-	CarVEgo                 float32
-	CarAEgo                 float32
-	CurveSpeed              float32
-	NextSpeedLimitMA        utils.MovingAverage
-	VisionCurveMA           utils.MovingAverage
-	MapCurveTriggerSpeed    float32
+	Data                      []uint8
+	CurrentWay                CurrentWay
+	LastWay                   CurrentWay
+	NextWays                  []NextWayResult
+	Location                  log.GpsLocationData
+	LastLocation              log.GpsLocationData
+	StableWayCounter          int
+	Curvatures                []Curvature
+	TargetVelocities          []Velocity
+	MaxSpeed                  float64
+	LastSpeedLimitDistance    float64
+	LastSpeedLimitValue       float64
+	LastSpeedLimitWayName     string
+	NextSpeedLimit            NextSpeedLimit
+	VtscSpeed                 float32
+	CarSetSpeed               float32
+	TimeLastSetSpeedAdjust    time.Time
+	CarVEgo                   float32
+	CarAEgo                   float32
+	CurveSpeed                float32
+	NextSpeedLimitMA          utils.MovingAverage
+	VisionCurveMA             utils.MovingAverage
+	CarStateUpdateTimeMA      utils.MovingAverage
+	MapCurveTriggerSpeed      float32
+	DistanceSinceLastPosition float32
+	TimeLastPosition          time.Time
+	TimeLastModel             time.Time
+	TimeLastCarState          time.Time
 }
 
 func (s *State) checkEnableSpeed() bool {
@@ -104,6 +109,9 @@ func (s *State) UpdateCarState(carData car.CarState) {
 	}
 	s.CarVEgo = carData.VEgo()
 	s.CarAEgo = carData.AEgo()
+	tdiff := time.Since(s.TimeLastCarState)
+	seconds := s.CarStateUpdateTimeMA.Update(tdiff.Seconds())
+	s.DistanceSinceLastPosition += float32(seconds) * s.CarVEgo
 }
 
 func (s *State) ToMessage() *capnp.Message {
