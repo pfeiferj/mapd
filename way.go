@@ -76,7 +76,6 @@ type DistanceResult struct {
 	LineLat        float64
 	LineLon        float64
 	Distance       float64
-	DistanceOnPath float64
 }
 
 // Updated CurrentWay struct with stability fields
