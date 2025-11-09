@@ -79,7 +79,7 @@ func main() {
 		modelData, modelSuccess := model.Read()
 		if modelSuccess {
 			state.TimeLastModel = time.Now()
-			state.VtscSpeed = calcVtscSpeed(modelData, &state)
+			state.VisionCurveSpeed = calcVisionCurveSpeed(modelData, &state)
 		}
 
 
@@ -139,7 +139,7 @@ func logOutput(event log.Event, mapdOut custom.MapdOut) {
 	//	"advisorySpeed", mapdOut.AdvisorySpeed(),
 	//	"oneWay", mapdOut.OneWay(),
 	//	"lanes", mapdOut.Lanes(),
-	//	"vtscSpeed", mapdOut.VtscSpeed(),
+	//	"visionCurveSpeed", mapdOut.VisionCurveSpeed(),
 	//	"curveSpeed", mapdOut.CurveSpeed(),
 	//	"suggestedSpeed", mapdOut.SuggestedSpeed(),
 	//)

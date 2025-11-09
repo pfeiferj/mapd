@@ -7,7 +7,7 @@ import (
 	ms "pfeifer.dev/mapd/settings"
 )
 
-func calcVtscSpeed(model log.ModelDataV2, state *State) float32 {
+func calcVisionCurveSpeed(model log.ModelDataV2, state *State) float32 {
 	xyztData, err := model.OrientationRate()
 	if err != nil {
 		return 0

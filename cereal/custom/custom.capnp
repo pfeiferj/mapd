@@ -80,12 +80,12 @@ enum MapdInputType {
   setCurveSpeedControl @4;
   setVisionCurveSpeedControl @5;
   setLogLevel @6;
-  setVtscTargetLatA @7;
-  setVtscMinTargetV @8;
+  setVisionCurveTargetLatA @7;
+  setVisionCurveMinTargetV @8;
   reloadSettings @9;
   saveSettings @10;
   setEnableSpeed @11;
-  setVtscUseEnableSpeed @12;
+  setVisionCurveUseEnableSpeed @12;
   setCurveUseEnableSpeed @13;
   setSpeedLimitUseEnableSpeed @14;
   setHoldLastSeenSpeedLimit @15;
@@ -140,6 +140,6 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   estimatedRoadWidth @17 :Float32;
   roadContext @18 :RoadContext;
   distanceFromWayCenter @19 :Float32;
-  vtscSpeed @20 :Float32;
+  visionCurveSpeed @20 :Float32;
   curveSpeed @21 :Float32;
 }

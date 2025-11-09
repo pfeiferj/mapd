@@ -19,7 +19,7 @@ type MapdSettings struct {
 	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
-	VtscUseEnableSpeed                  bool    `json:"vtc_use_enable_speed"`
+	VisionCurveUseEnableSpeed                  bool    `json:"vision_curve_use_enable_speed"`
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
 	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
 	LogLevel                            string  `json:"log_level"`
@@ -47,7 +47,7 @@ func (s *MapdSettings) Default() {
 	s.CurveSpeedControlEnabled = false
 	s.SpeedLimitControlEnabled = false
 	s.EnableSpeed = 0
-	s.VtscUseEnableSpeed = false
+	s.VisionCurveUseEnableSpeed = false
 	s.CurveUseEnableSpeed = false
 	s.SpeedLimitUseEnableSpeed = false
 	s.HoldLastSeenSpeedLimit = false
@@ -71,7 +71,7 @@ func (s *MapdSettings) Recommended() {
 	s.SpeedLimitControlEnabled = true
 	s.EnableSpeed = 80 * MPH_TO_MS
 	s.SpeedLimitUseEnableSpeed = true
-	s.VtscUseEnableSpeed = false
+	s.VisionCurveUseEnableSpeed = false
 	s.CurveUseEnableSpeed = false
 	s.HoldLastSeenSpeedLimit = true
 	s.CurveTargetJerk = -0.6
@@ -147,9 +147,9 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Load()
 	case custom.MapdInputType_saveSettings:
 		go s.Save()
-	case custom.MapdInputType_setVtscMinTargetV:
+	case custom.MapdInputType_setVisionCurveMinTargetV:
 		s.VisionCurveMinTargetV = input.Float()
-	case custom.MapdInputType_setVtscTargetLatA:
+	case custom.MapdInputType_setVisionCurveTargetLatA:
 		s.VisionCurveTargetLatA = input.Float()
 	case custom.MapdInputType_setVisionCurveSpeedControl:
 		s.VisionCurveSpeedControlEnabled = input.Bool()
@@ -161,8 +161,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.SpeedLimitOffset = input.Float()
 	case custom.MapdInputType_setEnableSpeed:
 		s.EnableSpeed = input.Float()
-	case custom.MapdInputType_setVtscUseEnableSpeed:
-		s.VtscUseEnableSpeed = input.Bool()
+	case custom.MapdInputType_setVisionCurveUseEnableSpeed:
+		s.VisionCurveUseEnableSpeed = input.Bool()
 	case custom.MapdInputType_setCurveUseEnableSpeed:
 		s.CurveUseEnableSpeed = input.Bool()
 	case custom.MapdInputType_setSpeedLimitUseEnableSpeed:

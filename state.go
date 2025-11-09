@@ -28,7 +28,7 @@ type State struct {
 	LastSpeedLimitValue       float64
 	LastSpeedLimitWayName     string
 	NextSpeedLimit            NextSpeedLimit
-	VtscSpeed                 float32
+	VisionCurveSpeed                 float32
 	CarSetSpeed               float32
 	TimeLastSetSpeedAdjust    time.Time
 	CarVEgo                   float32
@@ -89,8 +89,8 @@ func (s *State) SuggestedSpeed() float32 {
 			}
 		}
 	}
-	if ms.Settings.VisionCurveSpeedControlEnabled && s.VtscSpeed > 0 && (s.VtscSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VtscUseEnableSpeed || s.checkEnableSpeed()) {
-		suggestedSpeed = s.VtscSpeed
+	if ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.checkEnableSpeed()) {
+		suggestedSpeed = s.VisionCurveSpeed
 	}
 	if ms.Settings.CurveSpeedControlEnabled && s.CurveSpeed > 0 && (s.CurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.CurveUseEnableSpeed || s.checkEnableSpeed()) {
 		suggestedSpeed = s.CurveSpeed
@@ -154,7 +154,7 @@ func (s *State) ToMessage() *capnp.Message {
 
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Context))
 	output.SetEstimatedRoadWidth(float32(estimateRoadWidth(s.CurrentWay.Way)))
-	output.SetVtscSpeed(s.VtscSpeed)
+	output.SetVisionCurveSpeed(s.VisionCurveSpeed)
 	output.SetCurveSpeed(s.CurveSpeed)
 
 	output.SetSuggestedSpeed(s.SuggestedSpeed())

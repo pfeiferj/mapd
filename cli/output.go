@@ -29,13 +29,13 @@ func (m outputModel) View() string {
 	}
 	roadname, _ := m.output.RoadName()
 	return docStyle.Render(fmt.Sprintf(
-		"name: %s\nsuggested speed: %f\nspeed limit: %f\nnext speed limit: %f\nnext speed limit distance: %f\nvtsc speed: %f\ncurve speed: %f",
+		"name: %s\nsuggested speed: %f\nspeed limit: %f\nnext speed limit: %f\nnext speed limit distance: %f\nvision curve speed: %f\ncurve speed: %f",
 		roadname,
 		m.output.SuggestedSpeed(),
 		m.output.SpeedLimit(),
 		m.output.NextSpeedLimit(),
 		m.output.NextSpeedLimitDistance(),
-		m.output.VtscSpeed(),
+		m.output.VisionCurveSpeed(),
 		m.output.CurveSpeed(),
 		) + "\n")
 }

@@ -59,14 +59,14 @@ var settingsList = []list.Item{
 	settingsItem{
 		title: "Vision Target Lateral Acceleration (m/s^2)",
 		desc: "The maximum lateral acceleration used in the Vision Curve Control speed calculations",
-		MessageType: custom.MapdInputType_setVtscTargetLatA,
+		MessageType: custom.MapdInputType_setVisionCurveTargetLatA,
 		Type: Float,
 		state: settingsInput,
 	},
 	settingsItem{
 		title: "Vision Minimum Target Velocity",
 		desc: "The minimum speed that Vision Curve Control will request to drive",
-		MessageType: custom.MapdInputType_setVtscMinTargetV,
+		MessageType: custom.MapdInputType_setVisionCurveMinTargetV,
 		Type: Speed,
 		state: unitsInput,
 	},
@@ -94,7 +94,7 @@ var settingsList = []list.Item{
 	settingsItem{
 		title: "Use Enable Speed for Vision Curve Speed Control",
 		desc: "Determines whether the Mapd Enable Speed controls enabling of Vision Curve Speed Control",
-		MessageType: custom.MapdInputType_setVtscUseEnableSpeed,
+		MessageType: custom.MapdInputType_setVisionCurveUseEnableSpeed,
 		Type: Bool,
 		state: settingsInput,
 	},
