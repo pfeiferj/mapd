@@ -2,7 +2,7 @@ build: capnp go-deps
 	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
 
 docker:
-	sudo docker buildx build --platform linux/amd64,linux/arm64 .
+	docker buildx build --platform linux/amd64,linux/arm64 . -t pfeiferj/mapd:latest
 
 format:
 	gofumpt -l -w .
