@@ -9,9 +9,8 @@ import (
 
 type outputModel struct {
 	output custom.MapdOut
-	valid bool
+	valid  bool
 }
-
 
 func (m outputModel) Update(msg tea.Msg, mm *uiModel) (outputModel, tea.Cmd) {
 	out, success := mm.sub.Read()
@@ -19,7 +18,7 @@ func (m outputModel) Update(msg tea.Msg, mm *uiModel) (outputModel, tea.Cmd) {
 		m.valid = true
 		m.output = out
 	}
-    
+
 	return m, nil
 }
 
@@ -37,5 +36,5 @@ func (m outputModel) View() string {
 		m.output.NextSpeedLimitDistance(),
 		m.output.VisionCurveSpeed(),
 		m.output.CurveSpeed(),
-		) + "\n")
+	) + "\n")
 }

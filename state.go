@@ -28,7 +28,7 @@ type State struct {
 	LastSpeedLimitValue       float64
 	LastSpeedLimitWayName     string
 	NextSpeedLimit            NextSpeedLimit
-	VisionCurveSpeed                 float32
+	VisionCurveSpeed          float32
 	CarSetSpeed               float32
 	TimeLastSetSpeedAdjust    time.Time
 	CarVEgo                   float32
@@ -47,13 +47,13 @@ type State struct {
 func (s *State) checkEnableSpeed() bool {
 	if ms.Settings.EnableSpeed == 0 {
 		return true
-	}	
-	return math.Abs(float64(s.CarSetSpeed - ms.Settings.EnableSpeed)) < ms.ENABLE_SPEED_RANGE
+	}
+	return math.Abs(float64(s.CarSetSpeed-ms.Settings.EnableSpeed)) < ms.ENABLE_SPEED_RANGE
 }
 
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := float32(ms.MAX_OP_SPEED)
-	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500 * time.Millisecond 
+	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500*time.Millisecond
 
 	if ms.Settings.SpeedLimitControlEnabled {
 		slSuggestedSpeed := float32(s.MaxSpeed)
@@ -62,7 +62,6 @@ func (s *State) SuggestedSpeed() float32 {
 		}
 		if slSuggestedSpeed > 0 {
 			slSuggestedSpeed += ms.Settings.SpeedLimitOffset
-
 		}
 		if s.NextSpeedLimit.Speedlimit > 0 {
 			calcSpeed := slSuggestedSpeed
@@ -71,7 +70,7 @@ func (s *State) SuggestedSpeed() float32 {
 			}
 			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
 			timeToNextSpeedLimit := float32(math.Abs(s.NextSpeedLimit.Distance / float64(calcSpeed)))
-			speedLimitDiff := math.Abs(offsetNextSpeedLimit - float64(calcSpeed)) + 2
+			speedLimitDiff := math.Abs(offsetNextSpeedLimit-float64(calcSpeed)) + 2
 			timeToAdjust := float32(math.Abs(speedLimitDiff / float64(ms.Settings.CurveTargetAccel)))
 
 			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
@@ -84,7 +83,7 @@ func (s *State) SuggestedSpeed() float32 {
 		if suggestedSpeed > slSuggestedSpeed {
 			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
 				suggestedSpeed = slSuggestedSpeed
-			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo - 1 < slSuggestedSpeed {
+			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo-1 < slSuggestedSpeed {
 				suggestedSpeed = slSuggestedSpeed
 			}
 		}

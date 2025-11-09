@@ -1,14 +1,14 @@
 package cli
 
 import (
-	"log"
-	"os"
 	"context"
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/urfave/cli/v3"
-	"pfeifer.dev/mapd/params"
 	"pfeifer.dev/mapd/maps"
+	"pfeifer.dev/mapd/params"
 )
 
 func Handle() {
@@ -16,52 +16,52 @@ func Handle() {
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
 			{
-				Name:  "interactive",
+				Name:    "interactive",
 				Aliases: []string{"i"},
-				Usage: "Send commands to an active mapd instance",
+				Usage:   "Send commands to an active mapd instance",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					interactive()
 					return nil
 				},
 			},
 			{
-				Name:  "generate",
+				Name:    "generate",
 				Aliases: []string{"g"},
 				Flags: []cli.Flag{
 					&cli.Float64Flag{
 						Category: "Bounds",
-						Name: "minlat",
-						Usage: "Sets the minimum latitude in degrees used while generating offline maps",
-						Value: -90,
+						Name:     "minlat",
+						Usage:    "Sets the minimum latitude in degrees used while generating offline maps",
+						Value:    -90,
 					},
 					&cli.Float64Flag{
 						Category: "Bounds",
-						Name: "minlon",
-						Usage: "Sets the minimum longitude in degrees used while generating offline maps",
-						Value: -180,
+						Name:     "minlon",
+						Usage:    "Sets the minimum longitude in degrees used while generating offline maps",
+						Value:    -180,
 					},
 					&cli.Float64Flag{
 						Category: "Bounds",
-						Name: "maxlat",
-						Usage: "Sets the maximum latitude in degrees used while generating offline maps",
-						Value: 90,
+						Name:     "maxlat",
+						Usage:    "Sets the maximum latitude in degrees used while generating offline maps",
+						Value:    90,
 					},
 					&cli.Float64Flag{
 						Category: "Bounds",
-						Name: "maxlon",
-						Usage: "Sets the maximum longitude in degrees used while generating offline maps",
-						Value: 180,
+						Name:     "maxlon",
+						Usage:    "Sets the maximum longitude in degrees used while generating offline maps",
+						Value:    180,
 					},
 					&cli.Float64Flag{
 						Category: "Bounds",
-						Name: "overlap",
-						Usage: "Sets the amount in degrees to overlap each offline tile",
-						Value: 0.01,
+						Name:     "overlap",
+						Usage:    "Sets the amount in degrees to overlap each offline tile",
+						Value:    0.01,
 					},
 					&cli.StringFlag{
 						Category: "Inputs and Outputs",
-						Name: "input-file",
-						Usage: "The open street maps pbf file to generate offline map files from",
+						Name:     "input-file",
+						Usage:    "The open street maps pbf file to generate offline map files from",
 						Aliases: []string{
 							"i",
 						},
@@ -73,13 +73,13 @@ func Handle() {
 							"o",
 						},
 						Usage: "The base directory to output the offline map files to",
-						Name: "output-directory",
+						Name:  "output-directory",
 						Value: fmt.Sprintf("%s/offline", params.GetBaseOpPath()),
 					},
 					&cli.BoolFlag{
 						Category: "Inputs and Outputs",
-						Name: "generate-empty-files",
-						Usage: "Generates map tiles that have no roads",
+						Name:     "generate-empty-files",
+						Usage:    "Generates map tiles that have no roads",
 						Aliases: []string{
 							"e",
 						},
@@ -88,14 +88,14 @@ func Handle() {
 				},
 				Usage: "Triggers a generation of map data from 'map.osm.pbf'",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					offlineSettings := maps.OfflineSettings {
-						MinLat: cmd.Float64("minlat"),
-						MinLon: cmd.Float64("minlon"),
-						MaxLat: cmd.Float64("maxlat"),
-						MaxLon: cmd.Float64("maxlon"),
-						Overlap: cmd.Float64("overlap"),
-						InputFile: cmd.String("input-file"),
-						OutputDirectory: cmd.String("output-directory"),
+					offlineSettings := maps.OfflineSettings{
+						MinLat:             cmd.Float64("minlat"),
+						MinLon:             cmd.Float64("minlon"),
+						MaxLat:             cmd.Float64("maxlat"),
+						MaxLon:             cmd.Float64("maxlon"),
+						Overlap:            cmd.Float64("overlap"),
+						InputFile:          cmd.String("input-file"),
+						OutputDirectory:    cmd.String("output-directory"),
 						GenerateEmptyFiles: cmd.Bool("generate-empty-files"),
 					}
 					maps.GenerateOffline(offlineSettings)
@@ -118,5 +118,4 @@ func Handle() {
 	if shouldExit {
 		os.Exit(0)
 	}
-
 }

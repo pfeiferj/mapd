@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/utils"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -71,12 +71,12 @@ type WayCandidate struct {
 }
 
 type DistanceResult struct {
-	LineStart offline.Coordinates
-	LineEnd   offline.Coordinates
-	LineLat   float64
-	LineLon   float64
-	Distance  float64
-	DistanceOnPath  float64
+	LineStart      offline.Coordinates
+	LineEnd        offline.Coordinates
+	LineLat        float64
+	LineLon        float64
+	Distance       float64
+	DistanceOnPath float64
 }
 
 // Updated CurrentWay struct with stability fields
@@ -380,13 +380,13 @@ func DistanceToWay(latitude float64, longitude float64, way offline.Way) (Distan
 			minIdx = i
 		}
 	}
-	onWayDistance := DistanceToPoint(minNodeStart.Latitude() * ms.TO_RADIANS, lonRad * ms.TO_RADIANS, minLineLat*ms.TO_RADIANS, minLineLon*ms.TO_RADIANS)
+	onWayDistance := DistanceToPoint(minNodeStart.Latitude()*ms.TO_RADIANS, lonRad*ms.TO_RADIANS, minLineLat*ms.TO_RADIANS, minLineLon*ms.TO_RADIANS)
 	for i := range minIdx {
 		nodeStart := nodes.At(i)
 		nodeEnd := nodes.At(i + 1)
-		onWayDistance += DistanceToPoint(nodeStart.Latitude() * ms.TO_RADIANS, nodeStart.Longitude() * ms.TO_RADIANS, nodeEnd.Latitude() * ms.TO_RADIANS, nodeEnd.Longitude() * ms.TO_RADIANS)
+		onWayDistance += DistanceToPoint(nodeStart.Latitude()*ms.TO_RADIANS, nodeStart.Longitude()*ms.TO_RADIANS, nodeEnd.Latitude()*ms.TO_RADIANS, nodeEnd.Longitude()*ms.TO_RADIANS)
 	}
-	
+
 	res.Distance = minDistance
 	res.LineStart = minNodeStart
 	res.LineEnd = minNodeEnd

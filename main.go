@@ -10,10 +10,10 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
+	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
-	"pfeifer.dev/mapd/cli"
 )
 
 func main() {
@@ -82,7 +82,6 @@ func main() {
 			state.VisionCurveSpeed = calcVisionCurveSpeed(modelData, &state)
 		}
 
-
 		location, gpsSuccess := gps.Read()
 		if gpsSuccess {
 			state.TimeLastPosition = time.Now()
@@ -123,7 +122,6 @@ func main() {
 
 		// send at beginning of next loop
 	}
-
 }
 
 func logOutput(event log.Event, mapdOut custom.MapdOut) {

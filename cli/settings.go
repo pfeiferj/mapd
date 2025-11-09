@@ -4,180 +4,180 @@ import (
 	"fmt"
 	"strconv"
 
+	"capnproto.org/go/capnp/v3"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
-	"capnproto.org/go/capnp/v3"
 	ms "pfeifer.dev/mapd/settings"
 )
 
 var settingsList = []list.Item{
 	settingsItem{
-		title: "Speed Limit Control Enabled",
-		desc: "When enabled mapd will use the speed limit to determine a suggested speed",
+		title:       "Speed Limit Control Enabled",
+		desc:        "When enabled mapd will use the speed limit to determine a suggested speed",
 		MessageType: custom.MapdInputType_setSpeedLimitControl,
-		Type: Enable,
-		state: settingsInput,
+		Type:        Enable,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Curve Speed Control Enabled",
-		desc: "When enabled mapd will use map based curvature calculations to determine a suggested speed",
+		title:       "Curve Speed Control Enabled",
+		desc:        "When enabled mapd will use map based curvature calculations to determine a suggested speed",
 		MessageType: custom.MapdInputType_setCurveSpeedControl,
-		Type: Enable,
-		state: settingsInput,
+		Type:        Enable,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Vision Curve Speed Control Enabled",
-		desc: "When enabled mapd will use vision model based curvature calculations to determine a suggested speed",
+		title:       "Vision Curve Speed Control Enabled",
+		desc:        "When enabled mapd will use vision model based curvature calculations to determine a suggested speed",
 		MessageType: custom.MapdInputType_setVisionCurveSpeedControl,
-		Type: Enable,
-		state: settingsInput,
+		Type:        Enable,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Speed Limit Offset",
-		desc: "The offset that gets applied to a speed limit to determine a target speed",
+		title:       "Speed Limit Offset",
+		desc:        "The offset that gets applied to a speed limit to determine a target speed",
 		MessageType: custom.MapdInputType_setSpeedLimitOffset,
-		Type: Speed,
-		state: unitsInput,
+		Type:        Speed,
+		state:       unitsInput,
 	},
 	settingsItem{
-		title: "Slow Down For Next Speed Limit",
-		desc: "Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is lower than the current limit",
+		title:       "Slow Down For Next Speed Limit",
+		desc:        "Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is lower than the current limit",
 		MessageType: custom.MapdInputType_setSlowDownForNextSpeedLimit,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Speed Up For Next Speed Limit",
-		desc: "Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is higher than the current limit",
+		title:       "Speed Up For Next Speed Limit",
+		desc:        "Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is higher than the current limit",
 		MessageType: custom.MapdInputType_setSpeedUpForNextSpeedLimit,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Vision Target Lateral Acceleration (m/s^2)",
-		desc: "The maximum lateral acceleration used in the Vision Curve Control speed calculations",
+		title:       "Vision Target Lateral Acceleration (m/s^2)",
+		desc:        "The maximum lateral acceleration used in the Vision Curve Control speed calculations",
 		MessageType: custom.MapdInputType_setVisionCurveTargetLatA,
-		Type: Float,
-		state: settingsInput,
+		Type:        Float,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Vision Minimum Target Velocity",
-		desc: "The minimum speed that Vision Curve Control will request to drive",
+		title:       "Vision Minimum Target Velocity",
+		desc:        "The minimum speed that Vision Curve Control will request to drive",
 		MessageType: custom.MapdInputType_setVisionCurveMinTargetV,
-		Type: Speed,
-		state: unitsInput,
+		Type:        Speed,
+		state:       unitsInput,
 	},
 	settingsItem{
-		title: "Mapd Enable Speed",
-		desc: "The speed you can set your cruise control to that will then cause mapd features to engage",
+		title:       "Mapd Enable Speed",
+		desc:        "The speed you can set your cruise control to that will then cause mapd features to engage",
 		MessageType: custom.MapdInputType_setEnableSpeed,
-		Type: Speed,
-		state: unitsInput,
+		Type:        Speed,
+		state:       unitsInput,
 	},
 	settingsItem{
-		title: "Use Enable Speed For Speed Limit",
-		desc: "Determines whether the Mapd Enable Speed controls enabling of Speed Limit Control",
+		title:       "Use Enable Speed For Speed Limit",
+		desc:        "Determines whether the Mapd Enable Speed controls enabling of Speed Limit Control",
 		MessageType: custom.MapdInputType_setSpeedLimitUseEnableSpeed,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Use Enable Speed for Curve Speed Control",
-		desc: "Determines whether the Mapd Enable Speed controls enabling of Curve Speed Control",
+		title:       "Use Enable Speed for Curve Speed Control",
+		desc:        "Determines whether the Mapd Enable Speed controls enabling of Curve Speed Control",
 		MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Use Enable Speed for Vision Curve Speed Control",
-		desc: "Determines whether the Mapd Enable Speed controls enabling of Vision Curve Speed Control",
+		title:       "Use Enable Speed for Vision Curve Speed Control",
+		desc:        "Determines whether the Mapd Enable Speed controls enabling of Vision Curve Speed Control",
 		MessageType: custom.MapdInputType_setVisionCurveUseEnableSpeed,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Hold Speed Limit While Changing Set Speed",
-		desc: "When enabled mapd will suggest using the speed limit while the cruise control speed is changing. This prevents speeding up while trying to reach the enable speed",
+		title:       "Hold Speed Limit While Changing Set Speed",
+		desc:        "When enabled mapd will suggest using the speed limit while the cruise control speed is changing. This prevents speeding up while trying to reach the enable speed",
 		MessageType: custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Hold Last Seen Speed Limit",
-		desc: "When enabled mapd will use the last seen speed limit if it cannot determine a current speed limit",
+		title:       "Hold Last Seen Speed Limit",
+		desc:        "When enabled mapd will use the last seen speed limit if it cannot determine a current speed limit",
 		MessageType: custom.MapdInputType_setHoldLastSeenSpeedLimit,
-		Type: Bool,
-		state: settingsInput,
+		Type:        Bool,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Curve Target Jerk (m/s^3)",
-		desc: "The target amount of jerk to use when determining curve speed activation distance",
+		title:       "Curve Target Jerk (m/s^3)",
+		desc:        "The target amount of jerk to use when determining curve speed activation distance",
 		MessageType: custom.MapdInputType_setCurveTargetJerk,
-		Type: Float,
-		state: settingsInput,
+		Type:        Float,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Curve Target Accel (m/s^2)",
-		desc: "The target amount of acceleration to use when determining curve speed activation distance",
+		title:       "Curve Target Accel (m/s^2)",
+		desc:        "The target amount of acceleration to use when determining curve speed activation distance",
 		MessageType: custom.MapdInputType_setCurveTargetAccel,
-		Type: Float,
-		state: settingsInput,
+		Type:        Float,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Curve Target Offset (s)",
-		desc: "An offset for the time before a curve to reach the target curve speed",
+		title:       "Curve Target Offset (s)",
+		desc:        "An offset for the time before a curve to reach the target curve speed",
 		MessageType: custom.MapdInputType_setCurveTargetOffset,
-		Type: Float,
-		state: settingsInput,
+		Type:        Float,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Curve Target Lateral Acceleration (m/s^2)",
-		desc: "The maximum lateral acceleration used in the Curve Control speed calculations",
+		title:       "Curve Target Lateral Acceleration (m/s^2)",
+		desc:        "The maximum lateral acceleration used in the Curve Control speed calculations",
 		MessageType: custom.MapdInputType_setCurveTargetLatA,
-		Type: Float,
-		state: settingsInput,
+		Type:        Float,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Default Lane Width",
-		desc: "The default lane width to use when determining if we are currently on a road",
+		title:       "Default Lane Width",
+		desc:        "The default lane width to use when determining if we are currently on a road",
 		MessageType: custom.MapdInputType_setDefaultLaneWidth,
-		Type: Float,
-		state: settingsInput,
+		Type:        Float,
+		state:       settingsInput,
 	},
 	settingsItem{
-		title: "Set Log Level",
-		desc: "Modify how verbose logging will be for the mapd system",
+		title:       "Set Log Level",
+		desc:        "Modify how verbose logging will be for the mapd system",
 		MessageType: custom.MapdInputType_setLogLevel,
-		Type: Options,
-		state: settingsInput,
+		Type:        Options,
+		state:       settingsInput,
 		options: []list.Item{
-			settingsItem {title: "error"},
-			settingsItem {title: "warn"},
-			settingsItem {title: "info"},
-			settingsItem {title: "debug"},
+			settingsItem{title: "error"},
+			settingsItem{title: "warn"},
+			settingsItem{title: "info"},
+			settingsItem{title: "debug"},
 		},
 	},
 	settingsItem{
 		title: "Load Default Settings",
-		desc: "Loads the default settings",
+		desc:  "Loads the default settings",
 		state: defaultSettings,
 	},
 	settingsItem{
 		title: "Load Recommended Settings",
-		desc: "Loads the recommended settings",
+		desc:  "Loads the recommended settings",
 		state: recommendedSettings,
 	},
 	settingsItem{
 		title: "Save Settings",
-		desc: "Persists any updates to the settings across reboots",
+		desc:  "Persists any updates to the settings across reboots",
 		state: saveSettings,
 	},
 	settingsItem{
 		title: "Return to Main Menu",
-		desc: "Exit settings configuration and return to the initial actions menu",
+		desc:  "Exit settings configuration and return to the initial actions menu",
 		state: settingsExit,
 	},
 }
@@ -232,6 +232,7 @@ const (
 )
 
 type settingsState int
+
 const (
 	showSettingsMenu settingsState = iota
 	settingsExit
@@ -244,10 +245,10 @@ const (
 
 type settingsItem struct {
 	title, desc string
-	state settingsState
+	state       settingsState
 	MessageType custom.MapdInputType
-	Type SettingType
-	options []list.Item
+	Type        SettingType
+	options     []list.Item
 }
 
 func (i settingsItem) Title() string       { return i.title }
@@ -255,12 +256,12 @@ func (i settingsItem) Description() string { return i.desc }
 func (i settingsItem) FilterValue() string { return i.title }
 
 type settingsModel struct {
-	list list.Model
-	state settingsState
-	textInput textinput.Model
+	list         list.Model
+	state        settingsState
+	textInput    textinput.Model
 	selectedItem settingsItem
-	prompt string
-	speedUnit SpeedUnit
+	prompt       string
+	speedUnit    SpeedUnit
 }
 
 func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd) {
@@ -443,10 +444,9 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
-		m.textInput.Width = msg.Width-h
+		m.textInput.Width = msg.Width - h
 		m.textInput.CharLimit = 256
 	}
-
 
 	var cmd tea.Cmd
 	switch m.state {
@@ -458,7 +458,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 			m.list, cmd = m.list.Update(msg)
 		case Options:
 			m.list, cmd = m.list.Update(msg)
-		default: 
+		default:
 			m.textInput, cmd = m.textInput.Update(msg)
 		}
 	default:
@@ -504,19 +504,18 @@ func (m settingsModel) View() string {
 			return docStyle.Render(m.list.View())
 		case Options:
 			return docStyle.Render(m.list.View())
-		default: 
+		default:
 			return docStyle.Render(fmt.Sprintf(
 				"%s\n\n%s\n\n%s",
 				m.prompt,
 				m.textInput.View(),
 				"(esc to quit)",
-				) + "\n")
+			) + "\n")
 		}
 	default:
 		return docStyle.Render(m.list.View())
 	}
 }
-
 
 func getSettingsModel() settingsModel {
 	listDelegate := list.NewDefaultDelegate()

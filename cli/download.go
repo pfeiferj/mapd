@@ -3,22 +3,23 @@ package cli
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea"
-	ms "pfeifer.dev/mapd/settings"
 	"capnproto.org/go/capnp/v3"
 	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type downloadModel struct {
-	list list.Model
-	path string
+	list      list.Model
+	path      string
 	rootPaths []downloadItem
-	state downloadState
+	state     downloadState
 }
 
 type downloadState int
+
 const (
 	showRootDownloadMenu downloadState = iota
 	showSubDownloadMenu
@@ -31,6 +32,7 @@ type downloadItem struct {
 func (i downloadItem) Title() string {
 	return i.title
 }
+
 func (i downloadItem) Description() string {
 	return i.desc
 }
@@ -54,7 +56,6 @@ func getDownloadModel() downloadModel {
 	m.rootPaths = dItems
 	return m
 }
-
 
 func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -117,7 +118,7 @@ func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd)
 		h, v := docStyle.GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 	}
-    
+
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	return m, cmd

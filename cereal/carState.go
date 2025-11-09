@@ -4,8 +4,8 @@ import (
 	"github.com/pfeiferj/gomsgq"
 
 	"capnproto.org/go/capnp/v3"
-	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/car"
+	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/settings"
 )
 

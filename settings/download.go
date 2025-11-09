@@ -22,7 +22,7 @@ import (
 type LocationData struct {
 	BoundingBox Bounds `json:"bounding_box"`
 	FullName    string `json:"full_name"`
-	Submenu			string `json:"submenu"`
+	Submenu     string `json:"submenu"`
 }
 
 //go:embed download_menu.json
@@ -32,7 +32,6 @@ var (
 	BOUNDING_BOXES = map[string]map[string]LocationData{}
 	_              = json.Unmarshal(boundingBoxesJson, &BOUNDING_BOXES)
 )
-
 
 func DownloadFile(url string, filepath string) (err error) {
 	slog.Info("Downloading", "url", url)
@@ -95,9 +94,9 @@ type DownloadLocationDetail struct {
 var progress DownloadProgress
 
 func AddLocationDetailsToProgress(path string) {
-			progress.LocationDetails[path] = &DownloadLocationDetail{
-				TotalFiles: countFilesForBounds(getBoundsForPath(path)),
-			}
+	progress.LocationDetails[path] = &DownloadLocationDetail{
+		TotalFiles: countFilesForBounds(getBoundsForPath(path)),
+	}
 }
 
 func Download(paths string) {

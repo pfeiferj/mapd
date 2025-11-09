@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"time"
-	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pfeiferj/gomsgq"
+
 	"pfeifer.dev/mapd/cereal"
 )
 
@@ -25,23 +27,23 @@ var docStyle = lipgloss.NewStyle().Margin(1, 2)
 type TickMsg time.Time
 
 func tickEvery() tea.Cmd {
-    return tea.Every(50 * time.Millisecond, func(t time.Time) tea.Msg {
-        return TickMsg(t)
-    })
+	return tea.Every(50*time.Millisecond, func(t time.Time) tea.Msg {
+		return TickMsg(t)
+	})
 }
 
 type uiModel struct {
-	list list.Model
-	state mainState
+	list     list.Model
+	state    mainState
 	settings settingsModel
-	output outputModel
+	output   outputModel
 	download downloadModel
-	pub *gomsgq.MsgqPublisher
-	sub *cereal.MapdOutSubscriber
+	pub      *gomsgq.MsgqPublisher
+	sub      *cereal.MapdOutSubscriber
 }
 type item struct {
 	title, desc string
-	state mainState
+	state       mainState
 }
 
 func (i item) Title() string       { return i.title }
@@ -64,8 +66,8 @@ func initialModel() uiModel {
 }
 
 func (m uiModel) Init() tea.Cmd {
-    // Just return `nil`, which means "no I/O right now, please."
-    return tickEvery()
+	// Just return `nil`, which means "no I/O right now, please."
+	return tickEvery()
 }
 
 func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -89,7 +91,6 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.output, _ = m.output.Update(msg, &m)
 		return m, tickEvery()
 	}
-
 
 	var cmd tea.Cmd
 	switch m.state {

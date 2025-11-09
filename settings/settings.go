@@ -4,22 +4,20 @@ import (
 	"encoding/json"
 	"log/slog"
 	"strings"
+	"time"
 
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/params"
 	"pfeifer.dev/mapd/utils"
-	"time"
 )
 
-var (
-	Settings = MapdSettings{}
-)
+var Settings = MapdSettings{}
 
 type MapdSettings struct {
 	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
-	VisionCurveUseEnableSpeed                  bool    `json:"vision_curve_use_enable_speed"`
+	VisionCurveUseEnableSpeed           bool    `json:"vision_curve_use_enable_speed"`
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
 	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
 	LogLevel                            string  `json:"log_level"`
@@ -35,7 +33,7 @@ type MapdSettings struct {
 	CurveTargetLatA                     float32 `json:"curve_target_lat_a"`
 	SlowDownForNextSpeedLimit           bool    `json:"slow_down_for_next_speed_limit"`
 	SpeedUpForNextSpeedLimit            bool    `json:"speed_up_for_next_speed_limit"`
-	HoldSpeedLimitWhileChangingSetSpeed bool `json:"hold_speed_limit_while_changing_set_speed"`
+	HoldSpeedLimitWhileChangingSetSpeed bool    `json:"hold_speed_limit_while_changing_set_speed"`
 }
 
 func (s *MapdSettings) Default() {

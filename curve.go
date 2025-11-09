@@ -11,23 +11,23 @@ import (
 //}
 
 func calculate_velocity(t float32, target_jerk float32, a_ego float32, v_ego float32) float32 {
-  return v_ego + a_ego * t + target_jerk/2 * (t * t)
+	return v_ego + a_ego*t + target_jerk/2*(t*t)
 }
 
 func calculate_distance(t float32, target_jerk float32, a_ego float32, v_ego float32) float32 {
-  return t * v_ego + a_ego/2 * (t * t) + target_jerk/6 * (t * t * t)
+	return t*v_ego + a_ego/2*(t*t) + target_jerk/6*(t*t*t)
 }
 
 func UpdateCurveSpeed(s *State) {
-	var distances = make([]float64, len(s.TargetVelocities))
+	distances := make([]float64, len(s.TargetVelocities))
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
 		d := DistanceToPoint(
-			s.Location.Latitude() * ms.TO_RADIANS,
-			s.Location.Longitude() * ms.TO_RADIANS,
-			tv.Latitude * ms.TO_RADIANS,
-			tv.Longitude * ms.TO_RADIANS,
-			)
+			s.Location.Latitude()*ms.TO_RADIANS,
+			s.Location.Longitude()*ms.TO_RADIANS,
+			tv.Latitude*ms.TO_RADIANS,
+			tv.Longitude*ms.TO_RADIANS,
+		)
 
 		distances[i] = d
 
@@ -43,15 +43,14 @@ func UpdateCurveSpeed(s *State) {
 		match_idx = 0
 	}
 	forwardSize := len(s.TargetVelocities) - match_idx
-	var forwardPoints = make([]Velocity, forwardSize)
-	var forwardDistances = make([]float64, forwardSize)
-	
+	forwardPoints := make([]Velocity, forwardSize)
+	forwardDistances := make([]float64, forwardSize)
 
 	for i := range forwardSize {
-		forwardPoints[i] = s.TargetVelocities[i + match_idx]
-		forwardDistances[i] = distances[i + match_idx] - float64(s.DistanceSinceLastPosition)
+		forwardPoints[i] = s.TargetVelocities[i+match_idx]
+		forwardDistances[i] = distances[i+match_idx] - float64(s.DistanceSinceLastPosition)
 		if forwardDistances[i] <= 0 {
-			forwardDistances[i] = distances[i + match_idx]
+			forwardDistances[i] = distances[i+match_idx]
 		}
 	}
 
@@ -59,7 +58,6 @@ func UpdateCurveSpeed(s *State) {
 	calcSpeed := s.CarVEgo
 	if s.MapCurveTriggerSpeed > 0 && s.MapCurveTriggerSpeed > s.CarVEgo {
 		calcSpeed = s.MapCurveTriggerSpeed
-
 	} else {
 		s.MapCurveTriggerSpeed = 0
 	}
@@ -77,8 +75,8 @@ func UpdateCurveSpeed(s *State) {
 			a := float32(0.5 * ms.Settings.CurveTargetJerk)
 			b := s.CarAEgo
 			c := calcSpeed - float32(tv.Velocity)
-			t_a := -1 * (float32(math.Sqrt(float64(b*b - 4 * a * c))) + b) / 2 * a
-			t := (float32(math.Sqrt(float64(b*b - 4 * a * c))) - b) / 2 * a
+			t_a := -1 * (float32(math.Sqrt(float64(b*b-4*a*c))) + b) / 2 * a
+			t := (float32(math.Sqrt(float64(b*b-4*a*c))) - b) / 2 * a
 			if !math.IsNaN(float64(t_a)) && t_a > 0 {
 				t = t_a
 			}
@@ -95,7 +93,7 @@ func UpdateCurveSpeed(s *State) {
 
 		}
 
-		if float32(d) < max_d + float32(tv.Velocity) * ms.Settings.CurveTargetOffset {
+		if float32(d) < max_d+float32(tv.Velocity)*ms.Settings.CurveTargetOffset {
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)
 			}
@@ -111,4 +109,3 @@ func UpdateCurveSpeed(s *State) {
 		}
 	}
 }
-

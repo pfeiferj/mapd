@@ -1,11 +1,11 @@
 package utils
 
 type MovingAverage struct {
-	values []float64
-	index int
-	size int
+	values      []float64
+	index       int
+	size        int
 	initialized bool
-	Estimate float64
+	Estimate    float64
 }
 
 func (a *MovingAverage) Init(size int) {
@@ -39,6 +39,6 @@ func (a *MovingAverage) Update(val float64) float64 {
 	for _, v := range a.values {
 		total += v
 	}
-	a.Estimate = total/float64(a.size)
+	a.Estimate = total / float64(a.size)
 	return a.Estimate
 }

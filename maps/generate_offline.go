@@ -15,8 +15,8 @@ import (
 	"github.com/paulmach/osm/osmpbf"
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/utils"
 	"pfeifer.dev/mapd/params"
+	"pfeifer.dev/mapd/utils"
 )
 
 type TmpNode struct {
@@ -49,14 +49,14 @@ type Area struct {
 }
 
 type OfflineSettings struct {
-	MinLat float64
-	MinLon float64
-	MaxLat float64
-	MaxLon float64
-	OutputDirectory string
-	InputFile string
+	MinLat             float64
+	MinLon             float64
+	MaxLat             float64
+	MaxLon             float64
+	OutputDirectory    string
+	InputFile          string
 	GenerateEmptyFiles bool
-	Overlap float64
+	Overlap            float64
 }
 
 var (
