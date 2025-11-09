@@ -4,6 +4,9 @@ import (
 	"github.com/pfeiferj/gomsgq"
 
 	"pfeifer.dev/mapd/settings"
+	"capnproto.org/go/capnp/v3"
+	"pfeifer.dev/mapd/cereal/custom"
+	"pfeifer.dev/mapd/cereal/log"
 )
 
 func GetMapdPub() gomsgq.MsgqPublisher {
@@ -40,4 +43,24 @@ func GetMapdCliPub() gomsgq.MsgqPublisher {
 	pub.Init(msgq)
 
 	return pub
+}
+
+func NewOutput() (*capnp.Message, log.Event, custom.MapdOut) {
+	arena := capnp.SingleSegment(nil)
+
+	msg, seg, err := capnp.NewMessage(arena)
+	if err != nil {
+		panic(err)
+	}
+
+	event, err := log.NewRootEvent(seg)
+	if err != nil {
+		panic(err)
+	}
+	mapdOut, err := event.NewMapdOut()
+	if err != nil {
+		panic(err)
+	}
+
+	return msg, event, mapdOut
 }

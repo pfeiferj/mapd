@@ -4,12 +4,8 @@ import (
 	"log/slog"
 	"time"
 
-	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal"
-	"pfeifer.dev/mapd/cereal/custom"
-	"pfeifer.dev/mapd/cereal/log"
-	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
@@ -59,7 +55,7 @@ func main() {
 			ms.Settings.Handle(cliInput)
 		}
 
-		offlineMaps := readOffline(state.Data)
+		offlineMaps := maps.ReadOffline(state.Data)
 		msg := state.ToMessage()
 
 		b, err := msg.Marshal()
@@ -122,164 +118,4 @@ func main() {
 
 		// send at beginning of next loop
 	}
-}
-
-func logOutput(event log.Event, mapdOut custom.MapdOut) {
-	//name, _ := mapdOut.WayName()
-	//ref, _ := mapdOut.WayRef()
-	//hazard, _ := mapdOut.Hazard()
-	//slog.Debug("mapdOut",
-	//	"valid", event.Valid(),
-	//	"wayName", name,
-	//	"wayRef", ref,
-	//	"speedLimit", mapdOut.SpeedLimit(),
-	//	"hazard", hazard,
-	//	"advisorySpeed", mapdOut.AdvisorySpeed(),
-	//	"oneWay", mapdOut.OneWay(),
-	//	"lanes", mapdOut.Lanes(),
-	//	"visionCurveSpeed", mapdOut.VisionCurveSpeed(),
-	//	"curveSpeed", mapdOut.CurveSpeed(),
-	//	"suggestedSpeed", mapdOut.SuggestedSpeed(),
-	//)
-}
-
-func readOffline(data []uint8) offline.Offline {
-	msg, err := capnp.UnmarshalPacked(data)
-	utils.Logde(errors.Wrap(err, "could not unmarshal offline data"))
-	if err == nil {
-		offlineMaps, err := offline.ReadRootOffline(msg)
-		utils.Logde(errors.Wrap(err, "could not read offline message"))
-		return offlineMaps
-	}
-	return offline.Offline{}
-}
-
-func newOutput() (*capnp.Message, log.Event, custom.MapdOut) {
-	arena := capnp.SingleSegment(nil)
-
-	msg, seg, err := capnp.NewMessage(arena)
-	if err != nil {
-		panic(err)
-	}
-
-	event, err := log.NewRootEvent(seg)
-	if err != nil {
-		panic(err)
-	}
-	mapdOut, err := event.NewMapdOut()
-	if err != nil {
-		panic(err)
-	}
-
-	return msg, event, mapdOut
-}
-
-func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLimit {
-	if len(state.NextWays) == 0 {
-		return NextSpeedLimit{}
-	}
-
-	// Find the next speed limit change
-	cumulativeDistance := 0.0
-
-	if state.CurrentWay.Way.HasNodes() {
-		distToEnd, err := DistanceToEndOfWay(state.Location.Latitude(), state.Location.Longitude(), state.CurrentWay.Way, state.CurrentWay.OnWay.IsForward)
-		if err == nil && distToEnd > 0 {
-			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - float64(state.DistanceSinceLastPosition)
-		}
-	}
-
-	// Look through next ways for speed limit change
-	for _, nextWay := range state.NextWays {
-		nextMaxSpeed := nextWay.Way.MaxSpeed()
-		if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
-			nextMaxSpeed = nextWay.Way.MaxSpeedForward()
-		} else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
-			nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
-		}
-
-		if nextMaxSpeed != currentMaxSpeed && nextMaxSpeed > 0 {
-			result := NextSpeedLimit{
-				Latitude:   nextWay.StartPosition.Latitude(),
-				Longitude:  nextWay.StartPosition.Longitude(),
-				Speedlimit: nextMaxSpeed,
-				Distance:   cumulativeDistance,
-			}
-
-			wayName := RoadName(nextWay.Way)
-			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
-				diff := state.LastSpeedLimitDistance - cumulativeDistance
-				smoothed_diff := diff
-				if state.DistanceSinceLastPosition == 0 {
-					smoothed_diff = state.NextSpeedLimitMA.Update(diff)
-				}
-				result.Distance = state.LastSpeedLimitDistance - smoothed_diff
-
-				slog.Debug("Smoothed speed limit distance",
-					"raw_distance", cumulativeDistance,
-					"smoothed_distance", result.Distance,
-					"last_distance", state.LastSpeedLimitDistance,
-					"way", wayName,
-				)
-
-			} else {
-				state.NextSpeedLimitMA.Reset()
-			}
-			state.LastSpeedLimitDistance = result.Distance
-			state.LastSpeedLimitValue = nextMaxSpeed
-			state.LastSpeedLimitWayName = wayName
-
-			return result
-		}
-		if nextWay.Way.HasNodes() {
-			wayDistance, err := calculateWayDistance(nextWay.Way)
-			if err == nil {
-				cumulativeDistance += wayDistance
-			}
-		}
-	}
-
-	return NextSpeedLimit{}
-}
-
-func RoadName(way offline.Way) string {
-	name, err := way.Name()
-	if err == nil {
-		if len(name) > 0 {
-			return name
-		}
-	}
-	ref, err := way.Ref()
-	if err == nil {
-		if len(ref) > 0 {
-			return ref
-		}
-	}
-	return ""
-}
-
-func calculateWayDistance(way offline.Way) (float64, error) {
-	nodes, err := way.Nodes()
-	if err != nil {
-		return 0, err
-	}
-
-	if nodes.Len() < 2 {
-		return 0, nil
-	}
-
-	totalDistance := 0.0
-	for i := range nodes.Len() - 1 {
-		nodeStart := nodes.At(i)
-		nodeEnd := nodes.At(i + 1)
-		distance := DistanceToPoint(
-			nodeStart.Latitude()*ms.TO_RADIANS,
-			nodeStart.Longitude()*ms.TO_RADIANS,
-			nodeEnd.Latitude()*ms.TO_RADIANS,
-			nodeEnd.Longitude()*ms.TO_RADIANS,
-		)
-		totalDistance += distance
-	}
-
-	return totalDistance, nil
 }

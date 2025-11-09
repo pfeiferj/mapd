@@ -918,3 +918,45 @@ func NextWays(location log.GpsLocationData, currentWay CurrentWay, offlineMaps o
 
 	return nextWays, nil
 }
+
+func calculateWayDistance(way offline.Way) (float64, error) {
+	nodes, err := way.Nodes()
+	if err != nil {
+		return 0, err
+	}
+
+	if nodes.Len() < 2 {
+		return 0, nil
+	}
+
+	totalDistance := 0.0
+	for i := range nodes.Len() - 1 {
+		nodeStart := nodes.At(i)
+		nodeEnd := nodes.At(i + 1)
+		distance := DistanceToPoint(
+			nodeStart.Latitude()*ms.TO_RADIANS,
+			nodeStart.Longitude()*ms.TO_RADIANS,
+			nodeEnd.Latitude()*ms.TO_RADIANS,
+			nodeEnd.Longitude()*ms.TO_RADIANS,
+		)
+		totalDistance += distance
+	}
+
+	return totalDistance, nil
+}
+
+func RoadName(way offline.Way) string {
+	name, err := way.Name()
+	if err == nil {
+		if len(name) > 0 {
+			return name
+		}
+	}
+	ref, err := way.Ref()
+	if err == nil {
+		if len(ref) > 0 {
+			return ref
+		}
+	}
+	return ""
+}
