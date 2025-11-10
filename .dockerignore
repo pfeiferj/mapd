@@ -10,3 +10,4 @@ planet-latest.osm.pbf
 box.osm.pbf
 map.osm.pbf
 .git
+/build
