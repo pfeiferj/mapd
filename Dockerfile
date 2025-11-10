@@ -12,7 +12,7 @@ RUN go mod download
 COPY . /usr/local/app
 
 RUN make capnp-deps
-RUN make
+RUN PATH=$PATH:/home/root/go/bin make
 
 RUN mv build/mapd ./mapd
 RUN mv scripts/* ./
