@@ -83,12 +83,13 @@ func main() {
 			state.TimeLastPosition = time.Now()
 			state.DistanceSinceLastPosition = 0
 			state.Location = location
-			if !maps.PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
+			if !offlineMaps.HasWays() || !maps.PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
 				state.Data, err = maps.FindWaysAroundLocation(location.Latitude(), location.Longitude())
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 					continue
 				}
+				offlineMaps = maps.ReadOffline(state.Data)
 			}
 
 			state.LastWay = state.CurrentWay

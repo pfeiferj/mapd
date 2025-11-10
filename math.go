@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 
 	"capnproto.org/go/capnp/v3"
@@ -13,26 +14,63 @@ func Dot(ax float64, ay float64, bx float64, by float64) (product float64) {
 	return (ax * bx) + (ay * by)
 }
 
-func PointOnLine(startLat float64, startLon float64, endLat float64, endLon float64, lat float64, lon float64) (latitude float64, longitude float64) {
-	aplat := lat - startLat
-	aplon := lon - startLon
+// Point represents a 2D point
+type Point struct {
+	X, Y float64
+}
 
-	ablat := endLat - startLat
-	ablon := endLon - startLon
+type LinePoint struct {
+	X, Y, T float64
+}
 
-	t := Dot(aplat, aplon, ablat, ablon) / Dot(ablat, ablon, ablat, ablon)
+// Subtract returns the vector from other to p
+func (p Point) Subtract(other Point) Point {
+	return Point{X: p.X - other.X, Y: p.Y - other.Y}
+}
 
-	if t < 0 {
-		t = 0
+// Add returns the sum of two points/vectors
+func (p Point) Add(other Point) Point {
+	return Point{X: p.X + other.X, Y: p.Y + other.Y}
+}
+
+// Scale returns the point/vector scaled by a factor
+func (p Point) Scale(factor float64) Point {
+	return Point{X: p.X * factor, Y: p.Y * factor}
+}
+
+// Dot returns the dot product of two vectors
+func (p Point) Dot(other Point) float64 {
+	return p.X*other.X + p.Y*other.Y
+}
+
+func PointOnLine(startLat float64, startLon float64, endLat float64, endLon float64, lat float64, lon float64) (LinePoint) {
+	A := Point {
+		X: startLat,
+		Y: startLon,
 	}
-	if t > 1 {
-		t = 1
+	B := Point {
+		X: endLat,
+		Y: endLon,
+	}
+	P := Point {
+		X: lat,
+		Y: lon,
 	}
 
-	latitude = startLat + t*ablat
-	longitude = startLon + t*ablon
+	AB := B.Subtract(A)
+	AP := P.Subtract(A)
 
-	return latitude, longitude
+	// Project P onto AB, get parameter t
+	t := AP.Dot(AB) / AB.Dot(AB)
+
+	// Clamp to segment [0, 1]
+	t = math.Max(0, math.Min(1, t))
+
+	// Calculate closest point
+	closest := A.Add(AB.Scale(t))
+
+	res := LinePoint{X: closest.X, Y: closest.Y, T: t}
+	return res
 }
 
 // arguments should be in radians
@@ -210,7 +248,7 @@ func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) (average_
 
 func GetCurvatures(x_points []float64, y_points []float64) (curvatures []float64, arc_lengths []float64, err error) {
 	if len(x_points) < 3 {
-		return []float64{}, []float64{}, errors.New("not enough points to calculate curvatures")
+		return []float64{}, []float64{}, errors.New(fmt.Sprintf("not enough points to calculate curvatures. len(points): %d", len(x_points)))
 	}
 	curvatures = make([]float64, len(x_points)-2)
 	arc_lengths = make([]float64, len(x_points)-2)
