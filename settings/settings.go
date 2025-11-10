@@ -179,6 +179,12 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.CurveTargetLatA = input.Float()
 	case custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed:
 		s.HoldSpeedLimitWhileChangingSetSpeed = input.Bool()
+	case custom.MapdInputType_setSpeedUpForNextSpeedLimit:
+		s.SpeedUpForNextSpeedLimit = input.Bool()
+	case custom.MapdInputType_setSlowDownForNextSpeedLimit:
+		s.SlowDownForNextSpeedLimit = input.Bool()
+	case custom.MapdInputType_loadPersistentSettings:
+		s.Load()
 	case custom.MapdInputType_loadDefaultSettings:
 		s.Default()
 	case custom.MapdInputType_loadRecommendedSettings:
