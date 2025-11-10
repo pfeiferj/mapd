@@ -8,10 +8,10 @@ RUN ./install-ubuntu-deps.sh
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
+RUN make capnp-deps
 
 COPY . /usr/local/app
 
-RUN make capnp-deps
 RUN PATH=$PATH:/home/root/go/bin make
 
 RUN mv build/mapd ./mapd
