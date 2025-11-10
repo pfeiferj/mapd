@@ -8,6 +8,8 @@ RUN ./install-ubuntu-deps.sh
 COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
+
+COPY Makefile ./
 RUN make capnp-deps
 
 COPY . /usr/local/app
