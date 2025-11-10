@@ -2,7 +2,7 @@ build: capnp go-deps
 	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
 
 docker:
-	docker buildx build --platform linux/amd64,linux/arm64 . -t pfeiferj/mapd:latest
+	docker buildx build --platform linux/arm64 . -t pfeiferj/mapd:latest
 
 format:
 	gofumpt -l -w .
@@ -16,8 +16,8 @@ go-deps: go.mod
 	go get
 
 capnp-deps:
-	go install capnproto.org/go/capnp/v3/capnpc-go@latest
-	git clone https://github.com/capnproto/go-capnp ../go-capnp
+	go install capnproto.org/go/capnp/v3/capnpc-go@v3.1.0-alpha.1
+	git clone -b v3.1.0-alpha.1 https://github.com/capnproto/go-capnp ../go-capnp
 
 format-deps:
 	go install mvdan.cc/gofumpt@latest

@@ -99,6 +99,7 @@ enum MapdInputType {
   setSlowDownForNextSpeedLimit @23;
   setSpeedUpForNextSpeedLimit @24;
   setHoldSpeedLimitWhileChangingSetSpeed @25;
+  loadPersistentSettings @26;
 }
 
 enum SpeedLimitOffsetType {

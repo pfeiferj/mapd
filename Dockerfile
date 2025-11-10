@@ -9,10 +9,12 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
 
+COPY Makefile ./
+RUN make capnp-deps
+
 COPY . /usr/local/app
 
-RUN make capnp-deps
-RUN make
+RUN PATH=$PATH:/home/root/go/bin make
 
 RUN mv build/mapd ./mapd
 RUN mv scripts/* ./
