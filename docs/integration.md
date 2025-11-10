@@ -11,13 +11,9 @@
       mapdIn @144 :Custom.MapdIn;
       mapdOut @145 :Custom.MapdOut;
       ```
-2. Add mapdOut as a service in openpilot cereal/services.py and
-   cereal/services.h
+2. Add mapdOut as a service in openpilot cereal/services.py
    ```python
-   "mapdOut": (True, 20., 0.1),
-   ```
-   ```c++
-   { "mapdOut", {"mapdOut", true, 20, 1}},
+   "mapdOut": (True, 20., 20),
    ```
 3. Add MapdSettings to openpilot common/params\_keys.h
    ```c++
