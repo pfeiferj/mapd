@@ -6,6 +6,7 @@ import (
 	"capnproto.org/go/capnp/v3"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	ms "pfeifer.dev/mapd/settings"
@@ -88,6 +89,7 @@ func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd)
 				panic(err)
 			}
 			evt.SetValid(true)
+			evt.SetLogMonoTime(cereal.GetTime())
 			input, err := evt.NewMapdIn()
 			if err != nil {
 				panic(err)

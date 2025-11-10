@@ -61,6 +61,7 @@ func NewOutput() (*capnp.Message, log.Event, custom.MapdOut) {
 	if err != nil {
 		panic(err)
 	}
+	event.SetLogMonoTime(GetTime())
 
 	return msg, event, mapdOut
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	ms "pfeifer.dev/mapd/settings"
@@ -307,6 +308,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 					panic(err)
 				}
 				evt.SetValid(true)
+				evt.SetLogMonoTime(cereal.GetTime())
 				input, err := evt.NewMapdIn()
 				if err != nil {
 					panic(err)
@@ -332,6 +334,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 					panic(err)
 				}
 				evt.SetValid(true)
+				evt.SetLogMonoTime(cereal.GetTime())
 				input, err := evt.NewMapdIn()
 				if err != nil {
 					panic(err)
@@ -378,6 +381,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				panic(err)
 			}
 			evt.SetValid(true)
+			evt.SetLogMonoTime(cereal.GetTime())
 			input, err := evt.NewMapdIn()
 			if err != nil {
 				panic(err)
@@ -480,6 +484,7 @@ func (m *settingsModel) saveSettings(mm *uiModel) {
 		panic(err)
 	}
 	evt.SetValid(true)
+	evt.SetLogMonoTime(cereal.GetTime())
 	input, err := evt.NewMapdIn()
 	if err != nil {
 		panic(err)
