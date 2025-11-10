@@ -23,8 +23,8 @@ func UpdateCurveSpeed(s *State) {
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
 		d := DistanceToPoint(
-			s.CurrentWay.OnWay.Distance.LineLat*ms.TO_RADIANS,
-			s.CurrentWay.OnWay.Distance.LineLon*ms.TO_RADIANS,
+			s.CurrentWay.OnWay.Distance.LinePoint.X*ms.TO_RADIANS,
+			s.CurrentWay.OnWay.Distance.LinePoint.Y*ms.TO_RADIANS,
 			tv.Latitude*ms.TO_RADIANS,
 			tv.Longitude*ms.TO_RADIANS,
 		)
