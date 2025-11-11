@@ -102,6 +102,14 @@ enum MapdInputType {
   loadPersistentSettings @26;
 }
 
+enum WaySelectionType {
+  current @0;
+  predicted @1;
+  possible @2;
+  extended @3;
+  fail @4;
+}
+
 enum SpeedLimitOffsetType {
   static @0;
   percent @1;
@@ -143,4 +151,5 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   distanceFromWayCenter @19 :Float32;
   visionCurveSpeed @20 :Float32;
   curveSpeed @21 :Float32;
+  waySelectionType @22 :WaySelectionType;
 }
