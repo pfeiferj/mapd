@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
+	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
@@ -89,6 +90,7 @@ type CurrentWay struct {
 	LastChangeTime    time.Time
 	StableDistance    float64
 	Context           RoadContext
+	SelectionType     custom.WaySelectionType
 }
 
 type NextWayResult struct {
@@ -438,12 +440,16 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 				LastChangeTime:    currentWay.LastChangeTime,
 				StableDistance:    newStableDistance,
 				Context:           determineRoadContext(currentWay.Way),
+				SelectionType: custom.WaySelectionType_current,
 			}, nil
 		}
 		utils.Logde(err)
 	}
 
 	for _, nextWay := range nextWays {
+		if !nextWay.Way.HasNodes() {
+			continue
+		}
 		onWay, err := OnWay(nextWay.Way, location, determineDistanceMultiplier(nextWay.Way))
 		if err == nil && onWay.OnWay {
 			start, end := GetWayStartEnd(nextWay.Way, onWay.IsForward)
@@ -457,6 +463,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 				LastChangeTime:    time.Now(),
 				StableDistance:    onWay.Distance.Distance,
 				Context:           determineRoadContext(nextWay.Way),
+				SelectionType: custom.WaySelectionType_predicted,
 			}, nil
 		}
 		utils.Logde(err)
@@ -479,6 +486,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 					LastChangeTime:    time.Now(),
 					StableDistance:    selectedOnWay.Distance.Distance,
 					Context:           determineRoadContext(selectedWay),
+					SelectionType: custom.WaySelectionType_possible,
 				}, nil
 			}
 			utils.Logde(err)
@@ -499,12 +507,13 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 				LastChangeTime:    currentWay.LastChangeTime,
 				StableDistance:    currentWay.StableDistance,
 				Context:           determineRoadContext(currentWay.Way),
+				SelectionType:     custom.WaySelectionType_extended,
 			}, nil
 		}
 		utils.Logde(err)
 	}
 
-	return CurrentWay{}, errors.New(fmt.Sprintf("could not find a current way, distance from last way=%f", distanceFromCurrentWay))
+	return CurrentWay{SelectionType: custom.WaySelectionType_fail}, errors.New(fmt.Sprintf("could not find a current way, distance from last way=%f", distanceFromCurrentWay))
 }
 
 func getPossibleWays(offlineMaps offline.Offline, location log.GpsLocationData) ([]offline.Way, error) {

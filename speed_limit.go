@@ -1,9 +1,10 @@
 package main
 
 import (
+	"log/slog"
+	"math"
 	"strconv"
 	"strings"
-	"log/slog"
 
 	ms "pfeifer.dev/mapd/settings"
 )
@@ -76,6 +77,12 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 			wayName := RoadName(nextWay.Way)
 			if nextMaxSpeed == state.LastSpeedLimitValue && wayName == state.LastSpeedLimitWayName {
 				diff := state.LastSpeedLimitDistance - cumulativeDistance
+				if math.Abs(diff) > 100 { // something bad happened, reset state
+					state.LastSpeedLimitDistance = cumulativeDistance
+					state.DistanceSinceLastPosition = 0
+					diff = 0
+					state.NextSpeedLimitMA.Reset()
+				}
 				smoothed_diff := diff
 				if state.DistanceSinceLastPosition == 0 {
 					smoothed_diff = state.NextSpeedLimitMA.Update(diff)

@@ -160,5 +160,7 @@ func (s *State) ToMessage() *capnp.Message {
 	output.SetSuggestedSpeed(s.SuggestedSpeed())
 	output.SetDistanceFromWayCenter(float32(s.CurrentWay.OnWay.Distance.Distance))
 
+	output.SetWaySelectionType(s.CurrentWay.SelectionType)
+
 	return msg
 }
