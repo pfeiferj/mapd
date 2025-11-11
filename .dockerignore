@@ -11,3 +11,5 @@ box.osm.pbf
 map.osm.pbf
 .git
 /build
+/nation_bounding_boxes.json
+/us_states_bounding_boxes.json
