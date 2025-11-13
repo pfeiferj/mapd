@@ -4,8 +4,6 @@ import (
 	"math"
 	"time"
 
-	"capnproto.org/go/capnp/v3"
-
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
@@ -115,7 +113,7 @@ func (s *State) UpdateCarState(carData car.CarState) {
 	s.DistanceSinceLastPosition += float32(seconds) * s.CarVEgo
 }
 
-func (s *State) ToMessage() *capnp.Message {
+func (s *State) Send() error {
 	msg, output := s.Publisher.NewMessage(true)
 
 	name, _ := s.CurrentWay.Way.Name()
@@ -161,5 +159,5 @@ func (s *State) ToMessage() *capnp.Message {
 
 	output.SetWaySelectionType(s.CurrentWay.SelectionType)
 
-	return msg
+	return s.Publisher.Send(msg)
 }

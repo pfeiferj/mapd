@@ -12,3 +12,7 @@ func MapdInCreator(evt log.Event) (custom.MapdIn, error) {
 func MapdOutCreator(evt log.Event) (custom.MapdOut, error) {
 	return evt.NewMapdOut()
 }
+
+func MapdExtendedOutCreator(evt log.Event) (custom.MapdExtendedOut, error) {
+	return evt.NewMapdExtendedOut()
+}

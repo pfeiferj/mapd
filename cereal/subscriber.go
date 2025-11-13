@@ -36,14 +36,14 @@ func (s *Subscriber[T]) Read() (obj T, success bool) {
 	return obj, true
 }
 
-func NewSubscriber[T any](name string, reader Reader[T]) (subscriber Subscriber[T]) {
+func NewSubscriber[T any](name string, reader Reader[T], conflate bool) (subscriber Subscriber[T]) {
 	msgq := gomsgq.Msgq{}
 	err := msgq.Init(name, settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}
 	sub := gomsgq.MsgqSubscriber{}
-	sub.Conflate = true
+	sub.Conflate = conflate
 	sub.Init(msgq)
 
 	subscriber.Sub = sub

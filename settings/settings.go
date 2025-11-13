@@ -11,9 +11,15 @@ import (
 	"pfeifer.dev/mapd/utils"
 )
 
-var Settings = MapdSettings{}
+var Settings = MapdSettings{
+	downloadProgress: make(chan DownloadProgress, 1),
+	cancelDownload: make(chan bool, 1),
+}
 
 type MapdSettings struct {
+	downloadProgress                    chan DownloadProgress
+	cancelDownload                      chan bool
+	downloadActive                      bool
 	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
@@ -139,6 +145,16 @@ func (s *MapdSettings) setLogLevel() {
 	}
 }
 
+func (s *MapdSettings) GetDownloadProgress() (progress DownloadProgress, success bool) {
+	select {
+	case progress = <- s.downloadProgress:
+		s.downloadActive = progress.Active
+		return progress, true
+	default:
+	}
+	return
+}
+
 func (s *MapdSettings) Handle(input custom.MapdIn) {
 	switch input.Type() {
 	case custom.MapdInputType_reloadSettings:
@@ -189,13 +205,20 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Default()
 	case custom.MapdInputType_loadRecommendedSettings:
 		s.Recommended()
+	case custom.MapdInputType_cancelDownload:
+		select {
+			case s.cancelDownload <- true:
+			default:
+		}
 	case custom.MapdInputType_download:
 		path, err := input.Str()
 		if err != nil {
 			utils.Loge(err)
 			return
 		}
-		Download(path)
+		if !s.downloadActive {
+			go Download(path, s.downloadProgress, s.cancelDownload)
+		}
 	case custom.MapdInputType_setLogLevel:
 		logLevel, err := input.Str()
 		if err != nil {

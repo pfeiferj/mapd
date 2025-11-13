@@ -14,6 +14,10 @@ func MapdOutReader(evt log.Event) (custom.MapdOut, error) {
 	return evt.MapdOut()
 }
 
+func MapdExtendedOutReader(evt log.Event) (custom.MapdExtendedOut, error) {
+	return evt.MapdExtendedOut()
+}
+
 func CarStateReader(evt log.Event) (car.CarState, error) {
 	return evt.CarState()
 }

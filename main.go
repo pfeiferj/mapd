@@ -22,6 +22,10 @@ func main() {
 	}
 
 	state := State{}
+	extendedState := ExtendedState{
+		Pub: cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
+	}
+	defer extendedState.Pub.Pub.Msgq.Close()
 
 	state.NextSpeedLimitMA.Init(10)
 	state.CarStateUpdateTimeMA.Init(100)
@@ -31,22 +35,33 @@ func main() {
 	defer pub.Pub.Msgq.Close()
 	state.Publisher = &pub
 
-	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader)
+	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader, false)
 	defer sub.Sub.Msgq.Close()
 
-	cli := cereal.NewSubscriber("mapdCli", cereal.MapdInReader)
+	cli := cereal.NewSubscriber("mapdCli", cereal.MapdInReader, false)
 	defer cli.Sub.Msgq.Close()
 
 	gps := cereal.GetGpsSub()
 	defer gps.Sub.Msgq.Close()
 
-	car := cereal.NewSubscriber("carState", cereal.CarStateReader)
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader)
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true)
 	defer model.Sub.Msgq.Close()
 
 	for {
+		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
+		if err != nil {
+			slog.Error("Failed to send update", "error", err)
+		}
+		err = extendedState.Send() // this send is internally rate limited to 1 hz
+		if err != nil {
+			slog.Error("Failed to send extended update", "error", err)
+		}
+		time.Sleep(ms.LOOP_DELAY)
+
+		// handle settings inputs from openpilot/cli
 		input, inputSuccess := sub.Read()
 		if inputSuccess {
 			ms.Settings.Handle(input)
@@ -56,15 +71,13 @@ func main() {
 			ms.Settings.Handle(cliInput)
 		}
 
-		offlineMaps := maps.ReadOffline(state.Data)
-		msg := state.ToMessage()
-
-		err := pub.Send(msg)
-		if err != nil {
-			slog.Error("Failed to send update", "error", err)
+		progress, success := ms.Settings.GetDownloadProgress()
+		if success {
+			extendedState.DownloadProgress = progress
+			slog.Info("", "progress", extendedState.DownloadProgress)
 		}
 
-		time.Sleep(ms.LOOP_DELAY)
+		offlineMaps := maps.ReadOffline(state.Data) // read each loop to get around read safety limits in capnp
 
 		carData, carStateSuccess := car.Read()
 		if carStateSuccess {

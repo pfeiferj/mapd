@@ -9,8 +9,8 @@ import (
 )
 
 func GetGpsSub() (gpsSub Subscriber[log.GpsLocationData]) {
-	sub := NewSubscriber("gpsLocation", GpsLocationReader)
-	subExt := NewSubscriber("gpsLocationExternal", GpsLocationExternalReader)
+	sub := NewSubscriber("gpsLocation", GpsLocationReader, true)
+	subExt := NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true)
 
 	for range 60 {
 		time.Sleep(settings.LOOP_DELAY)

@@ -74,14 +74,11 @@ type Bounds struct {
 	MaxLon float64 `json:"max_lon"`
 }
 
-type DownloadLocations struct {
-	Nations []string `json:"nations"`
-	States  []string `json:"states"`
-}
-
 type DownloadProgress struct {
 	TotalFiles          int                                `json:"total_files"`
 	DownloadedFiles     int                                `json:"downloaded_files"`
+	Canceled     bool                                      `json:"canceled"`
+	Active     bool                                        `json:"active"`
 	LocationsToDownload []string                           `json:"locations_to_download"`
 	LocationDetails     map[string]*DownloadLocationDetail `json:"location_details"`
 }
@@ -91,32 +88,50 @@ type DownloadLocationDetail struct {
 	DownloadedFiles int `json:"location_downloaded_files"`
 }
 
-var progress DownloadProgress
+type download struct {
+	progress DownloadProgress
+	progressChan chan DownloadProgress
+	cancelChan chan bool
+}
 
-func AddLocationDetailsToProgress(path string) {
-	progress.LocationDetails[path] = &DownloadLocationDetail{
+func (p *DownloadProgress) addLocationDetails(path string) {
+	p.LocationDetails[path] = &DownloadLocationDetail{
 		TotalFiles: countFilesForBounds(getBoundsForPath(path)),
 	}
 }
 
-func Download(paths string) {
+
+func Download(paths string, progressChan chan DownloadProgress, cancelChan chan bool) {
 	slog.Info("download", "paths", paths)
-	progress = DownloadProgress{
-		LocationsToDownload: []string{},
-		LocationDetails:     map[string]*DownloadLocationDetail{},
+	pathsSplit := strings.Split(paths, ",")
+	d := download {
+		progress: DownloadProgress{
+			LocationsToDownload: pathsSplit,
+			TotalFiles: countTotalFiles(pathsSplit),
+			LocationDetails: make(map[string]*DownloadLocationDetail),
+			Active: true,
+		},
+		progressChan: progressChan,
+		cancelChan: cancelChan,
 	}
 
-	pathsSplit := strings.Split(paths, ",")
-	progress.LocationsToDownload = pathsSplit
-	progress.TotalFiles = countTotalFiles(pathsSplit)
 	for _, p := range pathsSplit {
-		AddLocationDetailsToProgress(p)
+		d.progress.addLocationDetails(p)
 		location := getDataForPath(p)
 		slog.Info("downloading nation", "nation", location.FullName)
-		err := DownloadBounds(location.BoundingBox, p)
+		err, canceled := d.downloadBounds(location.BoundingBox, p)
 		if err != nil {
 			utils.Logie(err)
 		}
+		if canceled {
+			d.progress.Canceled = true
+			break
+		}
+	}
+	d.progress.Active = false
+	select { //nonblocking update of progress
+	case d.progressChan <- d.progress:
+	default:
 	}
 }
 
@@ -135,15 +150,26 @@ func adjustedBounds(bounds Bounds) (int, int, int, int) {
 	return minLat, minLon, maxLat, maxLon
 }
 
-func DownloadBounds(bounds Bounds, locationName string) (err error) {
+func (d *download) downloadBounds(bounds Bounds, locationName string) (err error, cancel bool) {
 	slog.Info("Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
 
 	// clip given bounds to file areas
 	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
-	progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
-
+	d.progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
 	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
 		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
+			select { //nonblocking update of progress
+			case d.progressChan <- d.progress:
+			default:
+			}
+			select { // cancel if sent message
+			case cancel := <- d.cancelChan:
+				if cancel {
+					return nil, true
+				}
+			default:
+			}
+
 			filename := fmt.Sprintf("offline/%d/%d.tar.gz", i, j)
 			url := fmt.Sprintf("https://map-data.pfeifer.dev/%s", filename)
 			outputName := filepath.Join(params.GetBaseOpPath(), "tmp", filename)
@@ -202,15 +228,15 @@ func DownloadBounds(bounds Bounds, locationName string) (err error) {
 			err = os.Remove(outputName)
 			utils.Logde(errors.Wrap(err, "could not delete downloaded gzip file"))
 
-			progress.DownloadedFiles++
-			progress.LocationDetails[locationName].DownloadedFiles++
+			d.progress.DownloadedFiles++
+			d.progress.LocationDetails[locationName].DownloadedFiles++
 		}
 	}
 	err = os.RemoveAll(filepath.Join(params.GetBaseOpPath(), "tmp"))
 	utils.Logde(errors.Wrap(err, "could not remove temp download directory"))
 
 	slog.Info("Finished Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
-	return nil
+	return nil, false
 }
 
 func countFilesForBounds(bounds Bounds) int {
