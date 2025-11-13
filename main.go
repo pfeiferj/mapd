@@ -74,7 +74,6 @@ func main() {
 		progress, success := ms.Settings.GetDownloadProgress()
 		if success {
 			extendedState.DownloadProgress = progress
-			slog.Info("", "progress", extendedState.DownloadProgress)
 		}
 
 		offlineMaps := maps.ReadOffline(state.Data) // read each loop to get around read safety limits in capnp
