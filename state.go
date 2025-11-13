@@ -15,6 +15,7 @@ import (
 )
 
 type State struct {
+	Publisher                 *cereal.Publisher[custom.MapdOut]
 	Data                      []uint8
 	CurrentWay                CurrentWay
 	LastWay                   CurrentWay
@@ -115,9 +116,7 @@ func (s *State) UpdateCarState(carData car.CarState) {
 }
 
 func (s *State) ToMessage() *capnp.Message {
-	msg, event, output := cereal.NewOutput()
-
-	event.SetValid(true)
+	msg, output := s.Publisher.NewMessage(true)
 
 	name, _ := s.CurrentWay.Way.Name()
 	output.SetWayName(name)

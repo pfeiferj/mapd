@@ -1,49 +1,53 @@
 package cereal
 
 import (
-	"github.com/pfeiferj/gomsgq"
-
 	"capnproto.org/go/capnp/v3"
-	"pfeifer.dev/mapd/cereal/custom"
+	"github.com/pfeiferj/gomsgq"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/settings"
 )
 
-type MapdSubscriber struct {
+type Reader[T any] func (log.Event) (T, error)
+
+type Subscriber[T any] struct {
 	Sub gomsgq.MsgqSubscriber
+	reader Reader[T]
 }
 
-func (s *MapdSubscriber) Read() (input custom.MapdIn, success bool) {
+func (s *Subscriber[T]) Read() (obj T, success bool) {
 	data := s.Sub.Read()
 	if len(data) == 0 {
-		return input, false
+		return obj, false
 	}
 	msg, err := capnp.Unmarshal(data)
 	if err != nil {
-		return input, false
+		return obj, false
 	}
 
 	event, err := log.ReadRootEvent(msg)
 	if err != nil {
-		return input, false
+		return obj, false
 	}
 
-	input, err = event.MapdIn()
+	obj, err = s.reader(event)
 	if err != nil {
-		return input, false
+		return obj, false
 	}
-	return input, true
+	return obj, true
 }
 
-func GetMapdSub(name string) (mapdSub MapdSubscriber) {
+func NewSubscriber[T any](name string, reader Reader[T]) (subscriber Subscriber[T]) {
 	msgq := gomsgq.Msgq{}
 	err := msgq.Init(name, settings.DEFAULT_SEGMENT_SIZE)
 	if err != nil {
 		panic(err)
 	}
 	sub := gomsgq.MsgqSubscriber{}
+	sub.Conflate = true
 	sub.Init(msgq)
 
-	mapdSub.Sub = sub
-	return mapdSub
+	subscriber.Sub = sub
+	subscriber.reader = reader
+	return subscriber
+	
 }

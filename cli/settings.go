@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"capnproto.org/go/capnp/v3"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
-	"pfeifer.dev/mapd/cereal/log"
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -298,55 +295,25 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 			case saveSettings:
 				m.saveSettings(mm)
 			case defaultSettings:
-				arena := capnp.SingleSegment(nil)
-				msg, seg, err := capnp.NewMessage(arena)
-				if err != nil {
-					panic(err)
-				}
-				evt, err := log.NewRootEvent(seg)
-				if err != nil {
-					panic(err)
-				}
-				evt.SetValid(true)
-				evt.SetLogMonoTime(cereal.GetTime())
-				input, err := evt.NewMapdIn()
-				if err != nil {
-					panic(err)
-				}
+				msg, input := mm.pub.NewMessage(true)
 
 				input.SetType(custom.MapdInputType_loadDefaultSettings)
 
-				data, err := msg.Marshal()
+				err := mm.pub.Send(msg)
 				if err != nil {
 					panic(err)
 				}
-				mm.pub.Send(data)
 
 				m.saveSettings(mm)
 			case recommendedSettings:
-				arena := capnp.SingleSegment(nil)
-				msg, seg, err := capnp.NewMessage(arena)
-				if err != nil {
-					panic(err)
-				}
-				evt, err := log.NewRootEvent(seg)
-				if err != nil {
-					panic(err)
-				}
-				evt.SetValid(true)
-				evt.SetLogMonoTime(cereal.GetTime())
-				input, err := evt.NewMapdIn()
-				if err != nil {
-					panic(err)
-				}
+				msg, input := mm.pub.NewMessage(true)
 
 				input.SetType(custom.MapdInputType_loadRecommendedSettings)
 
-				data, err := msg.Marshal()
+				err := mm.pub.Send(msg)
 				if err != nil {
 					panic(err)
 				}
-				mm.pub.Send(data)
 
 				m.saveSettings(mm)
 			case unitsInput:
@@ -371,21 +338,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 		} else if msg.Type == tea.KeyEnter && m.state == settingsInput {
 			m.state = showSettingsMenu
 
-			arena := capnp.SingleSegment(nil)
-			msg, seg, err := capnp.NewMessage(arena)
-			if err != nil {
-				panic(err)
-			}
-			evt, err := log.NewRootEvent(seg)
-			if err != nil {
-				panic(err)
-			}
-			evt.SetValid(true)
-			evt.SetLogMonoTime(cereal.GetTime())
-			input, err := evt.NewMapdIn()
-			if err != nil {
-				panic(err)
-			}
+			msg, input := mm.pub.NewMessage(true)
 
 			input.SetType(m.selectedItem.MessageType)
 
@@ -418,7 +371,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 					input.SetBool(false)
 				}
 			case Options:
-				err = input.SetStr(m.list.SelectedItem().(settingsItem).title)
+				err := input.SetStr(m.list.SelectedItem().(settingsItem).title)
 				if err != nil {
 					panic(err)
 				}
@@ -435,11 +388,10 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				}
 				input.SetFloat(float32(val))
 			}
-			data, err := msg.Marshal()
+			err := mm.pub.Send(msg)
 			if err != nil {
 				panic(err)
 			}
-			mm.pub.Send(data)
 			m.list.SetItems(settingsList)
 			m.list.ResetSelected()
 			m.list.Title = "Mapd Settings"
@@ -474,29 +426,15 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 func (m *settingsModel) saveSettings(mm *uiModel) {
 	m.state = showSettingsMenu
 	mm.state = showMenu
-	arena := capnp.SingleSegment(nil)
-	msg, seg, err := capnp.NewMessage(arena)
-	if err != nil {
-		panic(err)
-	}
-	evt, err := log.NewRootEvent(seg)
-	if err != nil {
-		panic(err)
-	}
-	evt.SetValid(true)
-	evt.SetLogMonoTime(cereal.GetTime())
-	input, err := evt.NewMapdIn()
-	if err != nil {
-		panic(err)
-	}
+
+	msg, input := mm.pub.NewMessage(true)
 
 	input.SetType(custom.MapdInputType_saveSettings)
 
-	data, err := msg.Marshal()
+	err := mm.pub.Send(msg)
 	if err != nil {
 		panic(err)
 	}
-	mm.pub.Send(data)
 }
 
 func (m settingsModel) View() string {

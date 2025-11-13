@@ -3,12 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"capnproto.org/go/capnp/v3"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
-	"pfeifer.dev/mapd/cereal/log"
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -79,34 +76,19 @@ func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd)
 			it := m.list.SelectedItem().(downloadItem)
 			m.state = showRootDownloadMenu
 			mm.state = showMenu
-			arena := capnp.SingleSegment(nil)
-			msg, seg, err := capnp.NewMessage(arena)
-			if err != nil {
-				panic(err)
-			}
-			evt, err := log.NewRootEvent(seg)
-			if err != nil {
-				panic(err)
-			}
-			evt.SetValid(true)
-			evt.SetLogMonoTime(cereal.GetTime())
-			input, err := evt.NewMapdIn()
-			if err != nil {
-				panic(err)
-			}
+			msg, input := mm.pub.NewMessage(true)
 
 			input.SetType(custom.MapdInputType_download)
 			path := fmt.Sprintf("%s.%s", m.path, it.desc)
-			err = input.SetStr(path)
+			err := input.SetStr(path)
 			if err != nil {
 				panic(err)
 			}
 
-			data, err := msg.Marshal()
+			err = mm.pub.Send(msg)
 			if err != nil {
 				panic(err)
 			}
-			mm.pub.Send(data)
 
 			items := []list.Item{}
 			for _, item := range m.rootPaths {

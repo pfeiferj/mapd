@@ -27,22 +27,23 @@ func main() {
 	state.CarStateUpdateTimeMA.Init(100)
 	state.VisionCurveMA.Init(20)
 
-	pub := cereal.GetMapdPub()
-	defer pub.Msgq.Close()
+	pub := cereal.NewPublisher("mapdOut", cereal.MapdOutCreator)
+	defer pub.Pub.Msgq.Close()
+	state.Publisher = &pub
 
-	sub := cereal.GetMapdSub("mapdIn")
+	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader)
 	defer sub.Sub.Msgq.Close()
 
-	cli := cereal.GetMapdSub("mapdCli")
+	cli := cereal.NewSubscriber("mapdCli", cereal.MapdInReader)
 	defer cli.Sub.Msgq.Close()
 
 	gps := cereal.GetGpsSub()
 	defer gps.Sub.Msgq.Close()
 
-	car := cereal.GetCarSub()
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.GetModelSub()
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader)
 	defer model.Sub.Msgq.Close()
 
 	for {
@@ -58,11 +59,10 @@ func main() {
 		offlineMaps := maps.ReadOffline(state.Data)
 		msg := state.ToMessage()
 
-		b, err := msg.Marshal()
+		err := pub.Send(msg)
 		if err != nil {
 			slog.Error("Failed to send update", "error", err)
 		}
-		pub.Send(b)
 
 		time.Sleep(ms.LOOP_DELAY)
 

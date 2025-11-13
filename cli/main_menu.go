@@ -8,9 +8,9 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pfeiferj/gomsgq"
 
 	"pfeifer.dev/mapd/cereal"
+	"pfeifer.dev/mapd/cereal/custom"
 )
 
 type mainState int
@@ -38,8 +38,8 @@ type uiModel struct {
 	settings settingsModel
 	output   outputModel
 	download downloadModel
-	pub      *gomsgq.MsgqPublisher
-	sub      *cereal.MapdOutSubscriber
+	pub      *cereal.Publisher[custom.MapdIn]
+	sub      *cereal.Subscriber[custom.MapdOut]
 }
 type item struct {
 	title, desc string
@@ -58,8 +58,8 @@ func initialModel() uiModel {
 	}
 
 	listDelegate := list.NewDefaultDelegate()
-	pub := cereal.GetMapdCliPub()
-	sub := cereal.GetMapdOutSub()
+	pub := cereal.NewPublisher("mapdIn", cereal.MapdInCreator)
+	sub := cereal.NewSubscriber("mapdOut", cereal.MapdOutReader)
 	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub, download: getDownloadModel()}
 	m.list.Title = "Mapd Actions"
 	return m
