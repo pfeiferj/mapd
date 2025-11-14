@@ -1,6 +1,7 @@
 package params
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,18 +10,18 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gofrs/flock"
-	"pfeifer.dev/mapd/utils"
 )
 
 var (
 	ParamsPath    string = "/data/params/d"
-	MemParamsPath string = "/dev/shm/params/d"
 	BasePath      string = GetBasePath()
 )
 
 func GetBaseOpPath() string {
 	exists, err := Exists("/data/media/0")
-	utils.Logde(err)
+	if err != nil {
+		slog.Warn("could not check if /data/media/0 exists", "error", err)
+	}
 	if exists {
 		return "/data/media/0/osm"
 	} else {
@@ -30,8 +31,8 @@ func GetBaseOpPath() string {
 
 // Params
 var (
-	LAST_GPS_POSITION = ParamPath("LastGPSPosition", false)
-	MAPD_SETTINGS     = ParamPath("MapdSettings", false)
+	LAST_GPS_POSITION = ParamPath("LastGPSPosition")
+	MAPD_SETTINGS     = ParamPath("MapdSettings")
 )
 
 // exists returns whether the given file or directory exists
@@ -48,7 +49,9 @@ func Exists(path string) (bool, error) {
 
 func GetBasePath() string {
 	exists, err := Exists("/data/media/0")
-	utils.Logde(errors.Wrap(err, "could not check if media directory exists"))
+	if err != nil {
+		slog.Warn("could not check if /data/media/0 exists", "error", err)
+	}
 	if exists {
 		return "/data/media/0/osm"
 	} else {
@@ -58,9 +61,9 @@ func GetBasePath() string {
 
 func EnsureParamDirectories() {
 	err := os.MkdirAll(ParamsPath, 0o775)
-	utils.Logde(errors.Wrap(err, "could not make params directory"))
-	err = os.MkdirAll(MemParamsPath, 0o775)
-	utils.Logde(errors.Wrap(err, "could not make memory params directory"))
+	if err != nil {
+		slog.Warn("could not make params directory", "error", err, "directory", ParamsPath)
+	}
 }
 
 func ResetParams() {
@@ -75,11 +78,8 @@ func IsString(data []byte) bool {
 	return true
 }
 
-func GetParams(isMem bool) ([]string, error) {
+func GetParams() ([]string, error) {
 	basePath := ParamsPath
-	if isMem {
-		basePath = MemParamsPath
-	}
 
 	files, err := os.ReadDir(basePath)
 	if err != nil {
@@ -98,21 +98,9 @@ func GetParams(isMem bool) ([]string, error) {
 	return paramFiles, nil
 }
 
-func HasMemParams() (bool, error) {
-	files, err := os.ReadDir(BasePath)
-	if err != nil {
-		return false, errors.Wrap(err, "could not read mem params directory")
-	}
-	return len(files) > 1, nil
-}
-
-func ParamPath(name string, isMem bool) string {
+func ParamPath(name string) string {
 	var basePath string
-	if isMem {
-		basePath = MemParamsPath
-	} else {
-		basePath = ParamsPath
-	}
+	basePath = ParamsPath
 	return filepath.Join(basePath, name)
 }
 
@@ -154,7 +142,9 @@ func PutParam(path string, data []byte) error {
 		retries += 1
 		if retries > 30 {
 			// try to force the lock to be removed
-			utils.Logie(os.Remove(filepath.Join(lock_dir, ".lock")))
+			if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
+				slog.Debug("failed to force delete params lock", "error", err)
+			}
 		}
 		if retries > 50 {
 			return errors.New("could not obtain lock")
@@ -162,8 +152,12 @@ func PutParam(path string, data []byte) error {
 		// if we didn't obtain the lock let's try again after a short delay
 		time.Sleep(1 * time.Millisecond)
 	}
-	defer utils.Logwe(errors.Wrap(fileLock.Unlock(), "could not unlock params directory"))
-	defer utils.Logde(errors.Wrap(os.Remove(filepath.Join(lock_dir, ".lock")), "could not remove params lock file"))
+	defer func() { if err := fileLock.Unlock(); err != nil {
+			slog.Error("could not unlock params directory", "error", err)
+	} }()
+	defer func() { if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
+			slog.Error("could not remove params lock file", "error", err)
+	} }()
 
 	err = os.Rename(tmpName, path)
 	if err != nil {
@@ -200,7 +194,9 @@ func RemoveParam(path string) error {
 		retries += 1
 		if retries > 30 {
 			// try to force the lock to be removed
-			utils.Logde(os.Remove(filepath.Join(lock_dir, ".lock")))
+			if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
+				slog.Debug("failed to force delete params lock", "error", err)
+			}
 		}
 		if retries > 50 {
 			return errors.New("could not obtain lock")
@@ -208,8 +204,12 @@ func RemoveParam(path string) error {
 		// if we didn't obtain the lock let's try again after a short delay
 		time.Sleep(1 * time.Millisecond)
 	}
-	defer utils.Logwe(errors.Wrap(fileLock.Unlock(), "could not unlock params directory"))
-	defer utils.Logde(errors.Wrap(os.Remove(filepath.Join(lock_dir, ".lock")), "could not remove params lock file"))
+	defer func() { if err := fileLock.Unlock(); err != nil {
+			slog.Error("could not unlock params directory", "error", err)
+	} }()
+	defer func() { if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
+			slog.Error("could not remove params lock file", "error", err)
+	} }()
 
 	os.Remove(path)
 

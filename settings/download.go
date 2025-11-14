@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/params"
-	"pfeifer.dev/mapd/utils"
 )
 
 type LocationData struct {
@@ -121,7 +120,7 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 		slog.Info("downloading nation", "nation", location.FullName)
 		err, canceled := d.downloadBounds(location.BoundingBox, p)
 		if err != nil {
-			utils.Logie(err)
+			slog.Warn("failed to download nation", "error", err, "nation", location.FullName)
 		}
 		if canceled {
 			d.progress.Canceled = true
@@ -174,16 +173,22 @@ func (d *download) downloadBounds(bounds Bounds, locationName string) (err error
 			url := fmt.Sprintf("https://map-data.pfeifer.dev/%s", filename)
 			outputName := filepath.Join(params.GetBaseOpPath(), "tmp", filename)
 			err := os.MkdirAll(filepath.Dir(outputName), 0o775)
-			utils.Logde(errors.Wrap(err, "failed to make output directory"))
+			if err != nil {
+				slog.Error("failed to create offline maps output directory", "error", err)
+			}
 			err = DownloadFile(url, outputName)
 			if err != nil {
-				utils.Logwe(errors.Wrap(err, "failed to download file, continuing to next"))
+				slog.Warn("failed to download file, continuing to next", "error", err, "url", url, "file", outputName)
 				continue
 			}
 			file, err := os.Open(outputName)
-			utils.Logde(errors.Wrap(err, "failed to open downloaded file"))
+			if err != nil {
+				slog.Warn("failed to open downloaded file", "error", err, "file", outputName)
+			}
 			reader, err := gzip.NewReader(file)
-			utils.Logde(errors.Wrap(err, "failed to read downloaded gzip"))
+			if err != nil {
+				slog.Warn("failed to parse gzip downloaded file", "error", err, "file", outputName)
+			}
 			tr := tar.NewReader(reader)
 			for {
 				header, err := tr.Next()
@@ -204,36 +209,52 @@ func (d *download) downloadBounds(bounds Bounds, locationName string) (err error
 				case tar.TypeDir:
 					if _, err := os.Stat(target); err != nil {
 						err := os.MkdirAll(target, 0o755)
-						utils.Logde(errors.Wrap(err, "could not create directory from zip"))
+						if err != nil {
+							slog.Warn("could not create directory from downloaded gzip", "error", err, "file", outputName, "directory", target)
+						}
 					}
 
 				// if it's a file create it
 				case tar.TypeReg:
 					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-					utils.Logde(errors.Wrap(err, "could not open file target for unzipped file"))
+					if err != nil {
+						slog.Warn("could not open file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
+					}
 
 					_, err = io.Copy(f, tr)
-					utils.Logde(errors.Wrap(err, "could not write unzipped data to target file"))
+					if err != nil {
+						slog.Warn("could not write data to file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
+					}
 
 					err = f.Sync()
-					utils.Logde(errors.Wrap(err, "could not fsync unzipped target file"))
+					if err != nil {
+						slog.Warn("could not fsync file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
+					}
 					f.Close()
 				}
 			}
 			err = reader.Close()
-			utils.Logde(errors.Wrap(err, "could not close gzip reader"))
+			if err != nil {
+				slog.Warn("could not close gzip reader", "error", err)
+			}
 			err = file.Close()
-			utils.Logde(errors.Wrap(err, "could not close downloaded file"))
+			if err != nil {
+				slog.Warn("could not close downloaded file", "error", err)
+			}
 
 			err = os.Remove(outputName)
-			utils.Logde(errors.Wrap(err, "could not delete downloaded gzip file"))
+			if err != nil {
+				slog.Warn("could not delete downloaded gzip file", "error", err)
+			}
 
 			d.progress.DownloadedFiles++
 			d.progress.LocationDetails[locationName].DownloadedFiles++
 		}
 	}
 	err = os.RemoveAll(filepath.Join(params.GetBaseOpPath(), "tmp"))
-	utils.Logde(errors.Wrap(err, "could not remove temp download directory"))
+	if err != nil {
+		slog.Warn("could not remove temporary download directory", "error", err)
+	}
 
 	slog.Info("Finished Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
 	return nil, false

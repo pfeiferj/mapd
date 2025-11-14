@@ -8,7 +8,6 @@ import (
 
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/params"
-	"pfeifer.dev/mapd/utils"
 )
 
 var Settings = MapdSettings{
@@ -92,13 +91,13 @@ func (s *MapdSettings) Load() (success bool) {
 	s.Default() // set defaults so settings not already in param are defaulted
 	data, err := params.GetParam(params.MAPD_SETTINGS)
 	if err != nil {
-		utils.Loge(err)
+		slog.Warn("failed to read MAPD_SETTINGS param", "error", err)
 		return false
 	}
 
 	err = json.Unmarshal(data, s)
 	if err != nil {
-		utils.Loge(err)
+		slog.Warn("failed to parse MAPD_SETTINGS param", "error", err)
 		return false
 	}
 
@@ -120,12 +119,12 @@ func (s *MapdSettings) LoadWithRetries(tries int) {
 func (s *MapdSettings) Save() {
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		utils.Loge(err)
+		slog.Error("failed to marshal settings to json", "error", err)
 		return
 	}
 	err = params.PutParam(params.MAPD_SETTINGS, data)
 	if err != nil {
-		utils.Loge(err)
+		slog.Error("failed to save MAPD_SETTINGS param", "error", err)
 		return
 	}
 }
@@ -213,7 +212,7 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_download:
 		path, err := input.Str()
 		if err != nil {
-			utils.Loge(err)
+			slog.Warn("failed to read download path string", "error", err)
 			return
 		}
 		if !s.downloadActive {
@@ -222,7 +221,7 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_setLogLevel:
 		logLevel, err := input.Str()
 		if err != nil {
-			utils.Loge(err)
+			slog.Warn("failed to read log level string", "error", err)
 			return
 		}
 		s.LogLevel = logLevel

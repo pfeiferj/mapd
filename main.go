@@ -9,7 +9,6 @@ import (
 	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
-	"pfeifer.dev/mapd/utils"
 )
 
 func main() {
@@ -106,7 +105,9 @@ func main() {
 
 			state.LastWay = state.CurrentWay
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
-			utils.Logde(errors.Wrap(err, "could not get current way"))
+			if err != nil {
+				slog.Debug("could not get current way", "error", err)
+			}
 
 			state.MaxSpeed = state.CurrentWay.Way.MaxSpeed()
 			if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
@@ -116,10 +117,14 @@ func main() {
 			}
 
 			state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
-			utils.Logde(errors.Wrap(err, "could not get next way"))
+			if err != nil {
+				slog.Debug("could not get next way", "error", err)
+			}
 
 			state.Curvatures, err = GetStateCurvatures(&state)
-			utils.Logde(errors.Wrap(err, "could not get curvatures from current state"))
+			if err != nil {
+				slog.Debug("could not get curvatures from current state", "error", err)
+			}
 			state.TargetVelocities = GetTargetVelocities(state.Curvatures)
 			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 		}

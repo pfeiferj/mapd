@@ -16,7 +16,6 @@ import (
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/params"
-	"pfeifer.dev/mapd/utils"
 )
 
 type TmpNode struct {
@@ -69,8 +68,9 @@ var (
 )
 
 func EnsureOfflineMapsDirectories(s OfflineSettings) {
-	err := os.MkdirAll(s.OutputDirectory, 0o775)
-	utils.Logwe(err)
+	if err := os.MkdirAll(s.OutputDirectory, 0o775); err != nil {
+		slog.Warn("could not make offline maps directory", "error", err, "directory", s.OutputDirectory)
+	}
 }
 
 // Creates a file for a specific bounding box
@@ -121,7 +121,10 @@ func GenerateOffline(s OfflineSettings) {
 	slog.Info("Generating Offline Map")
 	EnsureOfflineMapsDirectories(s)
 	file, err := os.Open("./map.osm.pbf")
-	utils.Check(errors.Wrap(err, "could not open map pbf file"))
+	if err != nil {
+		slog.Error("could not open map pbf file", "error", err)
+		panic("failed to read maps, exiting")
+	}
 	defer file.Close()
 
 	// The third parameter is the number of parallel decoders to use.
@@ -216,9 +219,15 @@ func GenerateOffline(s OfflineSettings) {
 
 		arena := capnp.MultiSegment([][]byte{})
 		msg, seg, err := capnp.NewMessage(arena)
-		utils.Check(errors.Wrap(err, "could not create capnp arena for offline data"))
+		if err != nil {
+			slog.Error("could not create capnp arena for offline data", "error", err)
+			panic("unexpected capnp error, exiting")
+		}
 		rootOffline, err := offline.NewRootOffline(seg)
-		utils.Check(errors.Wrap(err, "could not create capnp offline root"))
+		if err != nil {
+			slog.Error("could not create capnp root for offline data", "error", err)
+			panic("unexpected capnp error, exiting")
+		}
 
 		for _, way := range scannedWays {
 			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat-s.Overlap, area.MinLon-s.Overlap, area.MaxLat+s.Overlap, area.MaxLon+s.Overlap)
@@ -229,7 +238,10 @@ func GenerateOffline(s OfflineSettings) {
 
 		slog.Info("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
-		utils.Check(errors.Wrap(err, "could not create ways in offline data"))
+		if err != nil {
+			slog.Error("could not create ways in offline data", "error", err)
+			panic("unexpected capnp error, exiting")
+		}
 		rootOffline.SetMinLat(area.MinLat)
 		rootOffline.SetMinLon(area.MinLon)
 		rootOffline.SetMaxLat(area.MaxLat)
@@ -242,11 +254,20 @@ func GenerateOffline(s OfflineSettings) {
 			w.SetMaxLat(way.MaxLat)
 			w.SetMaxLon(way.MaxLon)
 			err := w.SetName(way.Name)
-			utils.Check(errors.Wrap(err, "could not set way name"))
+			if err != nil {
+				slog.Error("could not set way name", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
 			err = w.SetRef(way.Ref)
-			utils.Check(errors.Wrap(err, "could not set way ref"))
+			if err != nil {
+				slog.Error("could not set way ref", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
 			err = w.SetHazard(way.Hazard)
-			utils.Check(errors.Wrap(err, "could not set way hazard"))
+			if err != nil {
+				slog.Error("could not set way hazard", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetMaxSpeedForward(way.MaxSpeedForward)
 			w.SetMaxSpeedBackward(way.MaxSpeedBackward)
@@ -254,7 +275,10 @@ func GenerateOffline(s OfflineSettings) {
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
-			utils.Check(errors.Wrap(err, "could not create way nodes"))
+			if err != nil {
+				slog.Error("could not create way nodes", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
 			for j, node := range way.Nodes {
 				n := nodes.At(j)
 				n.SetLatitude(node.Latitude)
@@ -263,18 +287,36 @@ func GenerateOffline(s OfflineSettings) {
 		}
 
 		data, err := msg.MarshalPacked()
-		utils.Check(errors.Wrap(err, "could not marshal offline data"))
+		if err != nil {
+			slog.Error("could not marshal offline data", "error", err)
+			panic("unexpected capnp error, exiting")
+		}
 		err = CreateBoundsDir(area, s)
-		utils.Check(errors.Wrap(err, "could not create directory for bounds file"))
+		if err != nil {
+			slog.Error("could not create bounds directory", "error", err)
+			panic("unexpected file error, exiting")
+		}
 		err = os.WriteFile(GenerateBoundsFileName(area, s), data, 0o644)
-		utils.Check(errors.Wrap(err, "could not write offline data to file"))
+		if err != nil {
+			slog.Error("could not write offline data to file", "error", err)
+			panic("unexpected file error, exiting")
+		}
 	}
 	f, err := os.Open(s.OutputDirectory)
-	utils.Check(errors.Wrap(err, "could not open bounds directory"))
+	if err != nil {
+		slog.Error("could not open bounds directory", "error", err)
+		panic("unexpected file error, exiting")
+	}
 	err = f.Sync()
-	utils.Check(errors.Wrap(err, "could not fsync bounds directory"))
+	if err != nil {
+		slog.Error("could not fsync bounds directory", "error", err)
+		panic("unexpected file error, exiting")
+	}
 	err = f.Close()
-	utils.Check(errors.Wrap(err, "could not close bounds directory"))
+	if err != nil {
+		slog.Error("could not close bounds directory", "error", err)
+		panic("unexpected file error, exiting")
+	}
 
 	slog.Info("Done Generating Offline Map")
 }
