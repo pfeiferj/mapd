@@ -62,14 +62,24 @@ struct CustomReserved15 @0xbd443b539493bc68 {
 struct CustomReserved16 @0xfc6241ed8877b611 {
 }
 
-enum MapdExtendedOutType {
-  paths @0;
-  settings @1;
+struct MapdDownloadLocationDetails @0xff889853e7b0987f {
+  location @0 :Text;
+  totalFiles @1 :UInt32;
+  downloadedFiles @2 :UInt32;
+}
+
+struct MapdDownloadProgress @0xfaa35dcac85073a2 {
+  active @0 :Bool;
+  cancelled @1 :Bool;
+  totalFiles @2 :UInt32;
+  downloadedFiles @3 :UInt32;
+  locations @4 :List(Text);
+  locationDetails @5 :List(MapdDownloadLocationDetails);
 }
 
 struct MapdExtendedOut @0xa30662f84033036c {
-  type @0 :MapdExtendedOutType;
-  json @1 :Text;
+  downloadProgress @0 :MapdDownloadProgress;
+  settings @1 :Text;
 }
 
 enum MapdInputType {
@@ -100,6 +110,9 @@ enum MapdInputType {
   setSpeedUpForNextSpeedLimit @24;
   setHoldSpeedLimitWhileChangingSetSpeed @25;
   loadPersistentSettings @26;
+  cancelDownload @27;
+  setLogJson @28;
+  setLogSource @29;
 }
 
 enum WaySelectionType {

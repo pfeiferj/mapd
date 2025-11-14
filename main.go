@@ -9,7 +9,6 @@ import (
 	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
-	"pfeifer.dev/mapd/utils"
 )
 
 func main() {
@@ -22,30 +21,46 @@ func main() {
 	}
 
 	state := State{}
+	extendedState := ExtendedState{
+		Pub: cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
+	}
+	defer extendedState.Pub.Pub.Msgq.Close()
 
 	state.NextSpeedLimitMA.Init(10)
 	state.CarStateUpdateTimeMA.Init(100)
 	state.VisionCurveMA.Init(20)
 
-	pub := cereal.GetMapdPub()
-	defer pub.Msgq.Close()
+	pub := cereal.NewPublisher("mapdOut", cereal.MapdOutCreator)
+	defer pub.Pub.Msgq.Close()
+	state.Publisher = &pub
 
-	sub := cereal.GetMapdSub("mapdIn")
+	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader, false)
 	defer sub.Sub.Msgq.Close()
 
-	cli := cereal.GetMapdSub("mapdCli")
+	cli := cereal.NewSubscriber("mapdCli", cereal.MapdInReader, false)
 	defer cli.Sub.Msgq.Close()
 
 	gps := cereal.GetGpsSub()
 	defer gps.Sub.Msgq.Close()
 
-	car := cereal.GetCarSub()
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.GetModelSub()
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true)
 	defer model.Sub.Msgq.Close()
 
 	for {
+		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
+		if err != nil {
+			slog.Error("Failed to send update", "error", err)
+		}
+		err = extendedState.Send() // this send is internally rate limited to 1 hz
+		if err != nil {
+			slog.Error("Failed to send extended update", "error", err)
+		}
+		time.Sleep(ms.LOOP_DELAY)
+
+		// handle settings inputs from openpilot/cli
 		input, inputSuccess := sub.Read()
 		if inputSuccess {
 			ms.Settings.Handle(input)
@@ -55,16 +70,12 @@ func main() {
 			ms.Settings.Handle(cliInput)
 		}
 
-		offlineMaps := maps.ReadOffline(state.Data)
-		msg := state.ToMessage()
-
-		b, err := msg.Marshal()
-		if err != nil {
-			slog.Error("Failed to send update", "error", err)
+		progress, success := ms.Settings.GetDownloadProgress()
+		if success {
+			extendedState.DownloadProgress = progress
 		}
-		pub.Send(b)
 
-		time.Sleep(ms.LOOP_DELAY)
+		offlineMaps := maps.ReadOffline(state.Data) // read each loop to get around read safety limits in capnp
 
 		carData, carStateSuccess := car.Read()
 		if carStateSuccess {
@@ -94,7 +105,9 @@ func main() {
 
 			state.LastWay = state.CurrentWay
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
-			utils.Logde(errors.Wrap(err, "could not get current way"))
+			if err != nil {
+				slog.Debug("could not get current way", "error", err)
+			}
 
 			state.MaxSpeed = state.CurrentWay.Way.MaxSpeed()
 			if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
@@ -104,10 +117,14 @@ func main() {
 			}
 
 			state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
-			utils.Logde(errors.Wrap(err, "could not get next way"))
+			if err != nil {
+				slog.Debug("could not get next way", "error", err)
+			}
 
 			state.Curvatures, err = GetStateCurvatures(&state)
-			utils.Logde(errors.Wrap(err, "could not get curvatures from current state"))
+			if err != nil {
+				slog.Debug("could not get curvatures from current state", "error", err)
+			}
 			state.TargetVelocities = GetTargetVelocities(state.Curvatures)
 			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 		}

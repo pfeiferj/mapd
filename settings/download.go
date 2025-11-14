@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/params"
-	"pfeifer.dev/mapd/utils"
 )
 
 type LocationData struct {
@@ -74,14 +73,11 @@ type Bounds struct {
 	MaxLon float64 `json:"max_lon"`
 }
 
-type DownloadLocations struct {
-	Nations []string `json:"nations"`
-	States  []string `json:"states"`
-}
-
 type DownloadProgress struct {
 	TotalFiles          int                                `json:"total_files"`
 	DownloadedFiles     int                                `json:"downloaded_files"`
+	Canceled     bool                                      `json:"canceled"`
+	Active     bool                                        `json:"active"`
 	LocationsToDownload []string                           `json:"locations_to_download"`
 	LocationDetails     map[string]*DownloadLocationDetail `json:"location_details"`
 }
@@ -91,32 +87,50 @@ type DownloadLocationDetail struct {
 	DownloadedFiles int `json:"location_downloaded_files"`
 }
 
-var progress DownloadProgress
+type download struct {
+	progress DownloadProgress
+	progressChan chan DownloadProgress
+	cancelChan chan bool
+}
 
-func AddLocationDetailsToProgress(path string) {
-	progress.LocationDetails[path] = &DownloadLocationDetail{
+func (p *DownloadProgress) addLocationDetails(path string) {
+	p.LocationDetails[path] = &DownloadLocationDetail{
 		TotalFiles: countFilesForBounds(getBoundsForPath(path)),
 	}
 }
 
-func Download(paths string) {
+
+func Download(paths string, progressChan chan DownloadProgress, cancelChan chan bool) {
 	slog.Info("download", "paths", paths)
-	progress = DownloadProgress{
-		LocationsToDownload: []string{},
-		LocationDetails:     map[string]*DownloadLocationDetail{},
+	pathsSplit := strings.Split(paths, ",")
+	d := download {
+		progress: DownloadProgress{
+			LocationsToDownload: pathsSplit,
+			TotalFiles: countTotalFiles(pathsSplit),
+			LocationDetails: make(map[string]*DownloadLocationDetail),
+			Active: true,
+		},
+		progressChan: progressChan,
+		cancelChan: cancelChan,
 	}
 
-	pathsSplit := strings.Split(paths, ",")
-	progress.LocationsToDownload = pathsSplit
-	progress.TotalFiles = countTotalFiles(pathsSplit)
 	for _, p := range pathsSplit {
-		AddLocationDetailsToProgress(p)
+		d.progress.addLocationDetails(p)
 		location := getDataForPath(p)
 		slog.Info("downloading nation", "nation", location.FullName)
-		err := DownloadBounds(location.BoundingBox, p)
+		err, canceled := d.downloadBounds(location.BoundingBox, p)
 		if err != nil {
-			utils.Logie(err)
+			slog.Warn("failed to download nation", "error", err, "nation", location.FullName)
 		}
+		if canceled {
+			d.progress.Canceled = true
+			break
+		}
+	}
+	d.progress.Active = false
+	select { //nonblocking update of progress
+	case d.progressChan <- d.progress:
+	default:
 	}
 }
 
@@ -135,29 +149,46 @@ func adjustedBounds(bounds Bounds) (int, int, int, int) {
 	return minLat, minLon, maxLat, maxLon
 }
 
-func DownloadBounds(bounds Bounds, locationName string) (err error) {
+func (d *download) downloadBounds(bounds Bounds, locationName string) (err error, cancel bool) {
 	slog.Info("Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
 
 	// clip given bounds to file areas
 	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
-	progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
-
+	d.progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
 	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
 		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
+			select { //nonblocking update of progress
+			case d.progressChan <- d.progress:
+			default:
+			}
+			select { // cancel if sent message
+			case cancel := <- d.cancelChan:
+				if cancel {
+					return nil, true
+				}
+			default:
+			}
+
 			filename := fmt.Sprintf("offline/%d/%d.tar.gz", i, j)
 			url := fmt.Sprintf("https://map-data.pfeifer.dev/%s", filename)
 			outputName := filepath.Join(params.GetBaseOpPath(), "tmp", filename)
 			err := os.MkdirAll(filepath.Dir(outputName), 0o775)
-			utils.Logde(errors.Wrap(err, "failed to make output directory"))
+			if err != nil {
+				slog.Error("failed to create offline maps output directory", "error", err)
+			}
 			err = DownloadFile(url, outputName)
 			if err != nil {
-				utils.Logwe(errors.Wrap(err, "failed to download file, continuing to next"))
+				slog.Warn("failed to download file, continuing to next", "error", err, "url", url, "file", outputName)
 				continue
 			}
 			file, err := os.Open(outputName)
-			utils.Logde(errors.Wrap(err, "failed to open downloaded file"))
+			if err != nil {
+				slog.Warn("failed to open downloaded file", "error", err, "file", outputName)
+			}
 			reader, err := gzip.NewReader(file)
-			utils.Logde(errors.Wrap(err, "failed to read downloaded gzip"))
+			if err != nil {
+				slog.Warn("failed to parse gzip downloaded file", "error", err, "file", outputName)
+			}
 			tr := tar.NewReader(reader)
 			for {
 				header, err := tr.Next()
@@ -178,39 +209,55 @@ func DownloadBounds(bounds Bounds, locationName string) (err error) {
 				case tar.TypeDir:
 					if _, err := os.Stat(target); err != nil {
 						err := os.MkdirAll(target, 0o755)
-						utils.Logde(errors.Wrap(err, "could not create directory from zip"))
+						if err != nil {
+							slog.Warn("could not create directory from downloaded gzip", "error", err, "file", outputName, "directory", target)
+						}
 					}
 
 				// if it's a file create it
 				case tar.TypeReg:
 					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-					utils.Logde(errors.Wrap(err, "could not open file target for unzipped file"))
+					if err != nil {
+						slog.Warn("could not open file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
+					}
 
 					_, err = io.Copy(f, tr)
-					utils.Logde(errors.Wrap(err, "could not write unzipped data to target file"))
+					if err != nil {
+						slog.Warn("could not write data to file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
+					}
 
 					err = f.Sync()
-					utils.Logde(errors.Wrap(err, "could not fsync unzipped target file"))
+					if err != nil {
+						slog.Warn("could not fsync file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
+					}
 					f.Close()
 				}
 			}
 			err = reader.Close()
-			utils.Logde(errors.Wrap(err, "could not close gzip reader"))
+			if err != nil {
+				slog.Warn("could not close gzip reader", "error", err)
+			}
 			err = file.Close()
-			utils.Logde(errors.Wrap(err, "could not close downloaded file"))
+			if err != nil {
+				slog.Warn("could not close downloaded file", "error", err)
+			}
 
 			err = os.Remove(outputName)
-			utils.Logde(errors.Wrap(err, "could not delete downloaded gzip file"))
+			if err != nil {
+				slog.Warn("could not delete downloaded gzip file", "error", err)
+			}
 
-			progress.DownloadedFiles++
-			progress.LocationDetails[locationName].DownloadedFiles++
+			d.progress.DownloadedFiles++
+			d.progress.LocationDetails[locationName].DownloadedFiles++
 		}
 	}
 	err = os.RemoveAll(filepath.Join(params.GetBaseOpPath(), "tmp"))
-	utils.Logde(errors.Wrap(err, "could not remove temp download directory"))
+	if err != nil {
+		slog.Warn("could not remove temporary download directory", "error", err)
+	}
 
 	slog.Info("Finished Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
-	return nil
+	return nil, false
 }
 
 func countFilesForBounds(bounds Bounds) int {

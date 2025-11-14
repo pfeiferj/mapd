@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
-	"pfeifer.dev/mapd/utils"
 )
 
 var MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
@@ -390,7 +390,7 @@ func GetWayStartEnd(way offline.Way, isForward bool) (offline.Coordinates, offli
 
 	nodes, err := way.Nodes()
 	if err != nil {
-		utils.Logde(errors.Wrap(err, "could not read way nodes"))
+		slog.Debug("could not read way nodes", "error", err)
 		return offline.Coordinates{}, offline.Coordinates{}
 	}
 
@@ -443,7 +443,9 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 				SelectionType: custom.WaySelectionType_current,
 			}, nil
 		}
-		utils.Logde(err)
+		if err != nil {
+			slog.Debug("failed to check if on way", "error", err)
+		}
 	}
 
 	for _, nextWay := range nextWays {
@@ -466,7 +468,9 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 				SelectionType: custom.WaySelectionType_predicted,
 			}, nil
 		}
-		utils.Logde(err)
+		if err != nil {
+			slog.Debug("failed to check if on way", "error", err)
+		}
 	}
 
 	possibleWays, err := getPossibleWays(offline, location)
@@ -489,7 +493,9 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 					SelectionType: custom.WaySelectionType_possible,
 				}, nil
 			}
-			utils.Logde(err)
+			if err != nil {
+				slog.Debug("failed to check if on way", "error", err)
+			}
 		}
 	}
 
@@ -510,7 +516,9 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 				SelectionType:     custom.WaySelectionType_extended,
 			}, nil
 		}
-		utils.Logde(err)
+		if err != nil {
+			slog.Debug("failed to check if on way", "error", err)
+		}
 	}
 
 	return CurrentWay{SelectionType: custom.WaySelectionType_fail}, errors.New(fmt.Sprintf("could not find a current way, distance from last way=%f", distanceFromCurrentWay))
@@ -526,7 +534,9 @@ func getPossibleWays(offlineMaps offline.Offline, location log.GpsLocationData) 
 	for i := 0; i < ways.Len(); i++ {
 		way := ways.At(i)
 		onWay, err := OnWay(way, location, 2)
-		utils.Logde(errors.Wrap(err, "Could not check if on way"))
+		if err != nil {
+			slog.Debug("failed to check if on way", "error", err)
+		}
 		if onWay.OnWay {
 			possibleWays = append(possibleWays, way)
 		}
@@ -586,7 +596,9 @@ func NextIsForward(nextWay offline.Way, matchNode offline.Coordinates) bool {
 	}
 	nodes, err := nextWay.Nodes()
 	if err != nil || nodes.Len() < 2 {
-		utils.Logde(errors.Wrap(err, "could not read next way nodes"))
+		if err != nil {
+			slog.Debug("could not read next way nodes", "error", err)
+		}
 		return true
 	}
 

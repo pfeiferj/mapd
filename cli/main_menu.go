@@ -8,9 +8,10 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/pfeiferj/gomsgq"
 
 	"pfeifer.dev/mapd/cereal"
+	"pfeifer.dev/mapd/cereal/custom"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type mainState int
@@ -20,6 +21,7 @@ const (
 	showSettings
 	showDownload
 	showOutput
+	showDownloadProgress
 )
 
 var docStyle = lipgloss.NewStyle().Margin(1, 2)
@@ -33,13 +35,17 @@ func tickEvery() tea.Cmd {
 }
 
 type uiModel struct {
-	list     list.Model
-	state    mainState
-	settings settingsModel
-	output   outputModel
-	download downloadModel
-	pub      *gomsgq.MsgqPublisher
-	sub      *cereal.MapdOutSubscriber
+	list              list.Model
+	state             mainState
+	settings          settingsModel
+	output            outputModel
+	download          downloadModel
+	downloadProgress  downloadProgressModel
+	pub               *cereal.Publisher[custom.MapdIn]
+	sub               *cereal.Subscriber[custom.MapdOut]
+	extendedSub       *cereal.Subscriber[custom.MapdExtendedOut]
+	extendedData      custom.MapdExtendedOut
+	extendedDataValid bool
 }
 type item struct {
 	title, desc string
@@ -54,13 +60,15 @@ func initialModel() uiModel {
 	items := []list.Item{
 		item{title: "Settings", desc: "Modify settings of an active instance of mapd", state: showSettings},
 		item{title: "Download", desc: "Trigger a download of maps in an active instance of mapd", state: showDownload},
+		item{title: "Download Progress", desc: "Watch the live download progress from mapd", state: showDownloadProgress},
 		item{title: "Watch", desc: "Watch the live output from mapd", state: showOutput},
 	}
 
 	listDelegate := list.NewDefaultDelegate()
-	pub := cereal.GetMapdCliPub()
-	sub := cereal.GetMapdOutSub()
-	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub, download: getDownloadModel()}
+	pub := cereal.NewPublisher("mapdIn", cereal.MapdInCreator)
+	sub := cereal.NewSubscriber("mapdOut", cereal.MapdOutReader, true)
+	extendedSub := cereal.NewSubscriber("mapdExtendedOut", cereal.MapdExtendedOutReader, true)
+	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub, extendedSub: &extendedSub, download: getDownloadModel()}
 	m.list.Title = "Mapd Actions"
 	return m
 }
@@ -87,8 +95,18 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settings, _ = m.settings.Update(msg, &m)
 		m.download, _ = m.download.Update(msg, &m)
 		m.output, _ = m.output.Update(msg, &m)
+		m.downloadProgress, _ = m.downloadProgress.Update(msg, &m)
 	case TickMsg:
+		extendedData, success := m.extendedSub.Read()
+		if success {
+			m.extendedData = extendedData
+			settingsData, _ := extendedData.Settings()
+			ms.Settings.Unmarshal([]byte(settingsData))	
+			m.extendedDataValid = true
+		}
 		m.output, _ = m.output.Update(msg, &m)
+		m.downloadProgress, _ = m.downloadProgress.Update(msg, &m)
+		m.settings, _ = m.settings.Update(msg, &m)
 		return m, tickEvery()
 	}
 
@@ -100,6 +118,8 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.output, cmd = m.output.Update(msg, &m)
 	case showDownload:
 		m.download, cmd = m.download.Update(msg, &m)
+	case showDownloadProgress:
+		m.downloadProgress, cmd = m.downloadProgress.Update(msg, &m)
 	default:
 		m.list, cmd = m.list.Update(msg)
 	}
@@ -114,6 +134,8 @@ func (m uiModel) View() string {
 		return m.output.View()
 	case showDownload:
 		return m.download.View()
+	case showDownloadProgress:
+		return m.downloadProgress.View()
 	}
 	return docStyle.Render(m.list.View())
 }

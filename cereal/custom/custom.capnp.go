@@ -1114,48 +1114,245 @@ func (f CustomReserved16_Future) Struct() (CustomReserved16, error) {
 	return CustomReserved16(p.Struct()), err
 }
 
-type MapdExtendedOutType uint16
+type MapdDownloadLocationDetails capnp.Struct
 
-// MapdExtendedOutType_TypeID is the unique identifier for the type MapdExtendedOutType.
-const MapdExtendedOutType_TypeID = 0xcbdaf55a12931b65
+// MapdDownloadLocationDetails_TypeID is the unique identifier for the type MapdDownloadLocationDetails.
+const MapdDownloadLocationDetails_TypeID = 0xff889853e7b0987f
 
-// Values of MapdExtendedOutType.
-const (
-	MapdExtendedOutType_paths    MapdExtendedOutType = 0
-	MapdExtendedOutType_settings MapdExtendedOutType = 1
-)
-
-// String returns the enum's constant name.
-func (c MapdExtendedOutType) String() string {
-	switch c {
-	case MapdExtendedOutType_paths:
-		return "paths"
-	case MapdExtendedOutType_settings:
-		return "settings"
-
-	default:
-		return ""
-	}
+func NewMapdDownloadLocationDetails(s *capnp.Segment) (MapdDownloadLocationDetails, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1})
+	return MapdDownloadLocationDetails(st), err
 }
 
-// MapdExtendedOutTypeFromString returns the enum value with a name,
-// or the zero value if there's no such value.
-func MapdExtendedOutTypeFromString(c string) MapdExtendedOutType {
-	switch c {
-	case "paths":
-		return MapdExtendedOutType_paths
-	case "settings":
-		return MapdExtendedOutType_settings
-
-	default:
-		return 0
-	}
+func NewRootMapdDownloadLocationDetails(s *capnp.Segment) (MapdDownloadLocationDetails, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1})
+	return MapdDownloadLocationDetails(st), err
 }
 
-type MapdExtendedOutType_List = capnp.EnumList[MapdExtendedOutType]
+func ReadRootMapdDownloadLocationDetails(msg *capnp.Message) (MapdDownloadLocationDetails, error) {
+	root, err := msg.Root()
+	return MapdDownloadLocationDetails(root.Struct()), err
+}
 
-func NewMapdExtendedOutType_List(s *capnp.Segment, sz int32) (MapdExtendedOutType_List, error) {
-	return capnp.NewEnumList[MapdExtendedOutType](s, sz)
+func (s MapdDownloadLocationDetails) String() string {
+	str, _ := text.Marshal(0xff889853e7b0987f, capnp.Struct(s))
+	return str
+}
+
+func (s MapdDownloadLocationDetails) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+	return capnp.Struct(s).EncodeAsPtr(seg)
+}
+
+func (MapdDownloadLocationDetails) DecodeFromPtr(p capnp.Ptr) MapdDownloadLocationDetails {
+	return MapdDownloadLocationDetails(capnp.Struct{}.DecodeFromPtr(p))
+}
+
+func (s MapdDownloadLocationDetails) ToPtr() capnp.Ptr {
+	return capnp.Struct(s).ToPtr()
+}
+func (s MapdDownloadLocationDetails) IsValid() bool {
+	return capnp.Struct(s).IsValid()
+}
+
+func (s MapdDownloadLocationDetails) Message() *capnp.Message {
+	return capnp.Struct(s).Message()
+}
+
+func (s MapdDownloadLocationDetails) Segment() *capnp.Segment {
+	return capnp.Struct(s).Segment()
+}
+func (s MapdDownloadLocationDetails) Location() (string, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return p.Text(), err
+}
+
+func (s MapdDownloadLocationDetails) HasLocation() bool {
+	return capnp.Struct(s).HasPtr(0)
+}
+
+func (s MapdDownloadLocationDetails) LocationBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return p.TextBytes(), err
+}
+
+func (s MapdDownloadLocationDetails) SetLocation(v string) error {
+	return capnp.Struct(s).SetText(0, v)
+}
+
+func (s MapdDownloadLocationDetails) TotalFiles() uint32 {
+	return capnp.Struct(s).Uint32(0)
+}
+
+func (s MapdDownloadLocationDetails) SetTotalFiles(v uint32) {
+	capnp.Struct(s).SetUint32(0, v)
+}
+
+func (s MapdDownloadLocationDetails) DownloadedFiles() uint32 {
+	return capnp.Struct(s).Uint32(4)
+}
+
+func (s MapdDownloadLocationDetails) SetDownloadedFiles(v uint32) {
+	capnp.Struct(s).SetUint32(4, v)
+}
+
+// MapdDownloadLocationDetails_List is a list of MapdDownloadLocationDetails.
+type MapdDownloadLocationDetails_List = capnp.StructList[MapdDownloadLocationDetails]
+
+// NewMapdDownloadLocationDetails creates a new list of MapdDownloadLocationDetails.
+func NewMapdDownloadLocationDetails_List(s *capnp.Segment, sz int32) (MapdDownloadLocationDetails_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1}, sz)
+	return capnp.StructList[MapdDownloadLocationDetails](l), err
+}
+
+// MapdDownloadLocationDetails_Future is a wrapper for a MapdDownloadLocationDetails promised by a client call.
+type MapdDownloadLocationDetails_Future struct{ *capnp.Future }
+
+func (f MapdDownloadLocationDetails_Future) Struct() (MapdDownloadLocationDetails, error) {
+	p, err := f.Future.Ptr()
+	return MapdDownloadLocationDetails(p.Struct()), err
+}
+
+type MapdDownloadProgress capnp.Struct
+
+// MapdDownloadProgress_TypeID is the unique identifier for the type MapdDownloadProgress.
+const MapdDownloadProgress_TypeID = 0xfaa35dcac85073a2
+
+func NewMapdDownloadProgress(s *capnp.Segment) (MapdDownloadProgress, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 2})
+	return MapdDownloadProgress(st), err
+}
+
+func NewRootMapdDownloadProgress(s *capnp.Segment) (MapdDownloadProgress, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 16, PointerCount: 2})
+	return MapdDownloadProgress(st), err
+}
+
+func ReadRootMapdDownloadProgress(msg *capnp.Message) (MapdDownloadProgress, error) {
+	root, err := msg.Root()
+	return MapdDownloadProgress(root.Struct()), err
+}
+
+func (s MapdDownloadProgress) String() string {
+	str, _ := text.Marshal(0xfaa35dcac85073a2, capnp.Struct(s))
+	return str
+}
+
+func (s MapdDownloadProgress) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+	return capnp.Struct(s).EncodeAsPtr(seg)
+}
+
+func (MapdDownloadProgress) DecodeFromPtr(p capnp.Ptr) MapdDownloadProgress {
+	return MapdDownloadProgress(capnp.Struct{}.DecodeFromPtr(p))
+}
+
+func (s MapdDownloadProgress) ToPtr() capnp.Ptr {
+	return capnp.Struct(s).ToPtr()
+}
+func (s MapdDownloadProgress) IsValid() bool {
+	return capnp.Struct(s).IsValid()
+}
+
+func (s MapdDownloadProgress) Message() *capnp.Message {
+	return capnp.Struct(s).Message()
+}
+
+func (s MapdDownloadProgress) Segment() *capnp.Segment {
+	return capnp.Struct(s).Segment()
+}
+func (s MapdDownloadProgress) Active() bool {
+	return capnp.Struct(s).Bit(0)
+}
+
+func (s MapdDownloadProgress) SetActive(v bool) {
+	capnp.Struct(s).SetBit(0, v)
+}
+
+func (s MapdDownloadProgress) Cancelled() bool {
+	return capnp.Struct(s).Bit(1)
+}
+
+func (s MapdDownloadProgress) SetCancelled(v bool) {
+	capnp.Struct(s).SetBit(1, v)
+}
+
+func (s MapdDownloadProgress) TotalFiles() uint32 {
+	return capnp.Struct(s).Uint32(4)
+}
+
+func (s MapdDownloadProgress) SetTotalFiles(v uint32) {
+	capnp.Struct(s).SetUint32(4, v)
+}
+
+func (s MapdDownloadProgress) DownloadedFiles() uint32 {
+	return capnp.Struct(s).Uint32(8)
+}
+
+func (s MapdDownloadProgress) SetDownloadedFiles(v uint32) {
+	capnp.Struct(s).SetUint32(8, v)
+}
+
+func (s MapdDownloadProgress) Locations() (capnp.TextList, error) {
+	p, err := capnp.Struct(s).Ptr(0)
+	return capnp.TextList(p.List()), err
+}
+
+func (s MapdDownloadProgress) HasLocations() bool {
+	return capnp.Struct(s).HasPtr(0)
+}
+
+func (s MapdDownloadProgress) SetLocations(v capnp.TextList) error {
+	return capnp.Struct(s).SetPtr(0, v.ToPtr())
+}
+
+// NewLocations sets the locations field to a newly
+// allocated capnp.TextList, preferring placement in s's segment.
+func (s MapdDownloadProgress) NewLocations(n int32) (capnp.TextList, error) {
+	l, err := capnp.NewTextList(capnp.Struct(s).Segment(), n)
+	if err != nil {
+		return capnp.TextList{}, err
+	}
+	err = capnp.Struct(s).SetPtr(0, l.ToPtr())
+	return l, err
+}
+func (s MapdDownloadProgress) LocationDetails() (MapdDownloadLocationDetails_List, error) {
+	p, err := capnp.Struct(s).Ptr(1)
+	return MapdDownloadLocationDetails_List(p.List()), err
+}
+
+func (s MapdDownloadProgress) HasLocationDetails() bool {
+	return capnp.Struct(s).HasPtr(1)
+}
+
+func (s MapdDownloadProgress) SetLocationDetails(v MapdDownloadLocationDetails_List) error {
+	return capnp.Struct(s).SetPtr(1, v.ToPtr())
+}
+
+// NewLocationDetails sets the locationDetails field to a newly
+// allocated MapdDownloadLocationDetails_List, preferring placement in s's segment.
+func (s MapdDownloadProgress) NewLocationDetails(n int32) (MapdDownloadLocationDetails_List, error) {
+	l, err := NewMapdDownloadLocationDetails_List(capnp.Struct(s).Segment(), n)
+	if err != nil {
+		return MapdDownloadLocationDetails_List{}, err
+	}
+	err = capnp.Struct(s).SetPtr(1, l.ToPtr())
+	return l, err
+}
+
+// MapdDownloadProgress_List is a list of MapdDownloadProgress.
+type MapdDownloadProgress_List = capnp.StructList[MapdDownloadProgress]
+
+// NewMapdDownloadProgress creates a new list of MapdDownloadProgress.
+func NewMapdDownloadProgress_List(s *capnp.Segment, sz int32) (MapdDownloadProgress_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 16, PointerCount: 2}, sz)
+	return capnp.StructList[MapdDownloadProgress](l), err
+}
+
+// MapdDownloadProgress_Future is a wrapper for a MapdDownloadProgress promised by a client call.
+type MapdDownloadProgress_Future struct{ *capnp.Future }
+
+func (f MapdDownloadProgress_Future) Struct() (MapdDownloadProgress, error) {
+	p, err := f.Future.Ptr()
+	return MapdDownloadProgress(p.Struct()), err
 }
 
 type MapdExtendedOut capnp.Struct
@@ -1164,12 +1361,12 @@ type MapdExtendedOut capnp.Struct
 const MapdExtendedOut_TypeID = 0xa30662f84033036c
 
 func NewMapdExtendedOut(s *capnp.Segment) (MapdExtendedOut, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1})
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 2})
 	return MapdExtendedOut(st), err
 }
 
 func NewRootMapdExtendedOut(s *capnp.Segment) (MapdExtendedOut, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1})
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 0, PointerCount: 2})
 	return MapdExtendedOut(st), err
 }
 
@@ -1205,30 +1402,46 @@ func (s MapdExtendedOut) Message() *capnp.Message {
 func (s MapdExtendedOut) Segment() *capnp.Segment {
 	return capnp.Struct(s).Segment()
 }
-func (s MapdExtendedOut) Type() MapdExtendedOutType {
-	return MapdExtendedOutType(capnp.Struct(s).Uint16(0))
-}
-
-func (s MapdExtendedOut) SetType(v MapdExtendedOutType) {
-	capnp.Struct(s).SetUint16(0, uint16(v))
-}
-
-func (s MapdExtendedOut) Json() (string, error) {
+func (s MapdExtendedOut) DownloadProgress() (MapdDownloadProgress, error) {
 	p, err := capnp.Struct(s).Ptr(0)
-	return p.Text(), err
+	return MapdDownloadProgress(p.Struct()), err
 }
 
-func (s MapdExtendedOut) HasJson() bool {
+func (s MapdExtendedOut) HasDownloadProgress() bool {
 	return capnp.Struct(s).HasPtr(0)
 }
 
-func (s MapdExtendedOut) JsonBytes() ([]byte, error) {
-	p, err := capnp.Struct(s).Ptr(0)
+func (s MapdExtendedOut) SetDownloadProgress(v MapdDownloadProgress) error {
+	return capnp.Struct(s).SetPtr(0, capnp.Struct(v).ToPtr())
+}
+
+// NewDownloadProgress sets the downloadProgress field to a newly
+// allocated MapdDownloadProgress struct, preferring placement in s's segment.
+func (s MapdExtendedOut) NewDownloadProgress() (MapdDownloadProgress, error) {
+	ss, err := NewMapdDownloadProgress(capnp.Struct(s).Segment())
+	if err != nil {
+		return MapdDownloadProgress{}, err
+	}
+	err = capnp.Struct(s).SetPtr(0, capnp.Struct(ss).ToPtr())
+	return ss, err
+}
+
+func (s MapdExtendedOut) Settings() (string, error) {
+	p, err := capnp.Struct(s).Ptr(1)
+	return p.Text(), err
+}
+
+func (s MapdExtendedOut) HasSettings() bool {
+	return capnp.Struct(s).HasPtr(1)
+}
+
+func (s MapdExtendedOut) SettingsBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(1)
 	return p.TextBytes(), err
 }
 
-func (s MapdExtendedOut) SetJson(v string) error {
-	return capnp.Struct(s).SetText(0, v)
+func (s MapdExtendedOut) SetSettings(v string) error {
+	return capnp.Struct(s).SetText(1, v)
 }
 
 // MapdExtendedOut_List is a list of MapdExtendedOut.
@@ -1236,7 +1449,7 @@ type MapdExtendedOut_List = capnp.StructList[MapdExtendedOut]
 
 // NewMapdExtendedOut creates a new list of MapdExtendedOut.
 func NewMapdExtendedOut_List(s *capnp.Segment, sz int32) (MapdExtendedOut_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 8, PointerCount: 1}, sz)
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 0, PointerCount: 2}, sz)
 	return capnp.StructList[MapdExtendedOut](l), err
 }
 
@@ -1246,6 +1459,9 @@ type MapdExtendedOut_Future struct{ *capnp.Future }
 func (f MapdExtendedOut_Future) Struct() (MapdExtendedOut, error) {
 	p, err := f.Future.Ptr()
 	return MapdExtendedOut(p.Struct()), err
+}
+func (p MapdExtendedOut_Future) DownloadProgress() MapdDownloadProgress_Future {
+	return MapdDownloadProgress_Future{Future: p.Future.Field(0, nil)}
 }
 
 type MapdInputType uint16
@@ -1282,6 +1498,9 @@ const (
 	MapdInputType_setSpeedUpForNextSpeedLimit            MapdInputType = 24
 	MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed MapdInputType = 25
 	MapdInputType_loadPersistentSettings                 MapdInputType = 26
+	MapdInputType_cancelDownload                         MapdInputType = 27
+	MapdInputType_setLogJson                             MapdInputType = 28
+	MapdInputType_setLogSource                           MapdInputType = 29
 )
 
 // String returns the enum's constant name.
@@ -1341,6 +1560,12 @@ func (c MapdInputType) String() string {
 		return "setHoldSpeedLimitWhileChangingSetSpeed"
 	case MapdInputType_loadPersistentSettings:
 		return "loadPersistentSettings"
+	case MapdInputType_cancelDownload:
+		return "cancelDownload"
+	case MapdInputType_setLogJson:
+		return "setLogJson"
+	case MapdInputType_setLogSource:
+		return "setLogSource"
 
 	default:
 		return ""
@@ -1405,6 +1630,12 @@ func MapdInputTypeFromString(c string) MapdInputType {
 		return MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed
 	case "loadPersistentSettings":
 		return MapdInputType_loadPersistentSettings
+	case "cancelDownload":
+		return MapdInputType_cancelDownload
+	case "setLogJson":
+		return MapdInputType_setLogJson
+	case "setLogSource":
+		return MapdInputType_setLogSource
 
 	default:
 		return 0
@@ -1973,138 +2204,155 @@ func (f MapdOut_Future) Struct() (MapdOut, error) {
 	return MapdOut(p.Struct()), err
 }
 
-const schema_b526ba661d550a59 = "x\xda\x94W}l\x14\xc7\x15\x7fo\xf7\xec\xb5\x8d\xcf" +
-	"\xe7\xf3\xaci\x08E.-\x89\x1a\x14\x0a\xc6\xb8\xc1N" +
-	"\x1d\xe7\xb0\x1d\xc5\xe8\xf886\xe0b\x11\xa9\xeb\xdb\xf1" +
-	"y\xe1\xbc{\xda\x9d\xb39\x14\xe4\x94\x12)\xfd@T" +
-	"M\x13\xa1((\xa5\x80\x14\xb5\x82\xd2\xb4\xa9R\x94\xaa" +
-	"-\xa2\x12J\x84\x94D\x8d\xd4\x90V@\x14D\x9a6" +
-	"\x0aQ\x83\x14\xdaD[\xbd\xd9=\x9f\x83\xaf%\xf7\xd7" +
-	"\xde\xfe\xdeo~\xefcg\xde\x9b[u4v\x7f\xac" +
-	"3\x1e4\x82\x92\x11u\xf5Ar\xd7\xf6\xb7\x1dq\xf2" +
-	"QH.\xc6`{\xd3\xd6%\xe3\xa7\xef|\x01b\x1a" +
-	"@\xd7\x95\xd8(\xb2\x1b1\x0d\xd4\xe0\x17\x1f\xa5{F" +
-	"\xaf\x9d\xf9v\x15\xd6\x1b\xc4\xfa\xbbd}s\xe0\xcc\xc1" +
-	"\xb1;\x9f}\x0c\x92\x8b\x95\x0a\x0b\xb0\xebO\xb1\xf5\xc8" +
-	"\xde\x8c\xe8\x07\x15\xc0\xa0\xed\xd7\x98\xcb\x9d;\xffL\x15" +
-	"\xc1\xad\xda\x182[#\xc1\x15ou\xa8\x83\xda\xc4\x91" +
-	"*\xac!m\x14\xd9v\xc9\xca\xab]\xf7\x7f<V\x7f" +
-	"\x142\x8bq\x0e\xad\x0e\x89\xd7M\xbcaM\x03`C" +
-	"\xda4`\xb0\xef\xfa\xf5\xaft\xfd\xe3\xc3c\xc4n\x98" +
-	"\xc3\xae#\xf6\x11\xedvd\xbf$v\xd7\x09-Q\x07" +
-	"\x18\x0c\x0e\xfc\xe1\xe5\x13\x17\x8f\x1e\x9f\x97\x13\x8f\xefC" +
-	"V\x8a\x93p1~\x0f`\xb0\xf5X\xe6\xcd\xbb\xa7\xce" +
-	"\x1f\xaf\x12l)>\x8a\xec@\x9c\x82=\xf9V\xf6\xc9" +
-	"\xef?\xf7\xc1\xcf\xe7\xe9\xd9\xf1\xde\x8a\xde&\xc0\xe0\xe1" +
-	"\x17\xaev\x1e\xfc\xf4\xe2\xc9*z\xdf%\xbd\xc3R\xaf" +
-	"\xff\xe2{{7|i\xe4TU\xafce\xaf\xe70" +
-	"\xbd\xd4\xce:/Va\xd9\xa4\xb5W\xb2&^z\xe2" +
-	"\xc7\xc6\xbd\x83\xbf\xab\xc2\xdaNZ\x93\x92\xb5_]s" +
-	"\x89\x7fc\xd9\x99*\xacab=,Y\x1f\xfc\xea\xbe" +
-	"\xd7\xd6\xf6\xed<W\xf5\xa3\xf4\xc4\xdb\x90\x0d\xcb\\\x87" +
-	"\xe2W\x01\x83\xde\xed#\x85\xfc\x1b\xcf\xbeREsQ" +
-	"\xcb\x18\xb2\x15-\xa4\xc9\x17?\xd16z\xfd\xc2+\xf3" +
-	"j\xd7\xd8\xb2\x07\xd9\x92\x16\xd2[\xd4B\xdf\xe2\xd5}" +
-	"?\xc9\xfd\xe7\xc2S\xe7\xab\xe8-%\xbdn\xa9\xd7\x9d" +
-	"\x1e\xfc\xce\xa1\x91\xa7.Ta%[F\x91\xdd!Y" +
-	"g\x9c\xdf/\xd8vv\xc7\xbf\xaa\xb0\x90X\xed\x92\xb5" +
-	"\xe8\xf0\xe1\xe1\xc6\x7f.\xfc\xa8\x0a\xebC\xaap\x9dd" +
-	"\x1d\x8d\x15>\xbdw\xff\x81\x1bUX\x97\x89u]\xd6" +
-	"n\xf9\xbbwl\xbc\xba\xe3\xbe\x7f\xcf\xcb\xf35\xaa\xef" +
-	"\x15Y\xb7\xcb\xf1\x19\xc0 \xf9\x9b\xe9\xc7\xdfO\x8d}" +
-	"\xf2\xff\xf2\\\x19d\xb9\xc7\xcd\xfc\xcal\xac\xe8\x0bw" +
-	"reV>\xbe\x965\x0bN\xa1w@\xbel\xe1>" +
-	"\xf7\xa6\xb8j\xad\xd9\x8cX\x0b\x7f\xd5\xad\xf8\x1b\xcc\x82" +
-	"5\xec\x14\x8a\xe2\xa1R\x81\x03lF\xcc\xe4Q\x01`" +
-	"}\xb8\x1e\x00\x91\xf5\xe0\xf3\x00\xa8\xb0\x1e\xfc)\x00\xaa" +
-	"\xac\x07\x7f\x06\x80\xb1\xe8Y\xc7z\xf0\x02\x00\xd6\xb3>" +
-	"\x1c\x03@\x8d\xf5\xe0\xcb\x00\xd8\xc0\xfa\xe4\xb3\x91\xa5p" +
-	"\x0f\x006\xb1>\xdc\x09\x80\x0bX\x8f|of\xdd\xf8" +
-	"\x1e\x00\xc6Y\x0f\x9e\x06\xc0\x16\xd6\x83o\x03`\x82\xf5" +
-	"\xe1\xeb\x00\xd8\xcaR\xf84\x00&YJ\xfamc)" +
-	"\xe9\x8fE\xefzdo\x8f\xde\x17\xb2\x14\x9e\x01\xc0/" +
-	"\xb0\x94\xd4\xbd\x8d\x0dI\xbdE]\xc3\xd8\x8b\x00x;" +
-	"\xcb\x90\xa3\xc0r\xa7\x9d\xbckZ\x00\x10\xf8\\<d" +
-	"z9\x8e\"m\x0a\xee\x99\xf9\x8eT6\xcb\xf3\x84\x1b" +
-	"\x05\xce-L\xdb\x93\xb6\xd84>\xae\xf9\\\xdc\x84\x0e" +
-	"\xb8NBx\xae$\x0f\x14\xbd)\x8e\xd28\x17\xdef" +
-	"\xfb\xb6\xab8\xd2Z6\x0aO\x0d\x8di7\x97\xe6\xa0" +
-	"M\xf1yT\x19\x12E\x94\x0aC\x9ck\xdb`;\xa1" +
-	"y\x1b@\xe0qJ\xc4\xe0\xd0/\x84\xed\xe4\xfc\xc07" +
-	"\xa7\xb8\xc1\x85\x80D\xf8\xca\xc5\x90c\x8e\xe5\xa1?t" +
-	"\x7f\xb3\xd8V\x9fK;7\x12es\x98I\xd90g" +
-	"\x9d\xfc\xa1\xc8\xcc+\xcb\x0aZd}\xd0\xcd[i\xc5" +
-	"\xf4\x85\xc1\xb9#\xa9\xc4DQ\x91\x0c\xa3^\xcfUo" +
-	"\xd7\xcd`*\xabEE\x9f\x8bn\x1aO\x8cGU\x1f" +
-	"\xe4\xe3f\x11\xf3\"m:|\xc4\xd6,1q39" +
-	"m\xaa\"\x15P5\x88\x8b\xc5\xbc\xa02\xd8\x1aU\x81" +
-	"\xd0-<\xeb\xd6MNr\xc7\xe2\x96\xb489\x1f(" +
-	"\xab\xbc;=\xe8N;\x0f\xb8\xdeF\xbe;L2\x9d" +
-	"\xa0$+9o-|\xc6jk\x91\x95r6\xd4r" +
-	"\xaebd\xc2\xce\xf3\x81\x09\xd3\xc9\xd9N\xce\xe0\xfd!" +
-	"]z\xdf\xcc=\x1fm_pG\x90!\xfcV\x9f\xfb" +
-	"\x0ckV\xe7\xea\x1a\x0f}\xcf\xe79\xf4C\xbb\x85\xac" +
-	"\xc7&\xb5(\xe8\xd47\xa81\x80\x18\x02$\xefZ\x0e" +
-	"\x90Y\xa6bf\x95\x82\x88:\x12\xb6\x82\xb0\xaf\xaa\x98" +
-	"Y\xa3`B\x94\x0a\x1c\x13\x95v\x0f\x88\x09\xc0\xc4N" +
-	"\xdfu\xb0\x19\x14l\x86\x8a{\xf5\x7f\xb8/\xbb\xddQ" +
-	"v\xcb\x8a\xca:\x00\xa3\xa0\xa8h<\xa2(\x98\x8c\\" +
-	"\xb3\x92\xd2\x0b`\x08\xc2\x1f%\\Qt\xd9\xa0\xf6*" +
-	"\xeb\x01\x8cG\x08\x7f\\Q\x10U\x1dU\x00\xf6\x982" +
-	"\x0a`\xec'\xf8\x87D\x8f\xa1\x8e1\x00v@\xd9\x03" +
-	"`\xfc\x80\xf0C\x84\xd7):\xd6\x01\xb0'\x95\xd3\x00" +
-	"\xc6!\xc2\x8f\x11^\xaf\xeaX\x0f\xc0\x8eH\xb7\xcf\x10" +
-	"\xfe\x1c\xe1ZL\xa7\xd9\xc8\x8eK\xfdc\x84\x9f\"\xbc" +
-	"A\xd5\xb1\x01\x80\x9dP\x9e\x060N\x11\xfe\x12\xe1\x8d" +
-	"1\x1d\x1b\x01\xd8o\x15\x0f\xc0x\x91\xf0\xb3\x847\xd5" +
-	"\xe9\xd8\x04\xc0\xfe\xa8\xfc\x08\xc08K\xf8\xab\x84/\xa8" +
-	"\xd7q\x01\x00;\xaf\xbc\x0e`\xfc\x99\xf0K\x847_" +
-	"\xd2\xb1\x19\x80\xfdM\xc6\xf3\x17\xc2\xdf!<\xbeD\xc7" +
-	"8\x0d\x1ae5\x80\xf1W\xc2\xdf%\xbc\xe5\xb2\x8e-" +
-	"\x00\xec\x8a\x8c\xf3\x1d\xc2\xaf\x11\x9eh\xd01\x01\xc0\xde" +
-	"W\xbe\x07`\\#\xfc\x13\xc2[\x1bul\x05`7" +
-	"d}>&<\xa6*\x98L6\xe9\x98\x04`\xa8R" +
-	"^1UE\xa3\x95\xf0\xb6\x84\x8em\x00,\xae\x8e\x01" +
-	"\x18\xcd\x84\xdfF8[\xa0#\x03`\xed\xea\xf3\x00\xc6" +
-	"m\x84/#\\o\xd6Q\x07`KU\xf2\xbb\x8c\xf0" +
-	"U\x84\xb7\xc7ul\x07`+T\x8a\xf3n\xc2\xd7\x12" +
-	"\xbe\xf0\x8b:.\x04`\xdd\x92\xbf\x96\xf0AU\xc1\x99" +
-	"i\xb3\xb4\xd1\x9c\xe4\xe5\x0d\xd6?m\x96\xb6\xf0\xf1\xd9" +
-	"\xfd\xe6\xb9\xa6Ev\xa0\xe1\x12a~t:A\xb5\x05" +
-	"6\x81\x82M\x80\x81\x13\x1de\xe8\x0f\x0f\xee<\x03\x86" +
-	"\xf8\xa0\xdd\xef\x0b\xd3\xc9\xf22\xa1\x7f\xc2\xdccz\xd6" +
-	"\xac:\xf1\x1f4\xf7\x98\xa0V\x01\xd1\xb3\x06mZ\xaf" +
-	"V\x04\x02\xd3\x9a\xb2}\xd7+AG8H\xe6zN" +
-	"YS6\x921\x0ca\x9eM)\xdb\"\xdd,V\x02" +
-	"s\x1d>b\x96\x10AA\x04\xec\xc8\x9b\x0e\xf7\xb1\x1e" +
-	"\x14\xac\x07\x0c\x84\x9d\xe7i\x1ax*\xb7\xca\x94\xd9\xca" +
-	"\xa0\x1co>\x174\xa2#\x8f~1\x97\xe3\xbe\xa0\x02" +
-	"}6L\xee\x0b{\xd2\x14\x1c\xad-\xaei\x8d\xd8\x96" +
-	"*&f\x8dT\x7f\x9ao\xa0\xf1\xdd\x02\x13\x95{t" +
-	"\xd8\x1c\x02\xcb\x8e\xaa\xf9\x80\xe7N\x8e\x98\xa5\x81\x0e\xee" +
-	"\x08\xee\xcd\xae\x9f\xa2\xc1\xe4\x0c\x14\xb1<,\xe7D\x94" +
-	"\x8d&\xa8L\xa1\x0cN\x9b%\x83\xe7y\x16\x85\xed:" +
-	"\xe1\xe5\x05\x13\x95\xabY\xe4\xb6\xdc\x86\xea\xaa\xb4\xa1\xd9" +
-	"A\x15\xd5@\x8a\xc8VH\xfd%\x99\xec%\x91d\xe3" +
-	":\x00\xda\x09\xc2\xce\xce\x14\xb8\x97\xe5\x8e\xa8\xa5\x17w" +
-	"\xcf\xed\xc5\xd5\x9a!\xd5r\xa0\xdfu\x04\xdf-\x1bb" +
-	"\xb3t\xbed\x9dt\xde\xbe\x9c\xee^\xc9\xf8:\x80\x99" +
-	"q\x8f\xf3i\xb3\x94\xc8\xda\xa24Stv9\xee\xb4" +
-	"SK$\x9d5M\x11\xcd\xea\xac\xf5\xaeyO\xad\x0e" +
-	"\xbak]\xd0y\xabb\xca\xdb,:T\xc7\xd6\xd9y" +
-	"f\xd2\xec\xda\xa1bf\xa22U\x92|5@\xe6[" +
-	"*f\xf2\x0ab8Q\x92\xf6\x97\x012\x96\x8a\x99\x82" +
-	"\x82I\xb5U\xce\x93\xe4$\xad\x9eP1#*\x93o" +
-	"\xf6\x8ft\xb8\xcb:\xc6\xf3\xae9\xdbH4_x\xe5" +
-	"~\x90\x18s\xdd\xfc\xec\xa9\xab%\xd5U5\xcd\xf0\xfe" +
-	"\xf0\xfe>g\xf3\xae\x0e7\xefz\x80\x8e\x82)&\xe4" +
-	"m0\xbc\xf7\x00\xd4\x14HW\x8d\xbb\xa0V~\xad\x97" +
-	"\x9b\xb55\xf2\xbf~+\xfeH\xd4Hd\x1f\xd1\xa2*" +
-	"\x86\x1b\xa2;<\x85+\xb6\xc8Sx\x17\xfd!R\x93" +
-	"w\xd0#\x96\\\xba\x1c`&[\xf4<j\x08\x05\x8f" +
-	"[vVp@+(\xb8\xbeo\x8f\xe5i\x12\x05<" +
-	"\xfa@\x00\x90\x187\xed|M\x95\xa7\xc8\xff\x1b\x00\x00" +
-	"\xff\xff$\xbf$<"
+const schema_b526ba661d550a59 = "x\xda\x94W}l\x1c\xd5\x11\x9f\xd9w\xe7s\x1c\x9f" +
+	"\xcf\x9b\xb7N\x03!J\xd3\x12$\"R\x12BJ0" +
+	"\x05\xe3\xf8\x88 \xba\x10o\x96`b\xc5\x12\xeb\xdbg" +
+	"{a\xbd{\xec\xbe\xb3\xe3\x88\xc8\x90\x82\x84h\x11\xfd" +
+	"\x00\x94\"\">\x92H\xa8m \xa5P\xd1\x08\xd4\x12" +
+	"\xf1GD\x1b\x09P\xab\x16(\xe2CT\xa1\xb4\x11D" +
+	"\x05\x09(\xd1V\xf3\xf6\xbe\x12_\x1b\xee\xaf\xbd\xfd\xcd" +
+	"o\xe7\xeb\xcd\x9b\x99[5\x94\xbe:\xb5:;\xd4\x01" +
+	"\x9a\xb9#\xdd\x16\xeb\xb7n{\xdf\x97O\xdd\x01\xfab" +
+	"\x8c\xb7ul]2v\xf8\x82\xe7 \x95\x01X\xa3\xa7" +
+	"\x87\x91/Og\x80\xc5O\x7fZ\xb8|\xf8\x93#w" +
+	"6a!\xb1z\x14\xeb\xa6\x81#\xf7\x8f^\xf0\xe8\xdd" +
+	"\xa0/\xd6\xea,\xc05'S\x1b\x91\xa7\xd3\x09\xfd/" +
+	"\x1a`\xbc\xe0Y\x1c\x1f?z\xec\x91&\x0a_\xcc\x8c" +
+	"\"\x7f-C\x0aW\xbe\xb5\x94\xe53\x13\x8f7a\x1d" +
+	"\xcc\x0c#\x7fI\xb1<\xb6\xe6\xea\xcfG\xdb\xf6\x9d\xce" +
+	"JkD\xdbK\xb4_e2\x00\xfc`f\x1a0\xde" +
+	"\xfd\xd9g\xdf^\xf3\xcf\x93\xfb\xc1\\\x8c\xed\x0dl\xe5" +
+	"\\O\xfb\xb9\xc8\x97\xb7\xd3\xcfe\xed\xb94`\x9c\x1f" +
+	"\xf8\xfd+\x07\xdf\xd9w`NHodw#?\x91" +
+	"%\xc5\xff\xc8^\x06\x18o\xddo\xbeq\xd1\xd4\xb1\x03" +
+	"M|=\x91\x1dF\x8e]\xe4\xebSo\x15\x1f\xfc\xc1" +
+	"\x93\x1f\xffb\x8e\xbe\xb7\xb3\xbdu}\x9b\x01\xe3\x91\xe7" +
+	"\x8e\xaf\xbe\xff\xd4;O5\xd1w\x8a\xf4\xe9J_\xdf" +
+	";\x1f\xed\xda\xf4\xcd\xa1CM\xad\x8eV\xad\x1e\xc5\xc2" +
+	"2\xb7\xe8?\xdf\x84\xf56\xe9:\x99%\xd6\xc4\x0b?" +
+	"}\xc0\xba\"\xffb\x13\xd61\xd2\xf5\x9eb\xdd\xc5." +
+	"}W|\xef\xfc#\xcdN\x8eX\xaf)\xd6\xc7\xbf\xbe" +
+	"\xea\xb5uW\xder\x94\xd2\xdcx(\xa8\xce.\xbb\x00" +
+	"\xf9\x8b*\xd6\xdff\x8f\x03\xc6\xbd\xdb\x86J\xde\x9f\x1f" +
+	"\xfdC\x13\x9d\xf7u\x8d\"\x7f\\E\xf1\xea\xee\xc7\xc6" +
+	"\xff\xf3\xe6C\xc7\x9a\xb0v\x11\xeb\xc7\x8a\xb5\xb6\x90\xff" +
+	"\xfe\x9e\xa1\x87\xdel\xc2\x9a\xec\x1aF~\xa7b\x1d\xf1" +
+	"\x7f7\xff\xc6\x97\xb7\xff\xbb\x09k\x84X\xb7)\xd69" +
+	"{\xf7^7\xef_\x0b?m\xc2\xdaD,[\xb1\xf6" +
+	"\xa5J\xa7\xae\xb8\xeb\xbe/\x9a\xb0\xae$\x96\xa9X+" +
+	">\\~\xfd\xf1\xedW}9\xe7\xe4W\x92\xef\xfd]" +
+	"\x94\x8d+\xbbf\x01\xe3'\xa2\xc1\xa3\xaf\x8c\xec\xfb\x92" +
+	"r\xa7\x9dY\xd0\xbb\xbav'\x91Rj\x86\x100\xd6" +
+	"\x7f3}\xcf\x89\xfe\xd1\xaf\x9a\x98\xcfv\x8f\"_\xd6" +
+	"M\xe6g\xf7\x1c:n\xed\xb9'nz \xa7r\x87" +
+	"\x91\xf7t\x93\x0bz\xf7\xd3\xb02.\x8aP\xd8\xde\xc5" +
+	"\xc5T9\x92\xc1\xe4\xc5E\xf5\xf8N\xd1.\xf9\xa5\xde" +
+	"\x01\xf5\xb2ED\"\x9c\x12\xcc\xb9t\x10\xb1\x15\xfe\xaa" +
+	"\xb3\xf17\xd9%\xe7:\xbfT\x967\xcc\x94\x04\xc0 " +
+	"\xa2\xb9\x035\x00n\xe3F\x00D>\x82\xcf\x00\xa0\xc6" +
+	"G\xf0\x09\x00d|\x04\x7f\x0e\x80\xa9\xca3\xcdG\xf0" +
+	"M\x00l\xe36\x8e\x02`\x86\x8f\xe0+\x00\xd8\xcem" +
+	"\xf5\x9c\xc7\x05\xee\x04\xc0\x0en\xe3-\x008\x9f\x8f\xa8" +
+	"\xf7N\xbe\x0d?\x02\xc0,\x1f\xc1\xc3\x00\xd8\xc5G\xf0" +
+	"}\x00\xccq\x1b_\x07\xc0n.\xf0a\x00\xd4\xb9P" +
+	"v\x17p\xa1\xec\xf1\xca\xbbQ\x91\xf7T\xde\x17r\x81" +
+	"G\x00\xf0\x1b\\(\xbd\x8b\xb8\xab\xf4\x9d\xb3f\x12{" +
+	"\x11\x00\xcf\xe5eeh1/+\x07\xce\xe3\xb7\xe10" +
+	"\x00.\xe1\x93\xe4X\xec\x04\xd3\xbe\x17\xd8\x0e\x00\xc4\x91" +
+	"\x907\xd8\xe1\xb8@Y\xb0\xa5\x08moi\x7f\xb1(" +
+	"<\xc2\xad\x92\x10\x0e\x16\xdcIWn\x1e\x1b\xcbDB" +
+	"\x9e\x81\x0e\x04~N\x86\x81\"\x0f\x94\xc3)\x81J\xd8" +
+	"\x08\xdf\xe8Fn\xa0\xf9JZ\x15\xca\x90%\xc2B0" +
+	"^\x10\x90\x99\x12s\xa8\xca%\xf2\xa8?q\xb1Q\xb6" +
+	"\xc9\xf5\x13\xf1\x8d\x00q((\x10K@\x9f\x94\xae?" +
+	"\x1e\xc5\x91=%,!%\xe4\x92W!\xaf\xf1\xedQ" +
+	"\x0f\xfa\x12\xf3g*\xdb\x1a\x09%\x17V\xae*N\"" +
+	"\xa9\x0a\x1a\xbeS?4\x15y\xfd\xb3R\xa6\"\xbd6" +
+	"\xf0\x9c\x82fG\xd2\x12\xc2WTb\xa2\xac\xabL\xbc" +
+	"\xde(Xx\xeb\x99`\x7f1SIz#\xbay," +
+	"7V\xc9z^\x8c\xd9e\xf4d\xc1\xf6\xc5\x90\x9bq" +
+	"\xe4\xc4\x99\xe4\x82\xcdd\x7fL\xd9 .\x96=Ii" +
+	"p3\x94\x05B\xb7\x88b\x90\x9e\x9c\x14\xbe#\x1c%" +
+	"\xf1\xc7#\xa0\xa8\xbc`:\x1fL\xfb\x1b\x82\xf0z\xb1" +
+	"#\x09\xb2\x90\xa3 \xeb1o-\x9d&u3\x15)" +
+	"\xc5l\xb1j\xacrh\xc2\xf5\xc4\xc0\x84\xed\x8f\xbb\xfe" +
+	"\xb8%\xfa\x12\xba\xb2>(\xc2\x08\xddH\x0a_\x92 " +
+	"9\xab\xa2\xed\x17\x85\x97\x0f\xa0/\xa9\xc7JMl\x8c" +
+	"\x80\x05~\xe5\xc5\x0a W\x0e\x8b\xe2\xeb7\x82\x8c\xb3" +
+	"\xfa\x92\x16;\xc7\xe5_\xa7s\\\xb3C\xaa\xe4mf" +
+	"eI\xad\xa3\x9d\xa5\x00R\x08\xa0_x/\x80y\x11" +
+	"Cs\x9d\x86:\xa2\x81\x04\xae\xdd\x08`^\xca\xd0\xbc" +
+	"Z\xc3\xda\x8d\xc3\xc10\x18\x0fE\x14\xd1\xb5\xaf\xb7c" +
+	"@\xec\x06\xa4\x88\x93c\xa1\xa6\x01\x1avB\xdd+\xf6" +
+	"?\xbc\xaaz\xb3\xbd\xea\x0d/k\xeb\x01\xac\x92\xc6\xd0" +
+	"\xba]\xab;\xc4g\xb4^\x00K\x12~\x07\xe1\x9af" +
+	"\xa8\xe6\xb7K\xdb\x08`\xddN\xf8=\x9a\x86\xc8\x0cd" +
+	"\x00\xfcnm\x18\xc0\xba\x8b\xe0\x1f\x11=\x85\x06\xa6\x00" +
+	"\xf8}\xdaN\x00\xeb\x87\x84\xef!<\xad\x19\x98\x06\xe0" +
+	"\x0fj\x87\x01\xac=\x84\xef'\xbc\x8d\x19\xd8\x06\xc0\x1f" +
+	"Wf\x1f!\xfcI\xc23)\x83&\x03?\xa0\xf4\xef" +
+	"'\xfc\x10\xe1\xed\xcc\xc0vZ\xa6\xb4\x87\x01\xacC\x84" +
+	"\xbf@\xf8\xbc\x94\x81\xf3h\x9ek!\x80\xf5<\xe1/" +
+	"\x13\xde\x916\xb0\x03\x80\xbf\xa4\xfd\x04\xc0z\x99\xf0W" +
+	"\x09\x9f\xdff\xe0|\x00~L{\x1d\xc0\xfa\x13\xe1\xef" +
+	"\x12\xde\xf9\xae\x81\x9d\x00\xfcm\xe5\xcf_\x09\xff\x80\xf0" +
+	"\xec\x12\x03\xb3\x00\xfc=\xed\x12\x00\xebo\x84\x7fHx" +
+	"\xd7{\x06v\x01\xf0\xbf+?? \xfc\x13\xc2s\xed" +
+	"\x06\xe6\x00\xf8\x09\xed^\x00\xeb\x13\xc2\xbf\"\xbc{\x9e" +
+	"\x81\xdd\x00\xfc\x0b\x95\x9f\xcf\x09O1\x0du\xbd\xc3@" +
+	"\x1d\x80#\xa3\xb8R\x8c\xa1\xd5M\xf8\x82\x9c\x81\x0b\x00" +
+	"x\x96\x8d\x02X\x9d\x84/\"\x9c\xcf7\x90\x03\xf0\x1e" +
+	"\xf6\x0c\x80\xb5\x88\xf0\xf3\x097:\x0d4\x00\xf82F" +
+	"v\xcf'|\x15\xe1=Y\x03{\x00\xf8JF~^" +
+	"D\xf8:\xc2\x17\x9eg\xe0B\x00\xbeV\xf1\xd7\x11\x9e" +
+	"g\x1a\xceN\xdb3\xd7\xdb\x93\xa2Z`}\xd3\xf6\xcc" +
+	"\x161V\xab\xb70\xb0\x1d\x927\xd6`T\xb9\xe1\xc0" +
+	"\\\x89\x1d\xa0a\x07`\xecW\xda\x01\xf4%\x97\x7f\x8e" +
+	"\x00\x13<\xef\xf6E\x92.z\x95\xd07a\xef\xb4C" +
+	"\xa7\xa6\x9d\xf8\xd7\xda;m`M@\x0c\x9d\xbcK\xdf" +
+	"\xb3\xba\x82\xd8v\xa6\xdc(\x08g`i2\x8c\x1a-" +
+	"\xf7;S.\x920qa\x8eL\xab\xca*z\x8bX" +
+	"w,\xf0\xc5\x90=\x83\x08\x1a\"\xe0R\xcf\xf6E\x84" +
+	"m\xa0a\x1b`,]O\x14hh2\xe1T)\xb5" +
+	"\xcc\xa0\x1a\x91\x91\x904\xfe+\x16\xa3\xf2\xf8\xb8\x88$" +
+	"%\xe8t7E$\xddI[\x0at\xb6\x04\xb63\xe4" +
+	":LN\xd4\x84\x94\x7f\x9a\x91\x90\x11;$\xe6\xeak" +
+	"= \xe6\x00c\xc7\xaddsC\x18L\x0e\xd93\x03" +
+	"K\x85/EX\xfb~\x8a\x86\x9b?P\xc6\xea\xc0m" +
+	"\xf0\xa8X\x99\xc2*\x84*8m\xcfX\xc2\x13E\x94" +
+	"n\xe0'\x8b\x11\xe6\xea;e\xc5l\xb5\x0d\xa5\x9b\xb4" +
+	"\xa1\xda\xb0\xab\xe4@)Q\x1d\x92\xfa\x8b\xae\xf7\x92\x12" +
+	"}\xdez\x00\xaa\x04\xe9\x16gK\",\x0a_\xb6\xd2" +
+	"\xa2\xd76\xb6\xe8f\xcd\x90r9\xd0\x17\xf8R\xecP" +
+	"\x0d\xb1S\x19_\xb2^\x19\xefYA{\x9d\x9e]\x0f" +
+	"0;\x16\x0a1m\xcf\xe4\x8a\xae\x9c\x99-\xfb\xb7\xfa" +
+	"\xc1\xb4\xdf\x8a'\xab[\x1a.\x19gu\xab{\xece" +
+	"\xad\x1aX\xdb\xea\x07\xab\xcf\x96L\xb5)\xa3Oy\xec" +
+	"\xae\x8d9{\x05\x80\xb9\x9d\xa19\xd10\xe6\xc4%\x00" +
+	"\xe6\xcd\x0cMOCL&\x8a\xee~\x0b\xc0t\x18\x9a" +
+	"%\x0du\xd6\xad\xe6\x89>I_O04\xa5\x869" +
+	"9S\x12\x98\xab\xff\xadO\xaal\xe9\x98\x17\xd8\xb5F" +
+	"\x92\x89dX\xed\x07\xb9\xd1 \xf0j\xb7\xae\x95PW" +
+	"\xb5\x9a\x9b5-\x9eV\xab\xfcVw\x93u-\xf2\xbf" +
+	"{6\xfeP\xe5\xc2\xab\xfb\x9e\x99)\x09:\xe5\xe4\xe0" +
+	"\xd6&\xb7e\xe5\x16u[.\xa4?EL_N\x8f" +
+	"\x94\xbel\x05\xc0l\xb1\x1c\x86tqK\xa1p\xdc\xa2" +
+	"\x14\x80N\\\x0a\xa2\xc8\x1d\xf5hb\xc4\xa2\xb2#\x01" +
+	"@n\xccv\xbd\xff\xdb7\xa8\xc8\xf2\x95\xc5\xa8\xb6\x17" +
+	"\x913\x8bj%\xf7\xb3^\x00\xf3\x01\x86\xe6c\x0d%" +
+	"\xb7w\x0b\x80\xf9\x08C\xf3I\xdab0q\xfd\xc00" +
+	"\x80\xb9\x9f\xa1y\x88jNKj\xee\xe0n\x00\xf3\x97" +
+	"\x0c\xcd\xe75\xc4\x94\xda_\xf4\xe7\xe8\xebg\x19\x9a\xaf" +
+	"\xd2\xf2\x82jy\xd1\x8f\x11\xf1\x8f\x0c\xcd\x0f5\xec\xb3" +
+	"\x8b\xd2\x9d\x12\xf5jS[\xaaG\xb1\xd60\x19H\xdb" +
+	"\xdb\xe0z\xc0D\x84\xed\xa0a;4,y\xc2\xd9\xe0" +
+	"z\"\x82\x9a\xc4\x0b\x8a6\xa5\x1b0\xc2.\xc0A\x86" +
+	"\xaa\xb0\xbb\x1aD\x98\x17\xd2v\xbd\x08\xaa\x84\xee\xfa\x1f" +
+	"k@Em\xa5\x8aO\xab\x82\xb3%\xbfP\xf1!\xdf" +
+	"\x97\xf8\xa0\xdag\xed\x0c\xae\xa1E6\xcf\xd0\x1c\xd4\xb0" +
+	"z\x04\x9b(\xdb\x05\x86\xe6M\x0dG\xb0\x95\x92x\x03" +
+	"C\xf3f\xad!\xe4\x86=\xa2\xb5\xac\xfd7\x00\x00\xff" +
+	"\xff)\xa1\xbb\x06"
 
 func RegisterSchema(reg *schemas.Registry) {
 	reg.Register(&schemas.Schema{
@@ -2127,14 +2375,15 @@ func RegisterSchema(reg *schemas.Registry) {
 			0xc2243c65e0340384,
 			0xc86a3d38d13eb3ef,
 			0xcb9fd56c7057593a,
-			0xcbdaf55a12931b65,
 			0xcd96dafb67a082d0,
 			0xda96579883444c35,
 			0xf35cc4560bbf6ec2,
 			0xf416ec09499d9d19,
 			0xf98d843bfd7004a3,
 			0xfa3e5ce74e25e82a,
+			0xfaa35dcac85073a2,
 			0xfc6241ed8877b611,
+			0xff889853e7b0987f,
 		},
 		Compressed: true,
 	})

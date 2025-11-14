@@ -3,17 +3,23 @@ package settings
 import (
 	"encoding/json"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/params"
-	"pfeifer.dev/mapd/utils"
 )
 
-var Settings = MapdSettings{}
+var Settings = MapdSettings{
+	downloadProgress: make(chan DownloadProgress, 1),
+	cancelDownload: make(chan bool, 1),
+}
 
 type MapdSettings struct {
+	downloadProgress                    chan DownloadProgress
+	cancelDownload                      chan bool
+	downloadActive                      bool
 	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
@@ -21,6 +27,8 @@ type MapdSettings struct {
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
 	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
 	LogLevel                            string  `json:"log_level"`
+	LogJson                             bool    `json:"log_json"`
+	LogSource                           bool    `json:"log_source"`
 	VisionCurveTargetLatA               float32 `json:"vision_curve_target_lat_a"`
 	VisionCurveMinTargetV               float32 `json:"vision_curve_min_target_v"`
 	SpeedLimitOffset                    float32 `json:"speed_limit_offset"`
@@ -41,6 +49,8 @@ func (s *MapdSettings) Default() {
 	s.VisionCurveTargetLatA = 1.9
 	s.SpeedLimitOffset = 0
 	s.LogLevel = "error"
+	s.LogJson = true
+	s.LogSource = true
 	s.VisionCurveSpeedControlEnabled = false
 	s.CurveSpeedControlEnabled = false
 	s.SpeedLimitControlEnabled = false
@@ -64,6 +74,8 @@ func (s *MapdSettings) Recommended() {
 	s.VisionCurveTargetLatA = 1.9
 	s.SpeedLimitOffset = 5 * MPH_TO_MS
 	s.LogLevel = "error"
+	s.LogJson = true
+	s.LogSource = true
 	s.VisionCurveSpeedControlEnabled = true
 	s.CurveSpeedControlEnabled = true
 	s.SpeedLimitControlEnabled = true
@@ -86,17 +98,30 @@ func (s *MapdSettings) Load() (success bool) {
 	s.Default() // set defaults so settings not already in param are defaulted
 	data, err := params.GetParam(params.MAPD_SETTINGS)
 	if err != nil {
-		utils.Loge(err)
+		slog.Warn("failed to read MAPD_SETTINGS param", "error", err)
 		return false
 	}
 
 	err = json.Unmarshal(data, s)
 	if err != nil {
-		utils.Loge(err)
+		slog.Warn("failed to parse MAPD_SETTINGS param", "error", err)
 		return false
 	}
 
-	s.setLogLevel()
+	s.setupLogger()
+
+	return true
+}
+
+func (s *MapdSettings) Unmarshal(b []byte) (success bool) {
+	s.Default() // set defaults so settings not already in param are defaulted
+	err := json.Unmarshal(b, s)
+	if err != nil {
+		slog.Warn("failed to unmarshal settings data", "error", err)
+		return false
+	}
+
+	s.setupLogger()
 
 	return true
 }
@@ -114,14 +139,26 @@ func (s *MapdSettings) LoadWithRetries(tries int) {
 func (s *MapdSettings) Save() {
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		utils.Loge(err)
+		slog.Error("failed to marshal settings to json", "error", err)
 		return
 	}
 	err = params.PutParam(params.MAPD_SETTINGS, data)
 	if err != nil {
-		utils.Loge(err)
+		slog.Error("failed to save MAPD_SETTINGS param", "error", err)
 		return
 	}
+}
+
+func (s *MapdSettings) setupLogger() {
+	handlerOptions := slog.HandlerOptions{
+		AddSource: s.LogSource,
+	}
+	if s.LogJson {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &handlerOptions)))
+	} else {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &handlerOptions)))
+	}
+	s.setLogLevel()
 }
 
 func (s *MapdSettings) setLogLevel() {
@@ -137,6 +174,16 @@ func (s *MapdSettings) setLogLevel() {
 	default:
 		slog.SetLogLoggerLevel(slog.LevelError)
 	}
+}
+
+func (s *MapdSettings) GetDownloadProgress() (progress DownloadProgress, success bool) {
+	select {
+	case progress = <- s.downloadProgress:
+		s.downloadActive = progress.Active
+		return progress, true
+	default:
+	}
+	return
 }
 
 func (s *MapdSettings) Handle(input custom.MapdIn) {
@@ -183,23 +230,36 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.SpeedUpForNextSpeedLimit = input.Bool()
 	case custom.MapdInputType_setSlowDownForNextSpeedLimit:
 		s.SlowDownForNextSpeedLimit = input.Bool()
+	case custom.MapdInputType_setLogSource:
+		s.LogSource = input.Bool()
+		s.setupLogger()
+	case custom.MapdInputType_setLogJson:
+		s.LogJson = input.Bool()
+		s.setupLogger()
 	case custom.MapdInputType_loadPersistentSettings:
 		s.Load()
 	case custom.MapdInputType_loadDefaultSettings:
 		s.Default()
 	case custom.MapdInputType_loadRecommendedSettings:
 		s.Recommended()
+	case custom.MapdInputType_cancelDownload:
+		select {
+			case s.cancelDownload <- true:
+			default:
+		}
 	case custom.MapdInputType_download:
 		path, err := input.Str()
 		if err != nil {
-			utils.Loge(err)
+			slog.Warn("failed to read download path string", "error", err)
 			return
 		}
-		Download(path)
+		if !s.downloadActive {
+			go Download(path, s.downloadProgress, s.cancelDownload)
+		}
 	case custom.MapdInputType_setLogLevel:
 		logLevel, err := input.Str()
 		if err != nil {
-			utils.Loge(err)
+			slog.Warn("failed to read log level string", "error", err)
 			return
 		}
 		s.LogLevel = logLevel
