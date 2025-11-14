@@ -1,9 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"log/slog"
 	"time"
 
-	"capnproto.org/go/capnp/v3"
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
 	ms "pfeifer.dev/mapd/settings"
@@ -19,13 +20,26 @@ type ExtendedState struct {
 func (s *ExtendedState) Send() error {
 	if time.Since(s.lastSend) > 1 * time.Second {
 		s.lastSend = time.Now()
-		return s.Pub.Send(s.downloadProgressToMessage())
+		msg, out := s.Pub.NewMessage(true)
+		s.setDownloadProgress(out)
+		s.setSettings(out)
+		return s.Pub.Send(msg)
 	}
 	return nil
 }
 
-func (s *ExtendedState) downloadProgressToMessage() *capnp.Message {
-	msg, out := s.Pub.NewMessage(true)
+func (s *ExtendedState) setSettings(out custom.MapdExtendedOut) {
+	b, err := json.Marshal(ms.Settings)
+	if err != nil {
+		slog.Warn("failed to marshal settings for extended state")
+		return
+	}
+	if err := out.SetSettings(string(b)); err != nil {
+		slog.Warn("failed to set settings in extended state")
+	}
+}
+
+func (s *ExtendedState) setDownloadProgress(out custom.MapdExtendedOut) {
 	p, err := out.NewDownloadProgress()
 	if err != nil {
 		panic(err)
@@ -58,6 +72,5 @@ func (s *ExtendedState) downloadProgressToMessage() *capnp.Message {
 		d.SetTotalFiles(uint32(locationDetails.TotalFiles))
 		idx++
 	}
-	return msg
 }
 
