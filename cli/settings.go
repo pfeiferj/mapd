@@ -159,6 +159,20 @@ var settingsList = []list.Item{
 		},
 	},
 	settingsItem{
+		title:       "Use JSON Logger",
+		desc:        "When true the logs will be output in a json format instead of a text format",
+		MessageType: custom.MapdInputType_setLogJson,
+		Type:        Bool,
+		state:       settingsInput,
+	},
+	settingsItem{
+		title:       "Log Source Location",
+		desc:        "When true the logs will include the file and line that wrote the log",
+		MessageType: custom.MapdInputType_setLogSource,
+		Type:        Bool,
+		state:       settingsInput,
+	},
+	settingsItem{
 		title: "Load Default Settings",
 		desc:  "Loads the default settings",
 		state: defaultSettings,

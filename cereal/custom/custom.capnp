@@ -111,6 +111,8 @@ enum MapdInputType {
   setHoldSpeedLimitWhileChangingSetSpeed @25;
   loadPersistentSettings @26;
   cancelDownload @27;
+  setLogJson @28;
+  setLogSource @29;
 }
 
 enum WaySelectionType {

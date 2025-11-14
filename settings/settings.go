@@ -3,6 +3,7 @@ package settings
 import (
 	"encoding/json"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -26,6 +27,8 @@ type MapdSettings struct {
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
 	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
 	LogLevel                            string  `json:"log_level"`
+	LogJson                             bool    `json:"log_json"`
+	LogSource                           bool    `json:"log_source"`
 	VisionCurveTargetLatA               float32 `json:"vision_curve_target_lat_a"`
 	VisionCurveMinTargetV               float32 `json:"vision_curve_min_target_v"`
 	SpeedLimitOffset                    float32 `json:"speed_limit_offset"`
@@ -46,6 +49,8 @@ func (s *MapdSettings) Default() {
 	s.VisionCurveTargetLatA = 1.9
 	s.SpeedLimitOffset = 0
 	s.LogLevel = "error"
+	s.LogJson = true
+	s.LogSource = true
 	s.VisionCurveSpeedControlEnabled = false
 	s.CurveSpeedControlEnabled = false
 	s.SpeedLimitControlEnabled = false
@@ -69,6 +74,8 @@ func (s *MapdSettings) Recommended() {
 	s.VisionCurveTargetLatA = 1.9
 	s.SpeedLimitOffset = 5 * MPH_TO_MS
 	s.LogLevel = "error"
+	s.LogJson = true
+	s.LogSource = true
 	s.VisionCurveSpeedControlEnabled = true
 	s.CurveSpeedControlEnabled = true
 	s.SpeedLimitControlEnabled = true
@@ -101,7 +108,7 @@ func (s *MapdSettings) Load() (success bool) {
 		return false
 	}
 
-	s.setLogLevel()
+	s.setupLogger()
 
 	return true
 }
@@ -127,6 +134,18 @@ func (s *MapdSettings) Save() {
 		slog.Error("failed to save MAPD_SETTINGS param", "error", err)
 		return
 	}
+}
+
+func (s *MapdSettings) setupLogger() {
+	handlerOptions := slog.HandlerOptions{
+		AddSource: s.LogSource,
+	}
+	if s.LogJson {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &handlerOptions)))
+	} else {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &handlerOptions)))
+	}
+	s.setLogLevel()
 }
 
 func (s *MapdSettings) setLogLevel() {
@@ -198,6 +217,12 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.SpeedUpForNextSpeedLimit = input.Bool()
 	case custom.MapdInputType_setSlowDownForNextSpeedLimit:
 		s.SlowDownForNextSpeedLimit = input.Bool()
+	case custom.MapdInputType_setLogSource:
+		s.LogSource = input.Bool()
+		s.setupLogger()
+	case custom.MapdInputType_setLogJson:
+		s.LogJson = input.Bool()
+		s.setupLogger()
 	case custom.MapdInputType_loadPersistentSettings:
 		s.Load()
 	case custom.MapdInputType_loadDefaultSettings:
