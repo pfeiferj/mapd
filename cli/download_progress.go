@@ -13,11 +13,8 @@ type downloadProgressModel struct {
 }
 
 func (m downloadProgressModel) Update(msg tea.Msg, mm *uiModel) (downloadProgressModel, tea.Cmd) {
-	out, success := mm.extendedSub.Read()
-	if success {
-		m.valid = true
-		m.output = out
-	}
+	m.valid = mm.extendedDataValid
+	m.output = mm.extendedData
 
 	return m, nil
 }

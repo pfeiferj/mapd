@@ -11,6 +11,7 @@ import (
 
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type mainState int
@@ -34,15 +35,17 @@ func tickEvery() tea.Cmd {
 }
 
 type uiModel struct {
-	list             list.Model
-	state            mainState
-	settings         settingsModel
-	output           outputModel
-	download         downloadModel
-	downloadProgress downloadProgressModel
-	pub              *cereal.Publisher[custom.MapdIn]
-	sub              *cereal.Subscriber[custom.MapdOut]
-	extendedSub      *cereal.Subscriber[custom.MapdExtendedOut]
+	list              list.Model
+	state             mainState
+	settings          settingsModel
+	output            outputModel
+	download          downloadModel
+	downloadProgress  downloadProgressModel
+	pub               *cereal.Publisher[custom.MapdIn]
+	sub               *cereal.Subscriber[custom.MapdOut]
+	extendedSub       *cereal.Subscriber[custom.MapdExtendedOut]
+	extendedData      custom.MapdExtendedOut
+	extendedDataValid bool
 }
 type item struct {
 	title, desc string
@@ -94,8 +97,16 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.output, _ = m.output.Update(msg, &m)
 		m.downloadProgress, _ = m.downloadProgress.Update(msg, &m)
 	case TickMsg:
+		extendedData, success := m.extendedSub.Read()
+		if success {
+			m.extendedData = extendedData
+			settingsData, _ := extendedData.Settings()
+			ms.Settings.Unmarshal([]byte(settingsData))	
+			m.extendedDataValid = true
+		}
 		m.output, _ = m.output.Update(msg, &m)
 		m.downloadProgress, _ = m.downloadProgress.Update(msg, &m)
+		m.settings, _ = m.settings.Update(msg, &m)
 		return m, tickEvery()
 	}
 

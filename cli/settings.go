@@ -18,6 +18,8 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setSpeedLimitControl,
 		Type:        Enable,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitControlEnabled) },
+
 	},
 	settingsItem{
 		title:       "Curve Speed Control Enabled",
@@ -25,6 +27,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setCurveSpeedControl,
 		Type:        Enable,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.CurveSpeedControlEnabled) },
 	},
 	settingsItem{
 		title:       "Vision Curve Speed Control Enabled",
@@ -32,6 +35,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setVisionCurveSpeedControl,
 		Type:        Enable,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.VisionCurveSpeedControlEnabled) },
 	},
 	settingsItem{
 		title:       "Speed Limit Offset",
@@ -39,6 +43,12 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setSpeedLimitOffset,
 		Type:        Speed,
 		state:       unitsInput,
+		value:  		 func() string {
+			val := ms.Settings.SpeedLimitOffset
+			mph := ms.MS_TO_MPH * val
+			kph := ms.MS_TO_KPH * val
+			return fmt.Sprintf("%f m/s, %f mph, %f kph", val, mph, kph)
+		},
 	},
 	settingsItem{
 		title:       "Slow Down For Next Speed Limit",
@@ -46,6 +56,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setSlowDownForNextSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.SlowDownForNextSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Speed Up For Next Speed Limit",
@@ -53,6 +64,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setSpeedUpForNextSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.SpeedUpForNextSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Vision Target Lateral Acceleration (m/s^2)",
@@ -60,6 +72,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setVisionCurveTargetLatA,
 		Type:        Float,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%f m/s^2", ms.Settings.VisionCurveTargetLatA) },
 	},
 	settingsItem{
 		title:       "Vision Minimum Target Velocity",
@@ -67,6 +80,12 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setVisionCurveMinTargetV,
 		Type:        Speed,
 		state:       unitsInput,
+		value:  		 func() string {
+			val := ms.Settings.VisionCurveMinTargetV
+			mph := ms.MS_TO_MPH * val
+			kph := ms.MS_TO_KPH * val
+			return fmt.Sprintf("%f m/s, %f mph, %f kph", val, mph, kph)
+		},
 	},
 	settingsItem{
 		title:       "Mapd Enable Speed",
@@ -74,6 +93,12 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setEnableSpeed,
 		Type:        Speed,
 		state:       unitsInput,
+		value:  		 func() string {
+			val := ms.Settings.EnableSpeed
+			mph := ms.MS_TO_MPH * val
+			kph := ms.MS_TO_KPH * val
+			return fmt.Sprintf("%f m/s, %f mph, %f kph", val, mph, kph)
+		},
 	},
 	settingsItem{
 		title:       "Use Enable Speed For Speed Limit",
@@ -81,6 +106,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setSpeedLimitUseEnableSpeed,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitUseEnableSpeed) },
 	},
 	settingsItem{
 		title:       "Use Enable Speed for Curve Speed Control",
@@ -88,6 +114,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setCurveUseEnableSpeed,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.CurveUseEnableSpeed) },
 	},
 	settingsItem{
 		title:       "Use Enable Speed for Vision Curve Speed Control",
@@ -95,6 +122,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setVisionCurveUseEnableSpeed,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.VisionCurveUseEnableSpeed) },
 	},
 	settingsItem{
 		title:       "Hold Speed Limit While Changing Set Speed",
@@ -102,6 +130,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.HoldSpeedLimitWhileChangingSetSpeed) },
 	},
 	settingsItem{
 		title:       "Hold Last Seen Speed Limit",
@@ -109,6 +138,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setHoldLastSeenSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.HoldLastSeenSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Curve Target Jerk (m/s^3)",
@@ -116,6 +146,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setCurveTargetJerk,
 		Type:        Float,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%f m/s^3", ms.Settings.CurveTargetJerk) },
 	},
 	settingsItem{
 		title:       "Curve Target Accel (m/s^2)",
@@ -123,6 +154,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setCurveTargetAccel,
 		Type:        Float,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%f m/s^2", ms.Settings.CurveTargetAccel) },
 	},
 	settingsItem{
 		title:       "Curve Target Offset (s)",
@@ -130,6 +162,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setCurveTargetOffset,
 		Type:        Float,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%f s", ms.Settings.CurveTargetOffset) },
 	},
 	settingsItem{
 		title:       "Curve Target Lateral Acceleration (m/s^2)",
@@ -137,6 +170,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setCurveTargetLatA,
 		Type:        Float,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%f m/s^2", ms.Settings.CurveTargetLatA) },
 	},
 	settingsItem{
 		title:       "Default Lane Width",
@@ -144,6 +178,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setDefaultLaneWidth,
 		Type:        Float,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%f meters", ms.Settings.DefaultLaneWidth) },
 	},
 	settingsItem{
 		title:       "Set Log Level",
@@ -157,6 +192,7 @@ var settingsList = []list.Item{
 			settingsItem{title: "info"},
 			settingsItem{title: "debug"},
 		},
+		value:  		 func() string { return fmt.Sprintf("%s", ms.Settings.LogLevel) },
 	},
 	settingsItem{
 		title:       "Use JSON Logger",
@@ -164,6 +200,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setLogJson,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.LogJson) },
 	},
 	settingsItem{
 		title:       "Log Source Location",
@@ -171,56 +208,68 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setLogSource,
 		Type:        Bool,
 		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.LogSource) },
 	},
 	settingsItem{
 		title: "Load Default Settings",
 		desc:  "Loads the default settings",
-		state: defaultSettings,
+		state:  defaultSettings,
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "Load Recommended Settings",
 		desc:  "Loads the recommended settings",
 		state: recommendedSettings,
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "Save Settings",
 		desc:  "Persists any updates to the settings across reboots",
 		state: saveSettings,
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "Return to Main Menu",
 		desc:  "Exit settings configuration and return to the initial actions menu",
 		state: settingsExit,
+		value:  func() string { return "" },
 	},
 }
 
 var enableList = []list.Item{
 	settingsItem{
 		title: "Enable",
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "Disable",
+		value:  func() string { return "" },
 	},
 }
 
 var boolList = []list.Item{
 	settingsItem{
 		title: "Yes",
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "No",
+		value:  func() string { return "" },
 	},
 }
 
 var unitsList = []list.Item{
 	settingsItem{
 		title: "m/s",
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "mph",
+		value:  func() string { return "" },
 	},
 	settingsItem{
 		title: "kph",
+		value:  func() string { return "" },
 	},
 }
 
@@ -261,9 +310,16 @@ type settingsItem struct {
 	MessageType custom.MapdInputType
 	Type        SettingType
 	options     []list.Item
+	value       func() string
 }
 
-func (i settingsItem) Title() string       { return i.title }
+func (i settingsItem) Title() string       {
+	val := i.value()
+	if val != "" {
+		return i.title + " = " + val
+	}
+	return i.title
+}
 func (i settingsItem) Description() string { return i.desc }
 func (i settingsItem) FilterValue() string { return i.title }
 

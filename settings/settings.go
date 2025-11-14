@@ -113,6 +113,19 @@ func (s *MapdSettings) Load() (success bool) {
 	return true
 }
 
+func (s *MapdSettings) Unmarshal(b []byte) (success bool) {
+	s.Default() // set defaults so settings not already in param are defaulted
+	err := json.Unmarshal(b, s)
+	if err != nil {
+		slog.Warn("failed to unmarshal settings data", "error", err)
+		return false
+	}
+
+	s.setupLogger()
+
+	return true
+}
+
 func (s *MapdSettings) LoadWithRetries(tries int) {
 	for range tries {
 		if s.Load() {
