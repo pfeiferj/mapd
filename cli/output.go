@@ -62,12 +62,15 @@ func (m outputModel) View() string {
 	}
 	latRange := maxLat - minLat
 	lonRange := maxLon - minLon
-	latFirst := true
-	if lonRange > latRange {
-		latFirst = false
-	}
 	gHeight := m.height - 15
 	gWidth := m.width
+	if gHeight < gWidth / 2 {
+		gWidth = gHeight * 2
+	} else {
+		gHeight = gWidth / 2
+	}
+
+
 	grid := make([]byte, int(gWidth*gHeight+gHeight + 1))
 	for i := range int(gWidth*gHeight+gHeight + 1) {
 		if i % (gWidth+1) == 0 && i != 0 {
@@ -77,18 +80,18 @@ func (m outputModel) View() string {
 		}
 	}
 	if latRange != 0 && lonRange != 0 {
-
-		aspect := float64(gWidth) / float64(gHeight)
+		aspect := latRange / lonRange
+		if lonRange > latRange {
+			aspect = lonRange / latRange
+		}
 		for i := range path.Len() {
 			point := path.At(i)
-			x := 0.0
-			y := 0.0
-			if latFirst {
-				x = (point.Latitude() - minLat) / latRange
-				y = (point.Longitude() - minLon) / lonRange / aspect
+			y := (point.Latitude() - minLat) / latRange
+			x := (lonRange - (point.Longitude() - minLon)) / lonRange
+			if latRange > lonRange {
+				x /= aspect
 			} else {
-				x = (point.Longitude() - minLon) / lonRange
-				y = (point.Latitude() - minLat) / latRange / aspect
+				y /= aspect
 			}
 			idx := int(math.Floor(x * float64(gWidth)) + ((math.Floor(y*float64(gHeight-1)))*(float64(gWidth)+1))) 
 			if idx % (gWidth+1) == 0 {
