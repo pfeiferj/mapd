@@ -77,9 +77,17 @@ struct MapdDownloadProgress @0xfaa35dcac85073a2 {
   locationDetails @5 :List(MapdDownloadLocationDetails);
 }
 
+struct MapdPathPoint @0xd6f78acca1bc3939 {
+  latitude @0 :Float64;
+  longitude @1 :Float64;
+  curvature @2 :Float32;
+  targetVelocity @3 :Float32;
+}
+
 struct MapdExtendedOut @0xa30662f84033036c {
   downloadProgress @0 :MapdDownloadProgress;
   settings @1 :Text;
+  path @2 :List(MapdPathPoint);
 }
 
 enum MapdInputType {

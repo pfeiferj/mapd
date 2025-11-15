@@ -23,6 +23,7 @@ func main() {
 	state := State{}
 	extendedState := ExtendedState{
 		Pub: cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
+		state: &state,
 	}
 	defer extendedState.Pub.Pub.Msgq.Close()
 

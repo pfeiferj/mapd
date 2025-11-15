@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"math"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"pfeifer.dev/mapd/cereal/custom"
@@ -9,7 +10,10 @@ import (
 
 type outputModel struct {
 	output custom.MapdOut
+	extendedOutput custom.MapdExtendedOut
 	valid  bool
+	extendedValid  bool
+	height, width int
 }
 
 func (m outputModel) Update(msg tea.Msg, mm *uiModel) (outputModel, tea.Cmd) {
@@ -18,17 +22,85 @@ func (m outputModel) Update(msg tea.Msg, mm *uiModel) (outputModel, tea.Cmd) {
 		m.valid = true
 		m.output = out
 	}
+	m.extendedValid = mm.extendedDataValid
+	m.extendedOutput = mm.extendedData
+
+
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		h, v := docStyle.GetFrameSize()
+		m.width = msg.Width-h
+		m.height = msg.Height-v
+	}
 
 	return m, nil
 }
 
 func (m outputModel) View() string {
-	if !m.valid {
+	if !m.valid || !m.extendedValid {
 		return ""
 	}
+	path, _ := m.extendedOutput.Path()
+	minLat := 180.0
+	minLon := 180.0
+	maxLat := -180.0
+	maxLon := -180.0
+	for i := range path.Len() {
+		point := path.At(i)
+		if point.Latitude() < minLat {
+			minLat = point.Latitude()
+		}
+		if point.Longitude() < minLon {
+			minLon = point.Longitude()
+		}
+		if point.Latitude() > maxLat {
+			maxLat = point.Latitude()
+		}
+		if point.Longitude() > maxLon {
+			maxLon = point.Longitude()
+		}
+	}
+	latRange := maxLat - minLat
+	lonRange := maxLon - minLon
+	latFirst := true
+	if lonRange > latRange {
+		latFirst = false
+	}
+	gHeight := m.height - 15
+	gWidth := m.width
+	grid := make([]byte, int(gWidth*gHeight+gHeight + 1))
+	for i := range int(gWidth*gHeight+gHeight + 1) {
+		if i % (gWidth+1) == 0 && i != 0 {
+			grid[i] = '\n'
+		} else {
+			grid[i] = ' '
+		}
+	}
+	if latRange != 0 && lonRange != 0 {
+
+		aspect := float64(gWidth) / float64(gHeight)
+		for i := range path.Len() {
+			point := path.At(i)
+			x := 0.0
+			y := 0.0
+			if latFirst {
+				x = (point.Latitude() - minLat) / latRange
+				y = (point.Longitude() - minLon) / lonRange / aspect
+			} else {
+				x = (point.Longitude() - minLon) / lonRange
+				y = (point.Latitude() - minLat) / latRange / aspect
+			}
+			idx := int(math.Floor(x * float64(gWidth)) + ((math.Floor(y*float64(gHeight-1)))*(float64(gWidth)+1))) 
+			if idx % (gWidth+1) == 0 {
+				idx += 1
+			}
+			grid[idx] = '#'
+		}
+	}
+
 	roadname, _ := m.output.RoadName()
 	return docStyle.Render(fmt.Sprintf(
-		"name: %s\nsuggested speed: %f\nspeed limit: %f\nnext speed limit: %f\nnext speed limit distance: %f\nvision curve speed: %f\ncurve speed: %f\ndistance from center: %f\nlanes: %d\nselection type: %s",
+		"name: %s\nsuggested speed: %f\nspeed limit: %f\nnext speed limit: %f\nnext speed limit distance: %f\nvision curve speed: %f\ncurve speed: %f\ndistance from center: %f\nlanes: %d\nselection type: %s\n\n%s",
 		roadname,
 		m.output.SuggestedSpeed(),
 		m.output.SpeedLimit(),
@@ -39,5 +111,6 @@ func (m outputModel) View() string {
 		m.output.DistanceFromWayCenter(),
 		m.output.Lanes(),
 		m.output.WaySelectionType().String(),
+		string(grid),
 	) + "\n")
 }
