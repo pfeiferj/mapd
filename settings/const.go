@@ -3,6 +3,7 @@ package settings
 import (
 	"math"
 	"time"
+	_ "embed"
 )
 
 const (
@@ -26,3 +27,12 @@ const (
 	WAYS_PER_FILE          = 2000
 	MAX_OP_SPEED           = 90 * MPH_TO_MS
 )
+
+//go:embed download_menu.json
+var boundingBoxesJson []byte
+
+//go:embed defaults.json
+var defaultsJson []byte
+
+//go:embed recommended.json
+var recommendedJson []byte

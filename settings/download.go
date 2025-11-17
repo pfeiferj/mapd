@@ -3,7 +3,6 @@ package settings
 import (
 	"archive/tar"
 	"compress/gzip"
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,13 +23,28 @@ type LocationData struct {
 	Submenu     string `json:"submenu"`
 }
 
-//go:embed download_menu.json
-var boundingBoxesJson []byte
+type DownloadMenu map[string]map[string]LocationData
 
-var (
-	BOUNDING_BOXES = map[string]map[string]LocationData{}
-	_              = json.Unmarshal(boundingBoxesJson, &BOUNDING_BOXES)
-)
+func GetDownloadMenu() (menu DownloadMenu) {
+	if _, err := os.Stat("/data/openpilot/mapd_download_menu.json"); err == nil {
+		recommended, err := os.ReadFile("/data/openpilot/mapd_download_menu.json")
+		if err != nil {
+			slog.Warn("failed to read custom download menu", "error", err)
+		}
+		err = json.Unmarshal(recommended, &menu)
+		if err != nil {
+			slog.Warn("failed to load custom download menu", "error", err)
+			return
+		}
+	} else {
+		err := json.Unmarshal(boundingBoxesJson, &menu)
+		if err != nil {
+			slog.Warn("failed to load download menu", "error", err)
+			return
+		}
+	}
+	return
+}
 
 func DownloadFile(url string, filepath string) (err error) {
 	slog.Info("Downloading", "url", url)
@@ -270,10 +284,11 @@ func getDataForPath(path string) LocationData {
 	if len(parts) < 2 {
 		panic("invalid download path")
 	}
-	box := BOUNDING_BOXES[parts[0]][parts[1]]
+	menu := GetDownloadMenu()
+	box := menu[parts[0]][parts[1]]
 	if len(parts) > 2 {
 		for i := range len(parts) - 2 {
-			box = BOUNDING_BOXES[box.Submenu][parts[i+2]]
+			box = menu[box.Submenu][parts[i+2]]
 		}
 	}
 	return box
