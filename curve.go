@@ -19,7 +19,7 @@ func calculate_distance(t float32, target_jerk float32, a_ego float32, v_ego flo
 }
 
 func UpdateCurveSpeed(s *State) {
-	distances := make([]float64, len(s.TargetVelocities))
+	distances := make([]float32, len(s.TargetVelocities))
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
 		d := DistanceToPoint(
@@ -44,11 +44,11 @@ func UpdateCurveSpeed(s *State) {
 	}
 	forwardSize := len(s.TargetVelocities) - match_idx
 	forwardPoints := make([]Velocity, forwardSize)
-	forwardDistances := make([]float64, forwardSize)
+	forwardDistances := make([]float32, forwardSize)
 
 	for i := range forwardSize {
 		forwardPoints[i] = s.TargetVelocities[i+match_idx]
-		forwardDistances[i] = distances[i+match_idx] - float64(s.DistanceSinceLastPosition)
+		forwardDistances[i] = distances[i+match_idx] - s.DistanceSinceLastPosition
 		if forwardDistances[i] <= 0 {
 			forwardDistances[i] = distances[i+match_idx]
 		}

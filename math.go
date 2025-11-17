@@ -74,11 +74,11 @@ func PointOnLine(startLat float64, startLon float64, endLat float64, endLon floa
 }
 
 // arguments should be in radians
-func DistanceToPoint(ax float64, ay float64, bx float64, by float64) (meters float64) {
+func DistanceToPoint(ax float64, ay float64, bx float64, by float64) (meters float32) {
 	a := math.Sin((bx-ax)/2)*math.Sin((bx-ax)/2) + math.Cos(ax)*math.Cos(bx)*math.Sin((by-ay)/2)*math.Sin((by-ay)/2)
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
-	return ms.R * c // in metres
+	return float32(ms.R * c) // in metres
 }
 
 func Vector(latA float64, lonA float64, latB float64, lonB float64) (x float64, y float64) {
@@ -104,7 +104,7 @@ type Curvature struct {
 }
 
 func GetStateCurvatures(state *State) ([]Curvature, error) {
-	nodes, err := state.CurrentWay.Way.Nodes()
+	nodes, err := state.CurrentWay.Way.Way.Nodes()
 	if err != nil {
 		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
 	}
@@ -114,7 +114,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way
 	for _, nextWay := range state.NextWays {
-		nwNodes, err := nextWay.Way.Nodes()
+		nwNodes, err := nextWay.Way.Way.Nodes()
 		if err != nil {
 			continue
 		}
@@ -123,7 +123,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		}
 		all_nodes = append(all_nodes, nwNodes)
 		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
-		all_nodes_is_merge_or_split = append(all_nodes_is_merge_or_split, lastWay.Lanes() < nextWay.Way.Lanes() || (lastWay.Lanes() > nextWay.Way.Lanes() && !lastWay.OneWay() && nextWay.Way.OneWay()))
+		all_nodes_is_merge_or_split = append(all_nodes_is_merge_or_split, lastWay.Way.Lanes() < nextWay.Way.Way.Lanes() || (lastWay.Way.Lanes() > nextWay.Way.Way.Lanes() && !lastWay.Way.OneWay() && nextWay.Way.Way.OneWay()))
 		lastWay = nextWay.Way
 	}
 
@@ -270,17 +270,17 @@ func GetCurvature(x_a float64, y_a float64, x_b float64, y_b float64, x_c float6
 
 	sp := (length_a + length_b + length_c) / 2
 
-	area := math.Sqrt(sp * (sp - length_a) * (sp - length_b) * (sp - length_c))
+	area := float32(math.Sqrt(float64(sp * (sp - length_a) * (sp - length_b) * (sp - length_c))))
 
 	if length_a*length_b*length_c == 0 {
 		return 0, 0, 0
 	}
 
-	curvature = (4 * area) / (length_a * length_b * length_c)
+	curvature = float64((4 * area) / (length_a * length_b * length_c))
 
 	radius := 1.0 / curvature
 
-	angle = math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
+	angle = math.Acos((math.Pow(radius, 2)*2 - math.Pow(float64(length_b), 2)) / (2 * math.Pow(radius, 2)))
 	arc_length = radius * angle
 	return curvature, arc_length, angle
 }

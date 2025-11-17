@@ -33,7 +33,7 @@ func (s *ExtendedState) Send() error {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
-	nodes, err := s.state.CurrentWay.Way.Nodes()
+	nodes, err := s.state.CurrentWay.Way.Way.Nodes()
 	if err != nil {
 		slog.Warn("could not get current way nodes")
 		return
@@ -42,7 +42,7 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 	all_nodes := []capnp.StructList[offline.Coordinates]{nodes}
 	all_nodes_direction := []bool{s.state.CurrentWay.OnWay.IsForward}
 	for _, nextWay := range s.state.NextWays {
-		nwNodes, err := nextWay.Way.Nodes()
+		nwNodes, err := nextWay.Way.Way.Nodes()
 		if err != nil {
 			continue
 		}

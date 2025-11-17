@@ -24,7 +24,7 @@ type State struct {
 	Curvatures                []Curvature
 	TargetVelocities          []Velocity
 	MaxSpeed                  float64
-	LastSpeedLimitDistance    float64
+	LastSpeedLimitDistance    float32
 	LastSpeedLimitValue       float64
 	LastSpeedLimitWayName     string
 	NextSpeedLimit            NextSpeedLimit
@@ -69,7 +69,7 @@ func (s *State) SuggestedSpeed() float32 {
 				calcSpeed = s.CarVEgo
 			}
 			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-			timeToNextSpeedLimit := float32(math.Abs(s.NextSpeedLimit.Distance / float64(calcSpeed)))
+			timeToNextSpeedLimit := float32(math.Abs(float64(s.NextSpeedLimit.Distance / calcSpeed)))
 			speedLimitDiff := math.Abs(offsetNextSpeedLimit-float64(calcSpeed)) + 2
 			timeToAdjust := float32(math.Abs(speedLimitDiff / float64(ms.Settings.CurveTargetAccel)))
 
@@ -116,31 +116,30 @@ func (s *State) UpdateCarState(carData car.CarState) {
 func (s *State) Send() error {
 	msg, output := s.Publisher.NewMessage(true)
 
-	name, _ := s.CurrentWay.Way.Name()
+	name, _ := s.CurrentWay.Way.Way.Name()
 	output.SetWayName(name)
 
-	ref, _ := s.CurrentWay.Way.Ref()
+	ref, _ := s.CurrentWay.Way.Way.Ref()
 	output.SetWayRef(ref)
 
-	roadName := RoadName(s.CurrentWay.Way)
-	output.SetRoadName(roadName)
+	output.SetRoadName(s.CurrentWay.Way.Name)
 
-	maxSpeed := s.CurrentWay.Way.MaxSpeed()
+	maxSpeed := s.CurrentWay.Way.Way.MaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
 
 	output.SetNextSpeedLimit(float32(s.NextSpeedLimit.Speedlimit))
 	output.SetNextSpeedLimitDistance(float32(s.NextSpeedLimit.Distance))
 
-	hazard, _ := s.CurrentWay.Way.Hazard()
+	hazard, _ := s.CurrentWay.Way.Way.Hazard()
 	output.SetHazard(hazard)
 
-	advisorySpeed := s.CurrentWay.Way.AdvisorySpeed()
+	advisorySpeed := s.CurrentWay.Way.Way.AdvisorySpeed()
 	output.SetAdvisorySpeed(float32(advisorySpeed))
 
-	oneWay := s.CurrentWay.Way.OneWay()
+	oneWay := s.CurrentWay.Way.Way.OneWay()
 	output.SetOneWay(oneWay)
 
-	lanes := s.CurrentWay.Way.Lanes()
+	lanes := s.CurrentWay.Way.Way.Lanes()
 	output.SetLanes(lanes)
 
 	if len(s.Data) > 0 {
@@ -149,8 +148,8 @@ func (s *State) Send() error {
 		output.SetTileLoaded(false)
 	}
 
-	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Context))
-	output.SetEstimatedRoadWidth(float32(estimateRoadWidth(s.CurrentWay.Way)))
+	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context))
+	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width)
 	output.SetVisionCurveSpeed(s.VisionCurveSpeed)
 	output.SetCurveSpeed(s.CurveSpeed)
 
