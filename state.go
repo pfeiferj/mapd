@@ -116,31 +116,31 @@ func (s *State) UpdateCarState(carData car.CarState) {
 func (s *State) Send() error {
 	msg, output := s.Publisher.NewMessage(true)
 
-	name, _ := s.CurrentWay.Way.Way.Name()
+	name := s.CurrentWay.Way.WayName()
 	output.SetWayName(name)
 
-	ref, _ := s.CurrentWay.Way.Way.Ref()
+	ref := s.CurrentWay.Way.WayRef()
 	output.SetWayRef(ref)
 
-	output.SetRoadName(s.CurrentWay.Way.Name)
+	output.SetRoadName(s.CurrentWay.Way.Name())
 
-	maxSpeed := s.CurrentWay.Way.Way.MaxSpeed()
+	maxSpeed := s.CurrentWay.Way.MaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
 
 	output.SetNextSpeedLimit(float32(s.NextSpeedLimit.Speedlimit))
 	output.SetNextSpeedLimitDistance(float32(s.NextSpeedLimit.Distance))
 
-	hazard, _ := s.CurrentWay.Way.Way.Hazard()
+	hazard := s.CurrentWay.Way.Hazard()
 	output.SetHazard(hazard)
 
-	advisorySpeed := s.CurrentWay.Way.Way.AdvisorySpeed()
+	advisorySpeed := s.CurrentWay.Way.AdvisorySpeed()
 	output.SetAdvisorySpeed(float32(advisorySpeed))
 
-	oneWay := s.CurrentWay.Way.Way.OneWay()
+	oneWay := s.CurrentWay.Way.OneWay()
 	output.SetOneWay(oneWay)
 
-	lanes := s.CurrentWay.Way.Way.Lanes()
-	output.SetLanes(lanes)
+	lanes := s.CurrentWay.Way.Lanes()
+	output.SetLanes(uint8(lanes))
 
 	if len(s.Data) > 0 {
 		output.SetTileLoaded(true)
@@ -148,8 +148,8 @@ func (s *State) Send() error {
 		output.SetTileLoaded(false)
 	}
 
-	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context))
-	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width)
+	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context()))
+	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width())
 	output.SetVisionCurveSpeed(s.VisionCurveSpeed)
 	output.SetCurveSpeed(s.CurveSpeed)
 

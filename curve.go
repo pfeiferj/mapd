@@ -32,10 +32,10 @@ func UpdateCurveSpeed(s *State) {
 		distances[i] = d
 
 		// find index of the most recent node we have driven past based on which node was used to calculate if we are on the way
-		if tv.Latitude == s.CurrentWay.Distance.LineStart.Latitude() && tv.Longitude == s.CurrentWay.Distance.LineStart.Longitude() && match_idx == -1 {
+		if tv.Latitude == s.CurrentWay.Distance.LineStart.Lat() && tv.Longitude == s.CurrentWay.Distance.LineStart.Lon() && match_idx == -1 {
 			match_idx = i + 1
 		}
-		if tv.Latitude == s.CurrentWay.Distance.LineEnd.Latitude() && tv.Longitude == s.CurrentWay.Distance.LineEnd.Longitude() && match_idx == -1 {
+		if tv.Latitude == s.CurrentWay.Distance.LineEnd.Lat() && tv.Longitude == s.CurrentWay.Distance.LineEnd.Lon() && match_idx == -1 {
 			match_idx = i + 1
 		}
 	}

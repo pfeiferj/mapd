@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
-	"pfeifer.dev/mapd/cereal/offline"
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -104,26 +102,20 @@ type Curvature struct {
 }
 
 func GetStateCurvatures(state *State) ([]Curvature, error) {
-	nodes, err := state.CurrentWay.Way.Way.Nodes()
-	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
-	}
-	num_points := nodes.Len()
-	all_nodes := []capnp.StructList[offline.Coordinates]{nodes}
+	nodes := state.CurrentWay.Way.Nodes()
+	num_points := len(nodes)
+	all_nodes := [][]Position{nodes}
 	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
 	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way
 	for _, nextWay := range state.NextWays {
-		nwNodes, err := nextWay.Way.Way.Nodes()
-		if err != nil {
-			continue
-		}
-		if nwNodes.Len() > 0 {
-			num_points += nwNodes.Len() - 1
+		nwNodes := nextWay.Way.Nodes()
+		if len(nwNodes) > 0 {
+			num_points += len(nwNodes) - 1
 		}
 		all_nodes = append(all_nodes, nwNodes)
 		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
-		all_nodes_is_merge_or_split = append(all_nodes_is_merge_or_split, lastWay.Way.Lanes() < nextWay.Way.Way.Lanes() || (lastWay.Way.Lanes() > nextWay.Way.Way.Lanes() && !lastWay.Way.OneWay() && nextWay.Way.Way.OneWay()))
+		all_nodes_is_merge_or_split = append(all_nodes_is_merge_or_split, lastWay.Lanes() < nextWay.Way.Lanes() || (lastWay.Lanes() > nextWay.Way.Lanes() && !lastWay.OneWay() && nextWay.Way.OneWay()))
 		lastWay = nextWay.Way
 	}
 
@@ -142,17 +134,17 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 				index += 1
 			}
 		} else {
-			index = all_nodes[all_nodes_idx].Len() - nodes_idx - 1
+			index = len(all_nodes[all_nodes_idx]) - nodes_idx - 1
 			if all_nodes_idx > 0 {
 				index -= 1
 			}
 		}
-		node := all_nodes[all_nodes_idx].At(index)
-		x_points[i] = node.Latitude()
-		y_points[i] = node.Longitude()
+		node := all_nodes[all_nodes_idx][index]
+		x_points[i] = node.Lat()
+		y_points[i] = node.Lon()
 
 		nodes_idx += 1
-		if nodes_idx == all_nodes[all_nodes_idx].Len() || (nodes_idx == all_nodes[all_nodes_idx].Len()-1 && all_nodes_idx > 0) {
+		if nodes_idx == len(all_nodes[all_nodes_idx]) || (nodes_idx == len(all_nodes[all_nodes_idx])-1 && all_nodes_idx > 0) {
 			all_nodes_idx += 1
 			nodes_idx = 0
 			if all_nodes_idx < len(all_nodes_is_merge_or_split) && all_nodes_is_merge_or_split[all_nodes_idx] {
