@@ -8,6 +8,7 @@ import (
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 
@@ -33,7 +34,7 @@ func (s *ExtendedState) Send() error {
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 	nodes := s.state.CurrentWay.Way.Nodes()
 	num_points := len(nodes)
-	all_nodes := [][]Position{nodes}
+	all_nodes := [][]m.Position{nodes}
 	all_nodes_direction := []bool{s.state.CurrentWay.OnWay.IsForward}
 	for _, nextWay := range s.state.NextWays {
 		nwNodes := nextWay.Way.Nodes()
@@ -145,4 +146,3 @@ func (s *ExtendedState) setDownloadProgress(out custom.MapdExtendedOut) {
 		idx++
 	}
 }
-

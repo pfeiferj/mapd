@@ -4,6 +4,7 @@ import (
 	"math"
 
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 //func calculate_accel(t float32, target_jerk float32, a_ego float32) float32 {
@@ -22,12 +23,8 @@ func UpdateCurveSpeed(s *State) {
 	distances := make([]float32, len(s.TargetVelocities))
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
-		d := DistanceToPoint(
-			s.CurrentWay.OnWay.Distance.LinePoint.X*ms.TO_RADIANS,
-			s.CurrentWay.OnWay.Distance.LinePoint.Y*ms.TO_RADIANS,
-			tv.Latitude*ms.TO_RADIANS,
-			tv.Longitude*ms.TO_RADIANS,
-		)
+		pos := m.NewPosition(tv.Latitude, tv.Longitude)
+		d := s.CurrentWay.OnWay.Distance.LinePosition.Pos.DistanceTo(pos)
 
 		distances[i] = d
 

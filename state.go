@@ -9,7 +9,7 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 	ms "pfeifer.dev/mapd/settings"
-	"pfeifer.dev/mapd/utils"
+	m "pfeifer.dev/mapd/math"
 )
 
 type State struct {
@@ -34,9 +34,9 @@ type State struct {
 	CarVEgo                   float32
 	CarAEgo                   float32
 	CurveSpeed                float32
-	NextSpeedLimitMA          utils.MovingAverage
-	VisionCurveMA             utils.MovingAverage
-	CarStateUpdateTimeMA      utils.MovingAverage
+	NextSpeedLimitMA          m.MovingAverage
+	VisionCurveMA             m.MovingAverage
+	CarStateUpdateTimeMA      m.MovingAverage
 	MapCurveTriggerSpeed      float32
 	DistanceSinceLastPosition float32
 	TimeLastPosition          time.Time

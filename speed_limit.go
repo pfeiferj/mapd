@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 func ParseMaxSpeed(maxspeed string) float64 {
@@ -51,7 +52,8 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 	cumulativeDistance := float32(0.0)
 
 	if len(state.CurrentWay.Way.Nodes()) > 0 {
-		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(state.Location.Latitude(), state.Location.Longitude(), state.CurrentWay.OnWay.IsForward)
+		pos := m.NewPosition(state.Location.Latitude(), state.Location.Longitude())
+		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(pos, state.CurrentWay.OnWay.IsForward)
 		if err == nil && distToEnd > 0 {
 			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - state.DistanceSinceLastPosition
 		}

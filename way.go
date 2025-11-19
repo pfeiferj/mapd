@@ -13,6 +13,7 @@ import (
 	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 type RoadContext int
@@ -68,9 +69,9 @@ type WayCandidate struct {
 }
 
 type DistanceResult struct {
-	LineStart      Position
-	LineEnd        Position
-	LinePoint      LinePoint
+	LineStart      m.Position
+	LineEnd        m.Position
+	LinePosition   m.LinePosition
 	Distance       float32
 }
 
@@ -79,8 +80,8 @@ type CurrentWay struct {
 	Way               Way
 	Distance          DistanceResult
 	OnWay             OnWayResult
-	StartPosition     Position
-	EndPosition       Position
+	StartPosition     m.Position
+	EndPosition       m.Position
 	ConfidenceCounter int
 	LastChangeTime    time.Time
 	StableDistance    float32
@@ -90,29 +91,8 @@ type CurrentWay struct {
 type NextWayResult struct {
 	Way           Way
 	IsForward     bool
-	StartPosition Position
-	EndPosition   Position
-}
-
-type Position struct {
-	latitudeDeg float64
-	longitudeDeg float64
-}
-
-func (n *Position) LatRad() float64 {
-	return n.latitudeDeg * ms.TO_RADIANS
-}
-
-func (n *Position) LonRad() float64 {
-	return n.longitudeDeg * ms.TO_RADIANS
-}
-
-func (n *Position) Lat() float64 {
-	return n.latitudeDeg
-}
-
-func (n *Position) Lon() float64 {
-	return n.longitudeDeg
+	StartPosition m.Position
+	EndPosition   m.Position
 }
 
 type Way struct {
@@ -142,12 +122,12 @@ type Way struct {
 	wayRefSet bool
 	maxSpeed float64
 	maxSpeedSet bool
-	minPos Position
+	minPos m.Position
 	minPosSet bool
-	maxPos Position
+	maxPos m.Position
 	maxPosSet bool
 
-	nodes []Position
+	nodes []m.Position
 	nodesSet bool
 	lanes int
 	lanesSet bool
@@ -162,23 +142,20 @@ type Way struct {
 	maxSpeedBackwardSet bool
 }
 
-func (w *Way) Nodes() []Position {
+func (w *Way) Nodes() []m.Position {
 	if w.nodesSet {
 		return w.nodes
 	}
 	nodes, err := w.way.Nodes()
 	if err != nil {
-		w.nodes = []Position{}
+		w.nodes = []m.Position{}
 		w.nodesSet = true
 		return w.nodes
 	}
-	w.nodes = make([]Position, nodes.Len())
+	w.nodes = make([]m.Position, nodes.Len())
 	for i := range nodes.Len() {
 		node := nodes.At(i)
-		w.nodes[i] = Position{
-			latitudeDeg: node.Latitude(),
-			longitudeDeg: node.Longitude(),
-		}
+		w.nodes[i] = m.NewPosition(node.Latitude(), node.Longitude())
 	}
 	w.nodesSet = true
 	return w.nodes
@@ -246,26 +223,20 @@ func (w *Way) MaxSpeedBackward() float64 {
 	return w.maxSpeedBackward
 }
 
-func (w *Way) MinPos() Position {
+func (w *Way) MinPos() m.Position {
 	if w.minPosSet {
 		return w.minPos
 	}
-	w.minPos = Position{
-		latitudeDeg: w.way.MinLat(),
-		longitudeDeg: w.way.MinLon(),
-	}
+	w.minPos = m.NewPosition(w.way.MinLat(), w.way.MinLon())
 	w.minPosSet = true
 	return w.minPos
 }
 
-func (w *Way) MaxPos() Position {
+func (w *Way) MaxPos() m.Position {
 	if w.maxPosSet {
 		return w.maxPos
 	}
-	w.maxPos = Position{
-		latitudeDeg: w.way.MinLat(),
-		longitudeDeg: w.way.MinLon(),
-	}
+	w.maxPos = m.NewPosition(w.way.MinLat(), w.way.MinLon())
 	w.maxPosSet = true
 	return w.maxPos
 }
@@ -303,7 +274,8 @@ func (w *Way) Hazard() string {
 
 func (w *Way) OnWay(location log.GpsLocationData, distanceMultiplier float32) (OnWayResult, error) {
 	res := OnWayResult{}
-	d, err := w.DistanceFrom(location.Latitude(), location.Longitude())
+	pos := m.NewPosition(location.Latitude(), location.Longitude())
+	d, err := w.DistanceFrom(pos)
 	res.Distance = d
 	if err != nil {
 		res.OnWay = false
@@ -326,17 +298,14 @@ func (w *Way) OnWay(location log.GpsLocationData, distanceMultiplier float32) (O
 
 
 func (w *Way) bearingAlignment(location log.GpsLocationData) (float32, error) {
-	d, err := w.DistanceFrom(location.Latitude(), location.Longitude())
+	pos := m.NewPosition(location.Latitude(), location.Longitude())
+	d, err := w.DistanceFrom(pos)
 	if err != nil {
 		return 1.0, err
 	}
 
-	startLat := d.LineStart.Lat()
-	startLon := d.LineStart.Lon()
-	endLat := d.LineEnd.Lat()
-	endLon := d.LineEnd.Lon()
-
-	wayBearing := Bearing(startLat, startLon, endLat, endLon)
+	lineVec := d.LineStart.VectorTo(d.LineEnd)
+	wayBearing := lineVec.Bearing()
 
 	// Calculate bearing delta
 	delta := math.Abs(float64(location.BearingDeg())*ms.TO_RADIANS - wayBearing)
@@ -399,52 +368,51 @@ func selectBestWayAdvanced(possibleWays []Way, location log.GpsLocationData, cur
 	return bestWay
 }
 
-func (w *Way) DistanceFrom(latitude float64, longitude float64) (DistanceResult, error) {
+func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 	res := DistanceResult{}
-	var minNodeStart Position
-	var minNodeEnd Position
+	var minNodeStart m.Position
+	var minNodeEnd m.Position
 	minDistance := float32(math.MaxFloat32)
 	nodes := w.Nodes()
 	if len(nodes) < 2 {
 		return res, errors.New("not enough nodes to determine distance")
 	}
 
-	latRad := latitude * ms.TO_RADIANS
-	lonRad := longitude * ms.TO_RADIANS
-	minLinePoint := LinePoint{}
+	minLinePosition := m.LinePosition{}
 	minIdx := 0
 	for i := 0; i < len(nodes)-1; i++ {
 		nodeStart := nodes[i]
 		nodeEnd := nodes[i + 1]
-		linePoint := PointOnLine(nodeStart.Lat(), nodeStart.Lon(), nodeEnd.Lat(), nodeEnd.Lon(), latitude, longitude)
+		line := m.Line{Start: nodeStart, End: nodeEnd}
+		linePosition := line.NearestPosition(pos)
+		distance := pos.DistanceTo(linePosition.Pos)
 
-		distance := DistanceToPoint(latRad, lonRad, linePoint.X*ms.TO_RADIANS, linePoint.Y*ms.TO_RADIANS)
 		if distance < minDistance {
 			minDistance = distance
 			minNodeStart = nodeStart
 			minNodeEnd = nodeEnd
-			minLinePoint = linePoint
+			minLinePosition = linePosition
 			minIdx = i
 		}
 	}
-	onWayDistance := DistanceToPoint(minNodeStart.LatRad(), lonRad*ms.TO_RADIANS, minLinePoint.X*ms.TO_RADIANS, minLinePoint.Y*ms.TO_RADIANS)
+	onWayDistance := minNodeStart.DistanceTo(minLinePosition.Pos)
 	for i := range minIdx {
 		nodeStart := nodes[i]
 		nodeEnd := nodes[i + 1]
-		onWayDistance += DistanceToPoint(nodeStart.LatRad(), nodeStart.LonRad(), nodeEnd.LatRad(), nodeEnd.LonRad())
+		onWayDistance += nodeStart.DistanceTo(nodeEnd)
 	}
 
 	res.Distance = minDistance
 	res.LineStart = minNodeStart
 	res.LineEnd = minNodeEnd
-	res.LinePoint = minLinePoint
+	res.LinePosition = minLinePosition
 	return res, nil
 }
 
-func (w *Way) GetStartEnd(isForward bool) (Position, Position) {
+func (w *Way) GetStartEnd(isForward bool) (m.Position, m.Position) {
 	nodes := w.Nodes()
 	if len(nodes) == 0 {
-		return Position{}, Position{}
+		return m.Position{}, m.Position{}
 	}
 
 	if len(nodes) == 1 {
@@ -464,7 +432,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []NextWayResult, offline offl
 		onWay, err := currentWay.Way.OnWay(location, currentWay.Way.DistanceMultiplier())
 		newStableDistance := onWay.Distance.Distance
 		distanceFromCurrentWay = newStableDistance
-		t := onWay.Distance.LinePoint.T
+		t := onWay.Distance.LinePosition.T
 		isEdge := t == 1 || t == 0
 		if err == nil && onWay.OnWay && !isEdge {
 			start, end := currentWay.Way.GetStartEnd(onWay.IsForward)
@@ -579,18 +547,15 @@ func getPossibleWays(offlineMaps offline.Offline, location log.GpsLocationData) 
 	return possibleWays, nil
 }
 
-func IsForward(lineStart Position, lineEnd Position, bearing float64) bool {
-	startLat := lineStart.Lat()
-	startLon := lineStart.Lon()
-	endLat := lineEnd.Lat()
-	endLon := lineEnd.Lon()
+func IsForward(lineStart m.Position, lineEnd m.Position, bearing float64) bool {
 
-	wayBearing := Bearing(startLat, startLon, endLat, endLon)
+	vec := lineStart.VectorTo(lineEnd)
+	wayBearing := vec.Bearing()
 	bearingDelta := math.Abs(bearing*ms.TO_RADIANS - wayBearing)
 	return math.Cos(bearingDelta) >= 0
 }
 
-func (w *Way) MatchingWays(offlineMaps offline.Offline, matchNode Position) ([]Way, error) {
+func (w *Way) MatchingWays(offlineMaps offline.Offline, matchNode m.Position) ([]Way, error) {
 	matchingWays := []Way{}
 	ways, err := offlineMaps.Ways()
 	if err != nil {
@@ -628,7 +593,7 @@ func (w *Way) MatchingWays(offlineMaps offline.Offline, matchNode Position) ([]W
 	return matchingWays, nil
 }
 
-func NextIsForward(nextWay Way, matchNode Position) bool {
+func NextIsForward(nextWay Way, matchNode m.Position) bool {
 	if len(nextWay.Nodes()) == 0 {
 		return true
 	}
@@ -651,8 +616,8 @@ func (w *Way) NextWay(offlineMaps offline.Offline, isForward bool) (NextWayResul
 		return NextWayResult{}, nil
 	}
 
-	var matchNode Position
-	var matchBearingNode Position
+	var matchNode m.Position
+	var matchBearingNode m.Position
 	if isForward {
 		matchNode = nodes[len(nodes) - 1]
 		if len(nodes) > 1 {
@@ -835,24 +800,24 @@ func (w *Way) NextWay(offlineMaps offline.Offline, isForward bool) (NextWayResul
 	return NextWayResult{StartPosition: matchNode}, nil
 }
 
-func (w *Way) isValidConnection(matchNode, bearingNode Position, maxCurvature float64) bool {
+func (w *Way) isValidConnection(matchNode, bearingNode m.Position, maxCurvature float64) bool {
 	nodes := w.Nodes()
 	if len(nodes) < 2 {
 		return false
 	}
 
-	var nextBearingNode Position
+	var nextBearingNode m.Position
 	if matchNode.Lat() == nodes[0].Lat() && matchNode.Lon() == nodes[0].Lon() {
 		nextBearingNode = nodes[1]
 	} else {
 		nextBearingNode = nodes[len(nodes) - 2]
 	}
 
-	curv, _, _ := GetCurvature(bearingNode.Lat(), bearingNode.Lon(), matchNode.Lat(), matchNode.Lon(), nextBearingNode.Lat(), nextBearingNode.Lon())
-	return math.Abs(curv) <= maxCurvature
+	curv := m.CalculateCurvature(bearingNode, matchNode, nextBearingNode)
+	return math.Abs(curv.Curvature) <= maxCurvature
 }
 
-func selectBestCandidate(candidates []Way, matchNode Position, context RoadContext) Way {
+func selectBestCandidate(candidates []Way, matchNode m.Position, context RoadContext) Way {
 	if len(candidates) == 1 {
 		return candidates[0]
 	}
@@ -883,36 +848,33 @@ func selectBestCandidate(candidates []Way, matchNode Position, context RoadConte
 	return bestWay
 }
 
-func (w *Way) DistanceToEnd(latitude float64, longitude float64, isForward bool) (float32, error) {
-	distanceResult, err := w.DistanceFrom(latitude, longitude)
+func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
+	distanceResult, err := w.DistanceFrom(pos)
 	if err != nil {
 		return 0, err
 	}
-	lat := distanceResult.LineEnd.Lat()
-	lon := distanceResult.LineEnd.Lon()
-	dist := DistanceToPoint(latitude*ms.TO_RADIANS, longitude*ms.TO_RADIANS, lat*ms.TO_RADIANS, lon*ms.TO_RADIANS)
+	dist := pos.DistanceTo(distanceResult.LineEnd)
 	stopFiltering := false
 	nodes := w.Nodes()
 	if err != nil {
 		return 0, err
 	}
+	lastPos := distanceResult.LineEnd
 	for i := 0; i < len(nodes); i++ {
 		index := i
 		if !isForward {
 			index = len(nodes) - 1 - i
 		}
 		node := nodes[index]
-		nLat := node.Lat()
-		nLon := node.Lon()
-		if node.Lat() == lat && node.Lon() == lon && !stopFiltering {
+		if node.Lat() == lastPos.Lat() && node.Lon() == lastPos.Lon() && !stopFiltering {
 			stopFiltering = true
 		}
 		if !stopFiltering {
 			continue
 		}
-		dist += DistanceToPoint(lat*ms.TO_RADIANS, lon*ms.TO_RADIANS, nLat*ms.TO_RADIANS, nLon*ms.TO_RADIANS)
-		lat = nLat
-		lon = nLon
+		
+		dist += lastPos.DistanceTo(node)
+		lastPos = node
 	}
 	return dist, nil
 }
@@ -922,10 +884,9 @@ func NextWays(location log.GpsLocationData, currentWay CurrentWay, offlineMaps o
 	dist := float32(0.0)
 	wayIdx := currentWay.Way
 	forward := isForward
-	startLat := location.Latitude()
-	startLon := location.Longitude()
+	startPos := m.NewPosition(location.Latitude(), location.Longitude())
 	for dist < ms.MIN_WAY_DIST {
-		d, err := wayIdx.DistanceToEnd(startLat, startLon, forward)
+		d, err := wayIdx.DistanceToEnd(startPos, forward)
 		if err != nil || d <= 0 {
 			break
 		}
@@ -937,8 +898,7 @@ func NextWays(location log.GpsLocationData, currentWay CurrentWay, offlineMaps o
 		nextWays = append(nextWays, nw)
 		wayIdx = nw.Way
 
-		startLat = nw.StartPosition.Lat()
-		startLon = nw.StartPosition.Lon()
+		startPos = nw.StartPosition
 		forward = nw.IsForward
 	}
 
@@ -957,29 +917,19 @@ func (w *Way) Distance() (float32) {
 	if w.distanceSet {
 		return w.distance
 	}
-	nodes, err := w.way.Nodes()
-	if err != nil {
-		w.distance = 0
-		w.distanceSet = true
-		return 0
-	}
+	nodes := w.Nodes()
 
-	if nodes.Len() < 2 {
+	if len(nodes) < 2 {
 		w.distanceSet = true
 		w.distance = 0
 		return 0
 	}
 
 	totalDistance := float32(0.0)
-	for i := range nodes.Len() - 1 {
-		nodeStart := nodes.At(i)
-		nodeEnd := nodes.At(i + 1)
-		distance := DistanceToPoint(
-			nodeStart.Latitude()*ms.TO_RADIANS,
-			nodeStart.Longitude()*ms.TO_RADIANS,
-			nodeEnd.Latitude()*ms.TO_RADIANS,
-			nodeEnd.Longitude()*ms.TO_RADIANS,
-		)
+	for i := range len(nodes) - 1 {
+		nodeStart := nodes[i]
+		nodeEnd := nodes[i + 1]
+		distance := nodeStart.DistanceTo(nodeEnd)
 		totalDistance += distance
 	}
 
