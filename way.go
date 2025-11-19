@@ -97,179 +97,147 @@ type NextWayResult struct {
 
 type Way struct {
 	way offline.Way
-	width float32
-	widthSet bool
-	context RoadContext
-	contextSet bool
-	isFreeway bool
-	isFreewaySet bool
-	name string
-	nameSet bool
-	distance float32
-	distanceSet bool
-	rank int
-	rankSet bool
-	priority int
-	prioritySet bool
-	distanceMultiplier float32
-	distanceMultiplierSet bool
 
-	oneWay bool
-	oneWaySet bool
-	wayName string
-	wayNameSet bool
-	wayRef string
-	wayRefSet bool
-	maxSpeed float64
-	maxSpeedSet bool
-	minPos m.Position
-	minPosSet bool
-	maxPos m.Position
-	maxPosSet bool
+	//calculated values
+	width curry[float32, Way]
+	context curry[RoadContext, Way]
+	isFreeway curry[bool, Way]
+	name curry[string, Way]
+	distance curry[float32, Way]
+	rank curry[int, Way]
+	priority curry[int, Way]
+	distanceMultiplier curry[float32, Way]
 
-	nodes []m.Position
-	nodesSet bool
-	lanes int
-	lanesSet bool
-	advisorySpeed float64
-	advisorySpeedSet bool
+	//values from offline file
+	oneWay curry[bool, Way]
+	wayName curry[string, Way]
+	wayRef curry[string, Way]
+	maxSpeed curry[float64, Way]
+	minPos curry[m.Position, Way]
+	maxPos curry[m.Position, Way]
+	nodes curry[[]m.Position, Way]
+	lanes curry[int, Way]
+	advisorySpeed curry[float64, Way]
+	hazard curry[string, Way]
+	maxSpeedForward curry[float64, Way]
+	maxSpeedBackward curry[float64, Way]
+}
 
-	hazard string
-	hazardSet bool
-	maxSpeedForward float64
-	maxSpeedForwardSet bool
-	maxSpeedBackward float64
-	maxSpeedBackwardSet bool
+func _nodes(w *Way) []m.Position {
+	nodes, err := w.way.Nodes()
+	if err != nil {
+		return []m.Position{}
+	}
+	res := make([]m.Position, nodes.Len())
+	for i := range nodes.Len() {
+		node := nodes.At(i)
+		res[i] = m.NewPosition(node.Latitude(), node.Longitude())
+	}
+	return res
 }
 
 func (w *Way) Nodes() []m.Position {
-	if w.nodesSet {
-		return w.nodes
-	}
-	nodes, err := w.way.Nodes()
-	if err != nil {
-		w.nodes = []m.Position{}
-		w.nodesSet = true
-		return w.nodes
-	}
-	w.nodes = make([]m.Position, nodes.Len())
-	for i := range nodes.Len() {
-		node := nodes.At(i)
-		w.nodes[i] = m.NewPosition(node.Latitude(), node.Longitude())
-	}
-	w.nodesSet = true
-	return w.nodes
+	return w.nodes.Value(w, _nodes)
+}
+
+func _oneWay(w *Way) bool {
+	return w.way.OneWay()
 }
 
 func (w *Way) OneWay() bool {
-	if w.oneWaySet {
-		return w.oneWay
+	return w.oneWay.Value(w, _oneWay)
+}
+
+func _wayName(w *Way) string {
+	wn, err := w.way.Name()
+	if err != nil {
+		wn = ""
 	}
-	w.oneWay = w.way.OneWay()
-	w.oneWaySet = true
-	return w.oneWay
+	return wn
 }
 
 func (w *Way) WayName() string {
-	if w.wayNameSet {
-		return w.wayName
-	}
-	var err error
-	w.wayName, err = w.way.Name()
+	return w.wayName.Value(w, _wayName)
+}
+
+func _wayRef(w *Way) string {
+	wr, err := w.way.Ref()
 	if err != nil {
-		w.wayName = ""
+		wr = ""
 	}
-	w.wayNameSet = true
-	return w.wayName
+	return wr
 }
 
 func (w *Way) WayRef() string {
-	if w.wayRefSet {
-		return w.wayRef
-	}
-	var err error
-	w.wayRef, err = w.way.Ref()
-	if err != nil {
-		w.wayRef = ""
-	}
-	w.wayRefSet = true
-	return w.wayRef
+	return w.wayRef.Value(w, _wayRef)
+}
+
+func _maxSpeed(w *Way) float64 {
+	return w.way.MaxSpeed()
 }
 
 func (w *Way) MaxSpeed() float64 {
-	if w.maxSpeedSet {
-		return w.maxSpeed
-	}
-	w.maxSpeed = w.way.MaxSpeed()
-	w.maxSpeedSet = true
-	return w.maxSpeed
+	return w.maxSpeed.Value(w, _maxSpeed)
+}
+
+func _maxSpeedForward(w *Way) float64 {
+	return w.way.MaxSpeedForward()
 }
 
 func (w *Way) MaxSpeedForward() float64 {
-	if w.maxSpeedForwardSet {
-		return w.maxSpeedForward
-	}
-	w.maxSpeedForward = w.way.MaxSpeedForward()
-	w.maxSpeedForwardSet = true
-	return w.maxSpeedForward
+	return w.maxSpeedForward.Value(w, _maxSpeedForward)
+}
+
+func _maxSpeedBackward(w *Way) float64 {
+	return w.way.MaxSpeedBackward()
 }
 
 func (w *Way) MaxSpeedBackward() float64 {
-	if w.maxSpeedBackwardSet {
-		return w.maxSpeedBackward
-	}
-	w.maxSpeedBackward = w.way.MaxSpeedBackward()
-	w.maxSpeedBackwardSet = true
-	return w.maxSpeedBackward
+	return w.maxSpeedBackward.Value(w, _maxSpeedBackward)
+}
+
+func _minPos(w *Way) m.Position {
+	return m.NewPosition(w.way.MinLat(), w.way.MinLon())
 }
 
 func (w *Way) MinPos() m.Position {
-	if w.minPosSet {
-		return w.minPos
-	}
-	w.minPos = m.NewPosition(w.way.MinLat(), w.way.MinLon())
-	w.minPosSet = true
-	return w.minPos
+	return w.minPos.Value(w, _minPos)
+}
+
+func _maxPos(w *Way) m.Position {
+	return m.NewPosition(w.way.MinLat(), w.way.MinLon())
 }
 
 func (w *Way) MaxPos() m.Position {
-	if w.maxPosSet {
-		return w.maxPos
-	}
-	w.maxPos = m.NewPosition(w.way.MinLat(), w.way.MinLon())
-	w.maxPosSet = true
-	return w.maxPos
+	return w.maxPos.Value(w, _maxPos)
+}
+
+func _lanes(w *Way) int {
+	return int(w.way.Lanes())
 }
 
 func (w *Way) Lanes() int {
-	if w.lanesSet {
-		return w.lanes
-	}
-	w.lanes = int(w.way.Lanes())
-	w.lanesSet = true
-	return w.lanes
+	return w.lanes.Value(w, _lanes)
+}
+
+func _advisorySpeed(w *Way) float64 {
+	return w.way.AdvisorySpeed()
 }
 
 func (w *Way) AdvisorySpeed() float64 {
-	if w.advisorySpeedSet {
-		return w.advisorySpeed
+	return w.advisorySpeed.Value(w, _advisorySpeed)
+}
+
+func _hazard(w *Way) string {
+	hazard, err := w.way.Hazard()
+	if err != nil {
+		hazard = ""
 	}
-	w.advisorySpeed = w.way.AdvisorySpeed()
-	w.advisorySpeedSet = true
-	return w.advisorySpeed
+	return hazard
 }
 
 func (w *Way) Hazard() string {
-	if w.hazardSet {
-		return w.hazard
-	}
-	var err error
-	w.hazard, err = w.way.Hazard()
-	if err != nil {
-		w.hazard = ""
-	}
-	w.hazardSet = true
-	return w.hazard
+	return w.hazard.Value(w, _hazard)
 }
 
 func (w *Way) OnWay(location log.GpsLocationData, distanceMultiplier float32) (OnWayResult, error) {
@@ -913,15 +881,10 @@ func NextWays(location log.GpsLocationData, currentWay CurrentWay, offlineMaps o
 	return nextWays, nil
 }
 
-func (w *Way) Distance() (float32) {
-	if w.distanceSet {
-		return w.distance
-	}
+func _distance(w *Way) float32 {
 	nodes := w.Nodes()
 
 	if len(nodes) < 2 {
-		w.distanceSet = true
-		w.distance = 0
 		return 0
 	}
 
@@ -933,61 +896,52 @@ func (w *Way) Distance() (float32) {
 		totalDistance += distance
 	}
 
-	w.distanceSet = true
-	w.distance = totalDistance
 	return totalDistance
 }
 
-func (w *Way) Name() string {
-	if w.nameSet {
-		return w.name
-	}
+func (w *Way) Distance() (float32) {
+	return w.distance.Value(w, _distance)
+}
+
+func _name(w *Way) string {
 	name, err := w.way.Name()
 	if err == nil {
 		if len(name) > 0 {
-			w.name = name
-			w.nameSet = true
 			return name
 		}
 	}
 	ref, err := w.way.Ref()
 	if err == nil {
 		if len(ref) > 0 {
-			w.name = ref
-			w.nameSet = true
 			return ref
 		}
 	}
-	w.name = ""
-	w.nameSet = true
 	return ""
 }
 
-func (w *Way) Width() float32 {
-	if w.widthSet {
-		return w.width
-	}
+func (w *Way) Name() string {
+	return w.name.Value(w, _name)
+}
+
+func _width(w *Way) float32 {
 	lanes := w.way.Lanes()
 	if lanes == 0 {
 		lanes = 2
 	}
 	width := float32(lanes) * ms.Settings.DefaultLaneWidth
-	w.widthSet = true
-	w.width = width
 	return width
 }
 
-func (w *Way) Context() RoadContext {
-	if w.contextSet {
-		return w.context
-	}
+func (w *Way) Width() float32 {
+	return w.width.Value(w, _width)
+}
+
+func _context(w *Way) RoadContext {
 	lanes := w.way.Lanes()
 	name, _ := w.way.Name()
 	ref, _ := w.way.Ref()
 
 	if w.IsFreeway() || lanes >= 4 {
-		w.contextSet = true
-		w.context = CONTEXT_FREEWAY
 		return CONTEXT_FREEWAY
 	}
 
@@ -997,27 +951,21 @@ func (w *Way) Context() RoadContext {
 		strings.Contains(nameUpper, "BOULEVARD") ||
 		strings.Contains(nameUpper, "ROAD") ||
 		len(ref) == 0) {
-		w.contextSet = true
-		w.context = CONTEXT_CITY
 		return CONTEXT_CITY
 	}
-
-	w.contextSet = true
-	w.context = CONTEXT_UNKNOWN
 	return CONTEXT_UNKNOWN
 }
 
-func (w *Way) IsFreeway() bool {
-	if w.isFreewaySet {
-		return w.isFreeway
-	}
+func (w *Way) Context() RoadContext {
+	return w.context.Value(w, _context)
+}
+
+func _isFreeway(w *Way) bool {
 	lanes := w.way.Lanes()
 	name, _ := w.way.Name()
 	ref, _ := w.way.Ref()
 
 	if lanes >= 6 {
-		w.isFreeway = true
-		w.isFreewaySet = true
 		return true
 	}
 
@@ -1031,21 +979,17 @@ func (w *Way) IsFreeway() bool {
 		strings.HasPrefix(refUpper, "I-") ||
 		strings.HasPrefix(refUpper, "I ") ||
 		(lanes >= 4 && len(ref) > 0 && !strings.Contains(nameUpper, "STREET")) {
-		w.isFreeway = true
-		w.isFreewaySet = true
 		return true
 	}
 
-	w.isFreeway = false
-	w.isFreewaySet = true
 	return false
 }
 
-// Get highway hierarchy rank for a way
-func (w *Way) Rank() int {
-	if w.rankSet {
-		return w.rank
-	}
+func (w *Way) IsFreeway() bool {
+	return w.isFreeway.Value(w, _isFreeway)
+}
+
+func _rank(w *Way) int {
 	name, _ := w.way.Name()
 	ref, _ := w.way.Ref()
 	lanes := w.way.Lanes()
@@ -1053,13 +997,9 @@ func (w *Way) Rank() int {
 	// Infer highway type from characteristics
 	if w.IsFreeway() {
 		if lanes >= 6 {
-			w.rank = HIGHWAY_RANK["motorway"]
-			w.rankSet = true
-			return w.rank
+			return HIGHWAY_RANK["motorway"]
 		}
-		w.rank = HIGHWAY_RANK["trunk"]
-		w.rankSet = true
-		return w.rank
+		return HIGHWAY_RANK["trunk"]
 	}
 
 	nameUpper := strings.ToUpper(name)
@@ -1068,34 +1008,29 @@ func (w *Way) Rank() int {
 	// Primary roads (usually have ref numbers)
 	if len(ref) > 0 && !strings.Contains(nameUpper, "STREET") {
 		if strings.HasPrefix(refUpper, "US-") || strings.HasPrefix(refUpper, "SR-") {
-			w.rank = HIGHWAY_RANK["primary"]
-			w.rankSet = true
-			return w.rank
+			return HIGHWAY_RANK["primary"]
 		}
-		w.rank = HIGHWAY_RANK["secondary"]
-		w.rankSet = true
-		return w.rank
+
+		return HIGHWAY_RANK["secondary"]
 	}
 
 	// Local roads
 	if strings.Contains(nameUpper, "STREET") ||
 		strings.Contains(nameUpper, "AVENUE") ||
 		strings.Contains(nameUpper, "ROAD") {
-		w.rank = HIGHWAY_RANK["residential"]
-		w.rankSet = true
-		return w.rank
+		return HIGHWAY_RANK["residential"]
 	}
 
 	// Default to unclassified
-	w.rank = HIGHWAY_RANK["unclassified"]
-	w.rankSet = true
-	return w.rank
+	return HIGHWAY_RANK["unclassified"]
 }
 
-func (w *Way) Priority() int {
-	if w.prioritySet {
-		return w.priority
-	}
+// Get highway hierarchy rank for a way
+func (w *Way) Rank() int {
+	return w.rank.Value(w, _rank)
+}
+
+func _priority(w *Way) int {
 	lanes := w.way.Lanes()
 	name, _ := w.way.Name()
 	ref, _ := w.way.Ref()
@@ -1141,27 +1076,24 @@ func (w *Way) Priority() int {
 		priority += 10
 	}
 
-	w.priority = priority
-	w.prioritySet = true
 	return priority
 }
 
-func (w *Way) DistanceMultiplier() float32 {
-	if w.distanceMultiplierSet {
-		return w.distanceMultiplier
-	}
+func (w *Way) Priority() int {
+	return w.priority.Value(w, _priority)
+}
+
+func _distanceMultiplier(w *Way) float32 {
 	switch w.Context() {
 	case CONTEXT_CITY:
-		w.distanceMultiplier = 0.75
-		w.distanceMultiplierSet = true
-		return w.distanceMultiplier
+		return 0.75
 	case CONTEXT_FREEWAY:
-		w.distanceMultiplier = 1.5
-		w.distanceMultiplierSet = true
-		return w.distanceMultiplier
+		return 1.5
 	default:
-		w.distanceMultiplier = 1
-		w.distanceMultiplierSet = true
-		return w.distanceMultiplier
+		return 1
 	}
+}
+
+func (w *Way) DistanceMultiplier() float32 {
+	return w.distanceMultiplier.Value(w, _distanceMultiplier)
 }
