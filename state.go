@@ -21,7 +21,7 @@ type State struct {
 	Location                  log.GpsLocationData
 	LastLocation              log.GpsLocationData
 	StableWayCounter          int
-	Curvatures                []Curvature
+	Curvatures                []m.Curvature
 	TargetVelocities          []Velocity
 	MaxSpeed                  float64
 	LastSpeedLimitDistance    float32

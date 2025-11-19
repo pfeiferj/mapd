@@ -37,8 +37,7 @@ func ParseMaxSpeed(maxspeed string) float64 {
 }
 
 type NextSpeedLimit struct {
-	Latitude   float64
-	Longitude  float64
+	Pos m.Position
 	Speedlimit float64
 	Distance   float32
 }
@@ -70,8 +69,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 
 		if nextMaxSpeed != currentMaxSpeed && nextMaxSpeed > 0 {
 			result := NextSpeedLimit{
-				Latitude:   nextWay.StartPosition.Lat(),
-				Longitude:  nextWay.StartPosition.Lon(),
+				Pos:   nextWay.StartPosition,
 				Speedlimit: nextMaxSpeed,
 				Distance:   cumulativeDistance,
 			}

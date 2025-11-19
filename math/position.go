@@ -55,6 +55,10 @@ func (p *Position) Dot(other Position) float64 {
 	return p.Lat()*other.Lat() + p.Lon()*other.Lon()
 }
 
+func (p *Position) Equals(other Position) bool {
+	return p.Lat() == other.Lat() && p.Lon() == other.Lon()
+}
+
 func (p *Position) VectorTo(end Position) Vector {
 	res := Vector{}
 	dlon := end.LonRad() - p.LonRad()

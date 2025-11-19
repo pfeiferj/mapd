@@ -9,13 +9,7 @@ import (
 	m "pfeifer.dev/mapd/math"
 )
 
-type Curvature struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Curvature float64 `json:"curvature"`
-}
-
-func GetStateCurvatures(state *State) ([]Curvature, error) {
+func GetStateCurvatures(state *State) ([]m.Curvature, error) {
 	nodes := state.CurrentWay.Way.Nodes()
 	num_points := len(nodes)
 	all_nodes := [][]m.Position{nodes}
@@ -67,7 +61,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 
 	curvatures, err := GetCurvatures(positions)
 	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not get curvatures from points")
+		return []m.Curvature{}, errors.Wrap(err, "could not get curvatures from points")
 	}
 
 	// set the merge nodes to be straight to help balance out issues with map representation
@@ -95,42 +89,34 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 
 	average_curvatures, err := GetAverageCurvatures(curvatures)
 	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not get average curvatures from curvatures")
+		return []m.Curvature{}, errors.Wrap(err, "could not get average curvatures from curvatures")
 	}
-	curvature_outputs := make([]Curvature, len(average_curvatures))
-	for i, curvature := range average_curvatures {
-		curvature_outputs[i].Curvature = curvature
-		curvature_outputs[i].Latitude = positions[i+2].Lat()
-		curvature_outputs[i].Longitude = positions[i+2].Lon()
-	}
-	return curvature_outputs, nil
+	return average_curvatures, nil
 }
 
 type Velocity struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Velocity  float64 `json:"velocity"`
+	Pos  m.Position
+	Velocity  float64
 }
 
-func GetTargetVelocities(curvatures []Curvature) (velocities []Velocity) {
+func GetTargetVelocities(curvatures []m.Curvature) (velocities []Velocity) {
 	velocities = make([]Velocity, len(curvatures))
 	for i, curv := range curvatures {
 		if curv.Curvature == 0 {
 			continue
 		}
 		velocities[i].Velocity = math.Pow(float64(ms.Settings.CurveTargetLatA)/curv.Curvature, 1.0/2)
-		velocities[i].Latitude = curv.Latitude
-		velocities[i].Longitude = curv.Longitude
+		velocities[i].Pos = curv.Pos
 	}
 	return velocities
 }
 
-func GetAverageCurvatures(curvatures []m.Curvature) (average_curvatures []float64, err error) {
+func GetAverageCurvatures(curvatures []m.Curvature) (average_curvatures []m.Curvature, err error) {
 	if len(curvatures) < 3 {
-		return []float64{}, errors.New("not enough curvatures to average")
+		return []m.Curvature{}, errors.New("not enough curvatures to average")
 	}
 
-	average_curvatures = make([]float64, len(curvatures)-2)
+	average_curvatures = make([]m.Curvature, len(curvatures)-2)
 
 	for i := 0; i < len(curvatures)-2; i++ {
 		a := curvatures[i].Curvature
@@ -141,11 +127,15 @@ func GetAverageCurvatures(curvatures []m.Curvature) (average_curvatures []float6
 		cl := curvatures[i+2].ArcLength
 
 		if al+bl+cl == 0 {
-			average_curvatures[i] = 0
+			average_curvatures[i] = curvatures[i+2]
 			continue
 		}
 
-		average_curvatures[i] = (a*al + b*bl + c*cl) / (al + bl + cl)
+		avg := m.Curvature{Pos: curvatures[i+1].Pos}
+		avg.Curvature = (a*al + b*bl + c*cl) / (al + bl + cl)
+		avg.ArcLength = (curvatures[i].ArcLength + curvatures[i+1].ArcLength + curvatures[i+2].ArcLength) / 3
+		avg.Angle = (curvatures[i].Angle + curvatures[i+1].Angle + curvatures[i+2].Angle) / 3
+		average_curvatures[i] = avg
 	}
 
 	return average_curvatures, nil

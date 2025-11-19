@@ -4,7 +4,6 @@ import (
 	"math"
 
 	ms "pfeifer.dev/mapd/settings"
-	m "pfeifer.dev/mapd/math"
 )
 
 //func calculate_accel(t float32, target_jerk float32, a_ego float32) float32 {
@@ -23,16 +22,15 @@ func UpdateCurveSpeed(s *State) {
 	distances := make([]float32, len(s.TargetVelocities))
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
-		pos := m.NewPosition(tv.Latitude, tv.Longitude)
-		d := s.CurrentWay.OnWay.Distance.LinePosition.Pos.DistanceTo(pos)
+		d := s.CurrentWay.OnWay.Distance.LinePosition.Pos.DistanceTo(tv.Pos)
 
 		distances[i] = d
 
 		// find index of the most recent node we have driven past based on which node was used to calculate if we are on the way
-		if tv.Latitude == s.CurrentWay.Distance.LineStart.Lat() && tv.Longitude == s.CurrentWay.Distance.LineStart.Lon() && match_idx == -1 {
+		if tv.Pos.Equals(s.CurrentWay.Distance.LineStart) && match_idx == -1 {
 			match_idx = i + 1
 		}
-		if tv.Latitude == s.CurrentWay.Distance.LineEnd.Lat() && tv.Longitude == s.CurrentWay.Distance.LineEnd.Lon() && match_idx == -1 {
+		if tv.Pos.Equals(s.CurrentWay.Distance.LineEnd) && match_idx == -1 {
 			match_idx = i + 1
 		}
 	}

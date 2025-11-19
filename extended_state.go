@@ -81,7 +81,8 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 	for _, curvature := range s.state.Curvatures {
 		for ; point_idx < path.Len(); point_idx++ {
 			point := path.At(point_idx)
-			if curvature.Latitude == point.Latitude() && curvature.Longitude == point.Longitude() {
+			pos := m.NewPosition(point.Latitude(), point.Longitude())
+			if curvature.Pos.Equals(pos) {
 				point.SetCurvature(float32(curvature.Curvature))
 				point_idx++
 				break
@@ -92,7 +93,8 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 	for _, velocity := range s.state.TargetVelocities {
 		for ; point_idx < path.Len(); point_idx++ {
 			point := path.At(point_idx)
-			if velocity.Latitude == point.Latitude() && velocity.Longitude == point.Longitude() {
+			pos := m.NewPosition(point.Latitude(), point.Longitude())
+			if velocity.Pos.Equals(pos) {
 				point.SetTargetVelocity(float32(velocity.Velocity))
 				point_idx++
 				break

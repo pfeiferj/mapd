@@ -603,7 +603,7 @@ func NextIsForward(nextWay Way, matchNode m.Position) bool {
 	}
 
 	lastNode := nodes[len(nodes) - 1]
-	if lastNode.Lat() == matchNode.Lat() && lastNode.Lon() == matchNode.Lon() {
+	if lastNode.Equals(matchNode) {
 		return false
 	}
 
@@ -807,7 +807,7 @@ func (w *Way) isValidConnection(matchNode, bearingNode m.Position, maxCurvature 
 	}
 
 	var nextBearingNode m.Position
-	if matchNode.Lat() == nodes[0].Lat() && matchNode.Lon() == nodes[0].Lon() {
+	if matchNode.Equals(nodes[0]) {
 		nextBearingNode = nodes[1]
 	} else {
 		nextBearingNode = nodes[len(nodes) - 2]
@@ -866,7 +866,7 @@ func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
 			index = len(nodes) - 1 - i
 		}
 		node := nodes[index]
-		if node.Lat() == lastPos.Lat() && node.Lon() == lastPos.Lon() && !stopFiltering {
+		if node.Equals(lastPos) && !stopFiltering {
 			stopFiltering = true
 		}
 		if !stopFiltering {
