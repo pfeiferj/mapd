@@ -4,6 +4,7 @@ import (
 	"math"
 
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 //func calculate_accel(t float32, target_jerk float32, a_ego float32) float32 {
@@ -41,8 +42,12 @@ func UpdateCurveSpeed(s *State) {
 	forwardPoints := make([]Velocity, forwardSize)
 	forwardDistances := make([]float32, forwardSize)
 
+	pastTriggerPos := true
 	for i := range forwardSize {
 		forwardPoints[i] = s.TargetVelocities[i+match_idx]
+		if forwardPoints[i].Pos.Equals(s.MapCurveTriggerPos) {
+			pastTriggerPos = false
+		}
 		forwardDistances[i] = distances[i+match_idx] - s.DistanceSinceLastPosition
 		if forwardDistances[i] <= 0 {
 			forwardDistances[i] = distances[i+match_idx]
@@ -50,11 +55,13 @@ func UpdateCurveSpeed(s *State) {
 	}
 
 	minValidV := float32(1000)
+	minValidPos := m.Position{}
+	if pastTriggerPos {
+		s.MapCurveTriggerSpeed = max(s.MapCurveTriggerSpeed, s.CarVEgo + ms.CURVE_CALC_OFFSET)
+	}
 	calcSpeed := s.CarVEgo
 	if s.MapCurveTriggerSpeed > 0 && s.MapCurveTriggerSpeed > s.CarVEgo {
 		calcSpeed = s.MapCurveTriggerSpeed
-	} else {
-		s.MapCurveTriggerSpeed = 0
 	}
 	for i, d := range forwardDistances {
 		tv := forwardPoints[i]
@@ -91,16 +98,23 @@ func UpdateCurveSpeed(s *State) {
 		if float32(d) < max_d+float32(tv.Velocity)*ms.Settings.CurveTargetOffset {
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)
+				minValidPos = tv.Pos
 			}
 		}
 	}
 	if minValidV == float32(1000) {
 		s.CurveSpeed = 0
-		s.MapCurveTriggerSpeed = 0
+		if s.MapCurveTriggerSpeed > s.SuggestedSpeed() {
+			s.MapCurveTriggerSpeed = 0
+		}
 	} else {
 		s.CurveSpeed = minValidV
+		if s.MapCurveTriggerSpeed - s.CarVEgo > ms.CURVE_CALC_OFFSET {
+			s.MapCurveTriggerSpeed = s.CarVEgo
+		}
 		if s.MapCurveTriggerSpeed == 0 {
 			s.MapCurveTriggerSpeed = s.CarVEgo
+			s.MapCurveTriggerPos = minValidPos 
 		}
 	}
 }

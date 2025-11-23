@@ -33,11 +33,13 @@ type State struct {
 	TimeLastSetSpeedAdjust    time.Time
 	CarVEgo                   float32
 	CarAEgo                   float32
+	CarVCruise                   float32
 	CurveSpeed                float32
 	NextSpeedLimitMA          m.MovingAverage
 	VisionCurveMA             m.MovingAverage
 	CarStateUpdateTimeMA      m.MovingAverage
 	MapCurveTriggerSpeed      float32
+	MapCurveTriggerPos      	m.Position
 	DistanceSinceLastPosition float32
 	TimeLastPosition          time.Time
 	TimeLastModel             time.Time
@@ -52,7 +54,7 @@ func (s *State) checkEnableSpeed() bool {
 }
 
 func (s *State) SuggestedSpeed() float32 {
-	suggestedSpeed := float32(ms.MAX_OP_SPEED)
+	suggestedSpeed := min(s.CarVCruise * ms.KPH_TO_MS, ms.MAX_OP_SPEED)
 	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500*time.Millisecond
 
 	if ms.Settings.SpeedLimitControlEnabled {
@@ -108,6 +110,7 @@ func (s *State) UpdateCarState(carData car.CarState) {
 	}
 	s.CarVEgo = carData.VEgo()
 	s.CarAEgo = carData.AEgo()
+	s.CarVCruise = carData.VCruise()
 	tdiff := time.Since(s.TimeLastCarState)
 	seconds := s.CarStateUpdateTimeMA.Update(tdiff.Seconds())
 	s.DistanceSinceLastPosition += float32(seconds) * s.CarVEgo
