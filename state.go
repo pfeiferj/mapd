@@ -66,13 +66,9 @@ func (s *State) SuggestedSpeed() float32 {
 			slSuggestedSpeed += ms.Settings.SpeedLimitOffset
 		}
 		if s.NextSpeedLimit.Speedlimit > 0 {
-			calcSpeed := slSuggestedSpeed
-			if calcSpeed == 0 {
-				calcSpeed = s.CarVEgo
-			}
 			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-			timeToNextSpeedLimit := float32(math.Abs(float64(s.NextSpeedLimit.Distance / calcSpeed)))
-			speedLimitDiff := math.Abs(offsetNextSpeedLimit-float64(calcSpeed)) + 2
+			timeToNextSpeedLimit := float32(math.Abs(float64(s.NextSpeedLimit.Distance / s.CarVEgo)))
+			speedLimitDiff := math.Abs(offsetNextSpeedLimit-float64(s.CarVEgo)) + 2
 			timeToAdjust := float32(math.Abs(speedLimitDiff / float64(ms.Settings.CurveTargetAccel)))
 
 			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && timeToAdjust > timeToNextSpeedLimit {
