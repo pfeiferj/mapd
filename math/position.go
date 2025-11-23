@@ -3,10 +3,15 @@ package math
 import (
 	m "math"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/cereal/log"
 )
 
 func NewPosition(latDeg, lonDeg float64) Position {
 	return Position{latitudeDeg: latDeg, longitudeDeg: lonDeg}
+}
+
+func PosFromLocation(loc log.GpsLocationData) Position {
+	return Position{latitudeDeg: loc.Latitude(), longitudeDeg: loc.Longitude()}
 }
 
 type Position struct {

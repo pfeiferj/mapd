@@ -9,6 +9,7 @@ import (
 	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 func main() {
@@ -95,8 +96,10 @@ func main() {
 			state.TimeLastPosition = time.Now()
 			state.DistanceSinceLastPosition = 0
 			state.Location = location
-			if !offlineMaps.HasWays() || !maps.PointInBox(location.Latitude(), location.Longitude(), offlineMaps.MinLat(), offlineMaps.MinLon(), offlineMaps.MaxLat(), offlineMaps.MaxLon()) {
-				state.Data, err = maps.FindWaysAroundLocation(location.Latitude(), location.Longitude())
+			box := offlineMaps.Box()
+			pos := m.PosFromLocation(location)
+			if len(offlineMaps.Ways()) == 0 || !box.PosInside(pos) {
+				state.Data, err = maps.FindWaysAroundPosition(pos)
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 					continue
@@ -105,7 +108,7 @@ func main() {
 			}
 
 			state.LastWay = state.CurrentWay
-			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, offlineMaps, location)
+			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, &offlineMaps, location)
 			if err != nil {
 				slog.Debug("could not get current way", "error", err)
 			}
@@ -117,7 +120,7 @@ func main() {
 				state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
 			}
 
-			state.NextWays, err = NextWays(location, state.CurrentWay, offlineMaps, state.CurrentWay.OnWay.IsForward)
+			state.NextWays, err = NextWays(location, state.CurrentWay, &offlineMaps, state.CurrentWay.OnWay.IsForward)
 			if err != nil {
 				slog.Debug("could not get next way", "error", err)
 			}

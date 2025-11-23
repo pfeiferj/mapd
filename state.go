@@ -10,6 +10,7 @@ import (
 	"pfeifer.dev/mapd/cereal/log"
 	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
+	"pfeifer.dev/mapd/maps"
 )
 
 type State struct {
@@ -17,7 +18,7 @@ type State struct {
 	Data                      []uint8
 	CurrentWay                CurrentWay
 	LastWay                   CurrentWay
-	NextWays                  []NextWayResult
+	NextWays                  []maps.NextWayResult
 	Location                  log.GpsLocationData
 	LastLocation              log.GpsLocationData
 	StableWayCounter          int
