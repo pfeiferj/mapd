@@ -4,122 +4,22 @@ import (
 	"fmt"
 	"math"
 
-	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
-	"pfeifer.dev/mapd/cereal/offline"
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
-func Dot(ax float64, ay float64, bx float64, by float64) (product float64) {
-	return (ax * bx) + (ay * by)
-}
-
-// Point represents a 2D point
-type Point struct {
-	X, Y float64
-}
-
-type LinePoint struct {
-	X, Y, T float64
-}
-
-// Subtract returns the vector from other to p
-func (p Point) Subtract(other Point) Point {
-	return Point{X: p.X - other.X, Y: p.Y - other.Y}
-}
-
-// Add returns the sum of two points/vectors
-func (p Point) Add(other Point) Point {
-	return Point{X: p.X + other.X, Y: p.Y + other.Y}
-}
-
-// Scale returns the point/vector scaled by a factor
-func (p Point) Scale(factor float64) Point {
-	return Point{X: p.X * factor, Y: p.Y * factor}
-}
-
-// Dot returns the dot product of two vectors
-func (p Point) Dot(other Point) float64 {
-	return p.X*other.X + p.Y*other.Y
-}
-
-func PointOnLine(startLat float64, startLon float64, endLat float64, endLon float64, lat float64, lon float64) (LinePoint) {
-	A := Point {
-		X: startLat,
-		Y: startLon,
-	}
-	B := Point {
-		X: endLat,
-		Y: endLon,
-	}
-	P := Point {
-		X: lat,
-		Y: lon,
-	}
-
-	AB := B.Subtract(A)
-	AP := P.Subtract(A)
-
-	// Project P onto AB, get parameter t
-	t := AP.Dot(AB) / AB.Dot(AB)
-
-	// Clamp to segment [0, 1]
-	t = math.Max(0, math.Min(1, t))
-
-	// Calculate closest point
-	closest := A.Add(AB.Scale(t))
-
-	res := LinePoint{X: closest.X, Y: closest.Y, T: t}
-	return res
-}
-
-// arguments should be in radians
-func DistanceToPoint(ax float64, ay float64, bx float64, by float64) (meters float64) {
-	a := math.Sin((bx-ax)/2)*math.Sin((bx-ax)/2) + math.Cos(ax)*math.Cos(bx)*math.Sin((by-ay)/2)*math.Sin((by-ay)/2)
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-
-	return ms.R * c // in metres
-}
-
-func Vector(latA float64, lonA float64, latB float64, lonB float64) (x float64, y float64) {
-	dlon := lonB - lonA
-	x = math.Sin(dlon) * math.Cos(latB)
-	y = math.Cos(latA)*math.Sin(latB) - (math.Sin(latA) * math.Cos(latB) * math.Cos(dlon))
-	return x, y
-}
-
-func Bearing(latA float64, lonA float64, latB float64, lonB float64) (radians float64) {
-	latA = latA * ms.TO_RADIANS
-	latB = latB * ms.TO_RADIANS
-	lonA = lonA * ms.TO_RADIANS
-	lonB = lonB * ms.TO_RADIANS
-	x, y := Vector(latA, lonA, latB, lonB)
-	return math.Atan2(x, y)
-}
-
-type Curvature struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Curvature float64 `json:"curvature"`
-}
-
-func GetStateCurvatures(state *State) ([]Curvature, error) {
-	nodes, err := state.CurrentWay.Way.Nodes()
-	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not read way nodes")
-	}
-	num_points := nodes.Len()
-	all_nodes := []capnp.StructList[offline.Coordinates]{nodes}
+func GetStateCurvatures(state *State) ([]m.Curvature, error) {
+	nodes := state.CurrentWay.Way.Nodes()
+	num_points := len(nodes)
+	all_nodes := [][]m.Position{nodes}
 	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
 	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way
 	for _, nextWay := range state.NextWays {
-		nwNodes, err := nextWay.Way.Nodes()
-		if err != nil {
-			continue
-		}
-		if nwNodes.Len() > 0 {
-			num_points += nwNodes.Len() - 1
+		nwNodes := nextWay.Way.Nodes()
+		if len(nwNodes) > 0 {
+			num_points += len(nwNodes) - 1
 		}
 		all_nodes = append(all_nodes, nwNodes)
 		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
@@ -127,8 +27,7 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		lastWay = nextWay.Way
 	}
 
-	x_points := make([]float64, num_points)
-	y_points := make([]float64, num_points)
+	positions := make([]m.Position, num_points)
 
 	merge_or_split_nodes := []int{}
 	all_nodes_idx := 0
@@ -142,17 +41,16 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 				index += 1
 			}
 		} else {
-			index = all_nodes[all_nodes_idx].Len() - nodes_idx - 1
+			index = len(all_nodes[all_nodes_idx]) - nodes_idx - 1
 			if all_nodes_idx > 0 {
 				index -= 1
 			}
 		}
-		node := all_nodes[all_nodes_idx].At(index)
-		x_points[i] = node.Latitude()
-		y_points[i] = node.Longitude()
+		node := all_nodes[all_nodes_idx][index]
+		positions[i] = node
 
 		nodes_idx += 1
-		if nodes_idx == all_nodes[all_nodes_idx].Len() || (nodes_idx == all_nodes[all_nodes_idx].Len()-1 && all_nodes_idx > 0) {
+		if nodes_idx == len(all_nodes[all_nodes_idx]) || (nodes_idx == len(all_nodes[all_nodes_idx])-1 && all_nodes_idx > 0) {
 			all_nodes_idx += 1
 			nodes_idx = 0
 			if all_nodes_idx < len(all_nodes_is_merge_or_split) && all_nodes_is_merge_or_split[all_nodes_idx] {
@@ -161,126 +59,100 @@ func GetStateCurvatures(state *State) ([]Curvature, error) {
 		}
 	}
 
-	curvatures, arc_lengths, err := GetCurvatures(x_points, y_points)
+	curvatures, err := GetCurvatures(positions)
 	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not get curvatures from points")
+		return []m.Curvature{}, errors.Wrap(err, "could not get curvatures from points")
 	}
 
 	// set the merge nodes to be straight to help balance out issues with map representation
 	for _, merge_or_split_node := range merge_or_split_nodes {
 		if merge_or_split_node >= 2 {
-			curvatures[merge_or_split_node-2] = 0.0015
-			curvatures[merge_or_split_node-1] = 0.0015
+			curvatures[merge_or_split_node-2].Curvature = 0.0015
+			curvatures[merge_or_split_node-1].Curvature = 0.0015
 		}
 		// also include nodes within 15 meters
 		for i := merge_or_split_node - 3; i >= 0; i-- {
-			if DistanceToPoint(x_points[merge_or_split_node]*ms.TO_RADIANS, y_points[merge_or_split_node]*ms.TO_RADIANS, x_points[i]*ms.TO_RADIANS, y_points[i]*ms.TO_RADIANS) > 15 {
+			
+			if positions[merge_or_split_node].DistanceTo(positions[i]) > 15 {
 				break
 			}
-			curvatures[i] = 0.0015
+			curvatures[i].Curvature = 0.0015
 		}
 		// also include forward nodes within 15 meters
 		for i := merge_or_split_node; i < len(curvatures); i++ {
-			if DistanceToPoint(x_points[merge_or_split_node]*ms.TO_RADIANS, y_points[merge_or_split_node]*ms.TO_RADIANS, x_points[i]*ms.TO_RADIANS, y_points[i]*ms.TO_RADIANS) > 15 {
+			if positions[merge_or_split_node].DistanceTo(positions[i]) > 15 {
 				break
 			}
-			curvatures[i] = 0.0015
+			curvatures[i].Curvature = 0.0015
 		}
 	}
 
-	average_curvatures, err := GetAverageCurvatures(curvatures, arc_lengths)
+	average_curvatures, err := GetAverageCurvatures(curvatures)
 	if err != nil {
-		return []Curvature{}, errors.Wrap(err, "could not get average curvatures from curvatures")
+		return []m.Curvature{}, errors.Wrap(err, "could not get average curvatures from curvatures")
 	}
-	curvature_outputs := make([]Curvature, len(average_curvatures))
-	for i, curvature := range average_curvatures {
-		curvature_outputs[i].Curvature = curvature
-		curvature_outputs[i].Latitude = x_points[i+2]
-		curvature_outputs[i].Longitude = y_points[i+2]
-	}
-	return curvature_outputs, nil
+	return average_curvatures, nil
 }
 
 type Velocity struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Velocity  float64 `json:"velocity"`
+	Pos  m.Position
+	Velocity  float64
 }
 
-func GetTargetVelocities(curvatures []Curvature) (velocities []Velocity) {
+func GetTargetVelocities(curvatures []m.Curvature) (velocities []Velocity) {
 	velocities = make([]Velocity, len(curvatures))
 	for i, curv := range curvatures {
 		if curv.Curvature == 0 {
 			continue
 		}
 		velocities[i].Velocity = math.Pow(float64(ms.Settings.CurveTargetLatA)/curv.Curvature, 1.0/2)
-		velocities[i].Latitude = curv.Latitude
-		velocities[i].Longitude = curv.Longitude
+		velocities[i].Pos = curv.Pos
 	}
 	return velocities
 }
 
-func GetAverageCurvatures(curvatures []float64, arc_lengths []float64) (average_curvatures []float64, err error) {
+func GetAverageCurvatures(curvatures []m.Curvature) (average_curvatures []m.Curvature, err error) {
 	if len(curvatures) < 3 {
-		return []float64{}, errors.New("not enough curvatures to average")
+		return []m.Curvature{}, errors.New("not enough curvatures to average")
 	}
 
-	average_curvatures = make([]float64, len(curvatures)-2)
+	average_curvatures = make([]m.Curvature, len(curvatures)-2)
 
 	for i := 0; i < len(curvatures)-2; i++ {
-		a := curvatures[i]
-		b := curvatures[i+1]
-		c := curvatures[i+2]
-		al := arc_lengths[i]
-		bl := arc_lengths[i+1]
-		cl := arc_lengths[i+2]
+		a := curvatures[i].Curvature
+		b := curvatures[i+1].Curvature
+		c := curvatures[i+2].Curvature
+		al := curvatures[i].ArcLength
+		bl := curvatures[i+1].ArcLength
+		cl := curvatures[i+2].ArcLength
 
 		if al+bl+cl == 0 {
-			average_curvatures[i] = 0
+			average_curvatures[i] = curvatures[i+2]
 			continue
 		}
 
-		average_curvatures[i] = (a*al + b*bl + c*cl) / (al + bl + cl)
+		avg := m.Curvature{Pos: curvatures[i+1].Pos}
+		avg.Curvature = (a*al + b*bl + c*cl) / (al + bl + cl)
+		avg.ArcLength = (curvatures[i].ArcLength + curvatures[i+1].ArcLength + curvatures[i+2].ArcLength) / 3
+		avg.Angle = (curvatures[i].Angle + curvatures[i+1].Angle + curvatures[i+2].Angle) / 3
+		average_curvatures[i] = avg
 	}
 
 	return average_curvatures, nil
 }
 
-func GetCurvatures(x_points []float64, y_points []float64) (curvatures []float64, arc_lengths []float64, err error) {
-	if len(x_points) < 3 {
-		return []float64{}, []float64{}, errors.New(fmt.Sprintf("not enough points to calculate curvatures. len(points): %d", len(x_points)))
+func GetCurvatures(positions []m.Position) (curvatures []m.Curvature, err error) {
+	if len(positions) < 3 {
+		return []m.Curvature{}, errors.New(fmt.Sprintf("not enough points to calculate curvatures. len(points): %d", len(positions)))
 	}
-	curvatures = make([]float64, len(x_points)-2)
-	arc_lengths = make([]float64, len(x_points)-2)
+	curvatures = make([]m.Curvature, len(positions)-2)
 
-	for i := 0; i < len(x_points)-2; i++ {
-		curvature, arc_length, _ := GetCurvature(x_points[i], y_points[i], x_points[i+1], y_points[i+1], x_points[i+2], y_points[i+2])
+	for i := 0; i < len(positions)-2; i++ {
+		curvature := m.CalculateCurvature(positions[i], positions[i+1], positions[i+2])
 
 		curvatures[i] = curvature
-
-		arc_lengths[i] = arc_length
-	}
-	return curvatures, arc_lengths, nil
-}
-
-func GetCurvature(x_a float64, y_a float64, x_b float64, y_b float64, x_c float64, y_c float64) (curvature float64, arc_length float64, angle float64) {
-	length_a := DistanceToPoint(x_a*ms.TO_RADIANS, y_a*ms.TO_RADIANS, x_b*ms.TO_RADIANS, y_b*ms.TO_RADIANS)
-	length_b := DistanceToPoint(x_a*ms.TO_RADIANS, y_a*ms.TO_RADIANS, x_c*ms.TO_RADIANS, y_c*ms.TO_RADIANS)
-	length_c := DistanceToPoint(x_b*ms.TO_RADIANS, y_b*ms.TO_RADIANS, x_c*ms.TO_RADIANS, y_c*ms.TO_RADIANS)
-
-	sp := (length_a + length_b + length_c) / 2
-
-	area := math.Sqrt(sp * (sp - length_a) * (sp - length_b) * (sp - length_c))
-
-	if length_a*length_b*length_c == 0 {
-		return 0, 0, 0
 	}
 
-	curvature = (4 * area) / (length_a * length_b * length_c)
-
-	radius := 1.0 / curvature
-
-	angle = math.Acos((math.Pow(radius, 2)*2 - math.Pow(length_b, 2)) / (2 * math.Pow(radius, 2)))
-	arc_length = radius * angle
-	return curvature, arc_length, angle
+	return curvatures, nil
 }
+

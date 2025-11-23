@@ -45,53 +45,42 @@ type MapdSettings struct {
 }
 
 func (s *MapdSettings) Default() {
-	s.VisionCurveMinTargetV = 10 * MPH_TO_MS
-	s.VisionCurveTargetLatA = 1.9
-	s.SpeedLimitOffset = 0
-	s.LogLevel = "error"
-	s.LogJson = true
-	s.LogSource = true
-	s.VisionCurveSpeedControlEnabled = false
-	s.CurveSpeedControlEnabled = false
-	s.SpeedLimitControlEnabled = false
-	s.EnableSpeed = 0
-	s.VisionCurveUseEnableSpeed = false
-	s.CurveUseEnableSpeed = false
-	s.SpeedLimitUseEnableSpeed = false
-	s.HoldLastSeenSpeedLimit = false
-	s.CurveTargetJerk = -0.6
-	s.CurveTargetAccel = -1.2
-	s.CurveTargetOffset = 1.5
-	s.DefaultLaneWidth = 3.7
-	s.CurveTargetLatA = 2.0
-	s.SpeedUpForNextSpeedLimit = false
-	s.SlowDownForNextSpeedLimit = true
-	s.HoldSpeedLimitWhileChangingSetSpeed = true
+	if _, err := os.Stat("/data/openpilot/mapd_defaults.json"); err == nil {
+		defaults, err := os.ReadFile("/data/openpilot/mapd_defaults.json")
+		if err != nil {
+			slog.Warn("failed to read custom default settings", "error", err)
+		}
+		err = json.Unmarshal(defaults, s)
+		if err != nil {
+			slog.Warn("failed to load custom default settings", "error", err)
+			return
+		}
+	} else {
+		err := json.Unmarshal(defaultsJson, s)
+		if err != nil {
+			slog.Warn("failed to load default settings", "error", err)
+			return
+		}
+	}
 }
 
 func (s *MapdSettings) Recommended() {
-	s.VisionCurveMinTargetV = 10 * MPH_TO_MS
-	s.VisionCurveTargetLatA = 1.9
-	s.SpeedLimitOffset = 5 * MPH_TO_MS
-	s.LogLevel = "error"
-	s.LogJson = true
-	s.LogSource = true
-	s.VisionCurveSpeedControlEnabled = true
-	s.CurveSpeedControlEnabled = true
-	s.SpeedLimitControlEnabled = true
-	s.EnableSpeed = 80 * MPH_TO_MS
-	s.SpeedLimitUseEnableSpeed = true
-	s.VisionCurveUseEnableSpeed = false
-	s.CurveUseEnableSpeed = false
-	s.HoldLastSeenSpeedLimit = true
-	s.CurveTargetJerk = -0.6
-	s.CurveTargetAccel = -1.2
-	s.CurveTargetOffset = 1.5
-	s.DefaultLaneWidth = 3.7
-	s.CurveTargetLatA = 2.0
-	s.SpeedUpForNextSpeedLimit = true
-	s.SlowDownForNextSpeedLimit = true
-	s.HoldSpeedLimitWhileChangingSetSpeed = true
+	if _, err := os.Stat("/data/openpilot/mapd_recommended.json"); err == nil {
+		recommended, err := os.ReadFile("/data/openpilot/mapd_recommended.json")
+		if err != nil {
+			slog.Warn("failed to read custom recommended settings", "error", err)
+		}
+		err = json.Unmarshal(recommended, s)
+		if err != nil {
+			slog.Warn("failed to load custom recommended settings", "error", err)
+			return
+		}
+	} else {
+		err := json.Unmarshal(recommendedJson, s)
+		if err != nil {
+			slog.Warn("failed to load recommended settings", "error", err)
+		}
+	}
 }
 
 func (s *MapdSettings) Load() (success bool) {

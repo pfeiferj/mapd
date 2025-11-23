@@ -4,6 +4,7 @@ import (
 	"math"
 
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 //func calculate_accel(t float32, target_jerk float32, a_ego float32) float32 {
@@ -19,23 +20,18 @@ func calculate_distance(t float32, target_jerk float32, a_ego float32, v_ego flo
 }
 
 func UpdateCurveSpeed(s *State) {
-	distances := make([]float64, len(s.TargetVelocities))
+	distances := make([]float32, len(s.TargetVelocities))
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
-		d := DistanceToPoint(
-			s.CurrentWay.OnWay.Distance.LinePoint.X*ms.TO_RADIANS,
-			s.CurrentWay.OnWay.Distance.LinePoint.Y*ms.TO_RADIANS,
-			tv.Latitude*ms.TO_RADIANS,
-			tv.Longitude*ms.TO_RADIANS,
-		)
+		d := s.CurrentWay.OnWay.Distance.LinePosition.Pos.DistanceTo(tv.Pos)
 
 		distances[i] = d
 
 		// find index of the most recent node we have driven past based on which node was used to calculate if we are on the way
-		if tv.Latitude == s.CurrentWay.Distance.LineStart.Latitude() && tv.Longitude == s.CurrentWay.Distance.LineStart.Longitude() && match_idx == -1 {
+		if tv.Pos.Equals(s.CurrentWay.Distance.LineStart) && match_idx == -1 {
 			match_idx = i + 1
 		}
-		if tv.Latitude == s.CurrentWay.Distance.LineEnd.Latitude() && tv.Longitude == s.CurrentWay.Distance.LineEnd.Longitude() && match_idx == -1 {
+		if tv.Pos.Equals(s.CurrentWay.Distance.LineEnd) && match_idx == -1 {
 			match_idx = i + 1
 		}
 	}
@@ -44,22 +40,28 @@ func UpdateCurveSpeed(s *State) {
 	}
 	forwardSize := len(s.TargetVelocities) - match_idx
 	forwardPoints := make([]Velocity, forwardSize)
-	forwardDistances := make([]float64, forwardSize)
+	forwardDistances := make([]float32, forwardSize)
 
+	pastTriggerPos := true
 	for i := range forwardSize {
 		forwardPoints[i] = s.TargetVelocities[i+match_idx]
-		forwardDistances[i] = distances[i+match_idx] - float64(s.DistanceSinceLastPosition)
+		if forwardPoints[i].Pos.Equals(s.MapCurveTriggerPos) {
+			pastTriggerPos = false
+		}
+		forwardDistances[i] = distances[i+match_idx] - s.DistanceSinceLastPosition
 		if forwardDistances[i] <= 0 {
 			forwardDistances[i] = distances[i+match_idx]
 		}
 	}
 
 	minValidV := float32(1000)
+	minValidPos := m.Position{}
+	if pastTriggerPos {
+		s.MapCurveTriggerSpeed = max(s.MapCurveTriggerSpeed, s.CarVEgo + ms.CURVE_CALC_OFFSET)
+	}
 	calcSpeed := s.CarVEgo
 	if s.MapCurveTriggerSpeed > 0 && s.MapCurveTriggerSpeed > s.CarVEgo {
 		calcSpeed = s.MapCurveTriggerSpeed
-	} else {
-		s.MapCurveTriggerSpeed = 0
 	}
 	for i, d := range forwardDistances {
 		tv := forwardPoints[i]
@@ -96,16 +98,23 @@ func UpdateCurveSpeed(s *State) {
 		if float32(d) < max_d+float32(tv.Velocity)*ms.Settings.CurveTargetOffset {
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)
+				minValidPos = tv.Pos
 			}
 		}
 	}
 	if minValidV == float32(1000) {
 		s.CurveSpeed = 0
-		s.MapCurveTriggerSpeed = 0
+		if s.MapCurveTriggerSpeed > s.SuggestedSpeed() {
+			s.MapCurveTriggerSpeed = 0
+		}
 	} else {
 		s.CurveSpeed = minValidV
+		if s.MapCurveTriggerSpeed - s.CarVEgo > ms.CURVE_CALC_OFFSET {
+			s.MapCurveTriggerSpeed = s.CarVEgo
+		}
 		if s.MapCurveTriggerSpeed == 0 {
 			s.MapCurveTriggerSpeed = s.CarVEgo
+			s.MapCurveTriggerPos = minValidPos 
 		}
 	}
 }

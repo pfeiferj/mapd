@@ -14,6 +14,7 @@ type downloadModel struct {
 	path      string
 	rootPaths []downloadItem
 	state     downloadState
+	menu      ms.DownloadMenu
 }
 
 type downloadState int
@@ -38,7 +39,8 @@ func (i downloadItem) FilterValue() string { return i.title }
 
 func getDownloadModel() downloadModel {
 	dItems := []downloadItem{}
-	for k := range ms.BOUNDING_BOXES {
+	menu := ms.GetDownloadMenu()
+	for k := range menu {
 		dItem := downloadItem{title: k}
 		dItems = append(dItems, dItem)
 	}
@@ -49,7 +51,7 @@ func getDownloadModel() downloadModel {
 
 	listDelegate := list.NewDefaultDelegate()
 
-	m := downloadModel{list: list.New(items, listDelegate, 0, 0)}
+	m := downloadModel{list: list.New(items, listDelegate, 0, 0), menu: menu}
 	m.list.Title = "Select Download Area"
 	m.rootPaths = dItems
 	return m
@@ -63,8 +65,8 @@ func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd)
 			m.path = it.title
 
 			items := []list.Item{}
-			for k := range ms.BOUNDING_BOXES[m.path] {
-				dItem := downloadItem{title: ms.BOUNDING_BOXES[m.path][k].FullName, desc: k}
+			for k := range m.menu[m.path] {
+				dItem := downloadItem{title: m.menu[m.path][k].FullName, desc: k}
 				items = append(items, dItem)
 			}
 			m.list.SetItems(items)

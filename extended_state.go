@@ -5,11 +5,10 @@ import (
 	"log/slog"
 	"time"
 
-	"capnproto.org/go/capnp/v3"
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
-	"pfeifer.dev/mapd/cereal/offline"
 	ms "pfeifer.dev/mapd/settings"
+	m "pfeifer.dev/mapd/math"
 )
 
 
@@ -33,21 +32,14 @@ func (s *ExtendedState) Send() error {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
-	nodes, err := s.state.CurrentWay.Way.Nodes()
-	if err != nil {
-		slog.Warn("could not get current way nodes")
-		return
-	}
-	num_points := nodes.Len()
-	all_nodes := []capnp.StructList[offline.Coordinates]{nodes}
+	nodes := s.state.CurrentWay.Way.Nodes()
+	num_points := len(nodes)
+	all_nodes := [][]m.Position{nodes}
 	all_nodes_direction := []bool{s.state.CurrentWay.OnWay.IsForward}
 	for _, nextWay := range s.state.NextWays {
-		nwNodes, err := nextWay.Way.Nodes()
-		if err != nil {
-			continue
-		}
-		if nwNodes.Len() > 0 {
-			num_points += nwNodes.Len() - 1
+		nwNodes := nextWay.Way.Nodes()
+		if len(nwNodes) > 0 {
+			num_points += len(nwNodes) - 1
 		}
 		all_nodes = append(all_nodes, nwNodes)
 		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
@@ -70,17 +62,17 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 				index += 1
 			}
 		} else {
-			index = all_nodes[all_nodes_idx].Len() - nodes_idx - 1
+			index = len(all_nodes[all_nodes_idx]) - nodes_idx - 1
 			if all_nodes_idx > 0 {
 				index -= 1
 			}
 		}
-		node := all_nodes[all_nodes_idx].At(index)
+		node := all_nodes[all_nodes_idx][index]
 		point := path.At(i)
-		point.SetLatitude(node.Latitude())
-		point.SetLongitude(node.Longitude())
+		point.SetLatitude(node.Lat())
+		point.SetLongitude(node.Lon())
 		nodes_idx += 1
-		if nodes_idx == all_nodes[all_nodes_idx].Len() || (nodes_idx == all_nodes[all_nodes_idx].Len()-1 && all_nodes_idx > 0) {
+		if nodes_idx == len(all_nodes[all_nodes_idx]) || (nodes_idx == len(all_nodes[all_nodes_idx])-1 && all_nodes_idx > 0) {
 			all_nodes_idx += 1
 			nodes_idx = 0
 		}
@@ -89,7 +81,8 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 	for _, curvature := range s.state.Curvatures {
 		for ; point_idx < path.Len(); point_idx++ {
 			point := path.At(point_idx)
-			if curvature.Latitude == point.Latitude() && curvature.Longitude == point.Longitude() {
+			pos := m.NewPosition(point.Latitude(), point.Longitude())
+			if curvature.Pos.Equals(pos) {
 				point.SetCurvature(float32(curvature.Curvature))
 				point_idx++
 				break
@@ -100,7 +93,8 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 	for _, velocity := range s.state.TargetVelocities {
 		for ; point_idx < path.Len(); point_idx++ {
 			point := path.At(point_idx)
-			if velocity.Latitude == point.Latitude() && velocity.Longitude == point.Longitude() {
+			pos := m.NewPosition(point.Latitude(), point.Longitude())
+			if velocity.Pos.Equals(pos) {
 				point.SetTargetVelocity(float32(velocity.Velocity))
 				point_idx++
 				break
@@ -154,4 +148,3 @@ func (s *ExtendedState) setDownloadProgress(out custom.MapdExtendedOut) {
 		idx++
 	}
 }
-
