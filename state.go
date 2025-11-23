@@ -15,7 +15,7 @@ import (
 
 type State struct {
 	Publisher                 *cereal.Publisher[custom.MapdOut]
-	Data                      []uint8
+	Data                      maps.Offline
 	CurrentWay                CurrentWay
 	LastWay                   CurrentWay
 	NextWays                  []maps.NextWayResult
@@ -142,11 +142,7 @@ func (s *State) Send() error {
 	lanes := s.CurrentWay.Way.Lanes()
 	output.SetLanes(uint8(lanes))
 
-	if len(s.Data) > 0 {
-		output.SetTileLoaded(true)
-	} else {
-		output.SetTileLoaded(false)
-	}
+	output.SetTileLoaded(s.Data.Loaded)
 
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context()))
 	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width())

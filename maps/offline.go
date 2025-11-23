@@ -2,6 +2,7 @@ package maps
 
 import (
 	"log/slog"
+	"math"
 
 	"pfeifer.dev/mapd/cereal/offline"
 	m "pfeifer.dev/mapd/math"
@@ -20,12 +21,14 @@ func ReadOffline(data []uint8) Offline {
 		if err != nil {
 			slog.Warn("could not read offline message", "error", err)
 		}
-		return Offline{offline: offlineMaps}
+		offlineMaps.Message().ResetReadLimit(math.MaxUint64)
+		return Offline{offline: offlineMaps, Loaded: true}
 	}
-	return Offline{}
+	return Offline{Loaded: false}
 }
 
 type Offline struct {
+	Loaded bool
 	offline offline.Offline
 	box        u.Curry[m.Box]
 	overlapBox u.Curry[m.Box]

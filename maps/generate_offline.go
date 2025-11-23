@@ -14,9 +14,10 @@ import (
 	"github.com/paulmach/osm/osmpbf"
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/offline"
-	"pfeifer.dev/mapd/params"
 	m "pfeifer.dev/mapd/math"
+	"pfeifer.dev/mapd/params"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 type TmpNode struct {
@@ -307,17 +308,40 @@ func GenerateOffline(s OfflineSettings) {
 
 var AREAS = generateAreas()
 
-func FindWaysAroundPosition(pos m.Position) ([]byte, error) {
+func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 	for _, area := range AREAS {
 		inBox := area.Box.PosInside(pos)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area, DEFAULT_SETTINGS)
 			slog.Info("Loading bounds file", "filename", boundsName)
 			data, err := os.ReadFile(boundsName)
-			return data, errors.Wrap(err, "could not read current offline data file")
+			o := ReadOffline(data)
+			if !o.Loaded {
+				area := Area{}
+				areas := generateAreas()
+				for _, a := range areas {
+					if a.Box.PosInside(pos) {
+						area = a
+					}
+				}
+				o.box.Set(area.Box)
+			}
+			return o, errors.Wrap(err, "could not read current offline data file")
 		}
 	}
-	return []uint8{}, nil
+	area := Area{}
+	areas := generateAreas()
+	for _, a := range areas {
+		if a.Box.PosInside(pos) {
+			area = a
+		}
+	}
+	cBox := utils.Curry[m.Box]{}
+	cBox.Set(area.Box)
+	return Offline{
+		Loaded: false,
+		box: cBox,
+	}, nil
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {

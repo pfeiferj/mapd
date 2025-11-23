@@ -13,3 +13,8 @@ func (c *Curry[T]) Value(setter func ()T) T {
 	c.val = setter()
 	return c.val
 }
+
+func (c *Curry[T]) Set(val T) {
+	c.set = true
+	c.val = val
+}
