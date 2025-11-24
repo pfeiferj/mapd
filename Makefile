@@ -12,6 +12,9 @@ deps: go-deps capnp-deps format-deps docker-deps
 docker-deps:
 	./scripts/install-docker.sh
 
+docker-qemu-static:
+	./scripts/docker-qemu-static.sh
+
 go-deps: go.mod
 	go get
 
