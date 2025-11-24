@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -15,7 +14,10 @@ import (
 	"github.com/paulmach/osm/osmpbf"
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal/offline"
+	m "pfeifer.dev/mapd/math"
 	"pfeifer.dev/mapd/params"
+	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 type TmpNode struct {
@@ -31,27 +33,25 @@ type TmpWay struct {
 	MaxSpeedBackward float64
 	MaxSpeedAdvisory float64
 	Lanes            uint8
-	MinLat           float64
-	MinLon           float64
-	MaxLat           float64
-	MaxLon           float64
+	Box              m.Box
 	OneWay           bool
 	Nodes            []TmpNode
 }
 
 type Area struct {
-	MinLat float64
-	MinLon float64
-	MaxLat float64
-	MaxLon float64
+	Box    m.Box
 	Ways   []TmpWay
 }
 
+func (a *Area) OverlapBox(overlap float64) m.Box {
+	return m.Box{
+		MinPos: m.NewPosition(a.Box.MinPos.Lat()-overlap, a.Box.MinPos.Lon()-overlap),
+		MaxPos: m.NewPosition(a.Box.MaxPos.Lat()+overlap, a.Box.MaxPos.Lon()+overlap),
+	}
+}
+
 type OfflineSettings struct {
-	MinLat             float64
-	MinLon             float64
-	MaxLat             float64
-	MaxLon             float64
+	Box                m.Box
 	OutputDirectory    string
 	InputFile          string
 	GenerateEmptyFiles bool
@@ -59,9 +59,6 @@ type OfflineSettings struct {
 }
 
 var (
-	GROUP_AREA_BOX_DEGREES = 2
-	AREA_BOX_DEGREES       = float64(1.0 / 4) // Must be 1.0 divided by an integer number
-	WAYS_PER_FILE          = 2000
 	DEFAULT_SETTINGS       = OfflineSettings{
 		OutputDirectory: fmt.Sprintf("%s/offline", params.GetBaseOpPath()),
 	}
@@ -75,42 +72,30 @@ func EnsureOfflineMapsDirectories(s OfflineSettings) {
 
 // Creates a file for a specific bounding box
 func GenerateBoundsFileName(a Area, s OfflineSettings) string {
-	group_lat_directory := int(math.Floor(a.MinLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	group_lon_directory := int(math.Floor(a.MinLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, group_lat_directory, group_lon_directory)
-	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, a.MinLat, a.MinLon, a.MaxLat, a.MaxLon)
+	p := a.Box.GroupPos()
+	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, int(p.Lat()), int(p.Lon()))
+	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, a.Box.MinPos.Lat(), a.Box.MinPos.Lon(), a.Box.MaxPos.Lat(), a.Box.MaxPos.Lon())
 }
 
 // Creates a file for a specific bounding box
 func CreateBoundsDir(a Area, s OfflineSettings) error {
-	group_lat_directory := int(math.Floor(a.MinLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	group_lon_directory := int(math.Floor(a.MinLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
-	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, group_lat_directory, group_lon_directory)
+	p := a.Box.GroupPos()
+	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, int(p.Lat()), int(p.Lon()))
 	err := os.MkdirAll(dir, 0o775)
 	return errors.Wrap(err, "could not create bounds directory")
 }
 
-// Checks if two bounding boxes intersect
-func Overlapping(axMin float64, ayMin float64, axMax float64, ayMax float64, bxMin float64, byMin float64, bxMax float64, byMax float64) bool {
-	intersect := !(axMin > bxMax || axMax < bxMin || ayMin > byMax || ayMax < byMin)
-	aMinInside := PointInBox(axMin, ayMin, bxMin, byMin, bxMax, byMax)
-	bMinInside := PointInBox(bxMin, byMin, axMin, ayMin, axMax, ayMax)
-	aMaxInside := PointInBox(axMax, ayMax, bxMin, byMin, bxMax, byMax)
-	bMaxInside := PointInBox(bxMax, byMax, axMin, ayMin, axMax, ayMax)
-	return intersect || aMinInside || bMinInside || aMaxInside || bMaxInside
-}
-
 // Generates bounding boxes for storing ways
 func generateAreas() []Area {
-	areas := make([]Area, int((361/AREA_BOX_DEGREES)*(181/AREA_BOX_DEGREES)))
+	areas := make([]Area, int((361/ms.AREA_BOX_DEGREES)*(181/ms.AREA_BOX_DEGREES)))
 	index := 0
-	for i := float64(-90); i < 90; i += AREA_BOX_DEGREES {
-		for j := float64(-180); j < 180; j += AREA_BOX_DEGREES {
+	for i := float64(-90); i < 90; i += ms.AREA_BOX_DEGREES {
+		for j := float64(-180); j < 180; j += ms.AREA_BOX_DEGREES {
 			a := &areas[index]
-			a.MinLat = i
-			a.MinLon = j
-			a.MaxLat = i + AREA_BOX_DEGREES
-			a.MaxLon = j + AREA_BOX_DEGREES
+			a.Box = m.Box{
+				MinPos: m.NewPosition(i, j),
+				MaxPos: m.NewPosition(i + ms.AREA_BOX_DEGREES, j + ms.AREA_BOX_DEGREES),
+			}
 			index += 1
 		}
 	}
@@ -186,10 +171,8 @@ func GenerateOffline(s OfflineSettings) {
 				tmpWay.Nodes[i].Latitude = n.Lat
 				tmpWay.Nodes[i].Longitude = n.Lon
 			}
-			tmpWay.MinLat = minLat
-			tmpWay.MinLon = minLon
-			tmpWay.MaxLat = maxLat
-			tmpWay.MaxLon = maxLon
+			tmpWay.Box.MinPos = m.NewPosition(minLat, minLon)
+			tmpWay.Box.MaxPos = m.NewPosition(maxLat, maxLon)
 			if minLat < allMinLat {
 				allMinLat = minLat
 			}
@@ -208,11 +191,12 @@ func GenerateOffline(s OfflineSettings) {
 
 	slog.Info("Finding Bounds")
 	for _, area := range areas {
-		if area.MinLat < s.MinLat || area.MinLon < s.MinLon || area.MaxLat > s.MaxLat || area.MaxLon > s.MaxLon {
+		overlapBox := s.Box.Overlap(s.Overlap)
+		if !overlapBox.Contains(area.Box) {
 			continue
 		}
 
-		haveWays := Overlapping(s.MinLat, s.MinLon, s.MaxLat, s.MaxLon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+		haveWays := overlapBox.Overlapping(area.Box)
 		if !haveWays && !s.GenerateEmptyFiles {
 			continue
 		}
@@ -230,7 +214,8 @@ func GenerateOffline(s OfflineSettings) {
 		}
 
 		for _, way := range scannedWays {
-			overlaps := Overlapping(way.MinLat, way.MinLon, way.MaxLat, way.MaxLon, area.MinLat-s.Overlap, area.MinLon-s.Overlap, area.MaxLat+s.Overlap, area.MaxLon+s.Overlap)
+			
+			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
 			if overlaps {
 				area.Ways = append(area.Ways, way)
 			}
@@ -242,17 +227,17 @@ func GenerateOffline(s OfflineSettings) {
 			slog.Error("could not create ways in offline data", "error", err)
 			panic("unexpected capnp error, exiting")
 		}
-		rootOffline.SetMinLat(area.MinLat)
-		rootOffline.SetMinLon(area.MinLon)
-		rootOffline.SetMaxLat(area.MaxLat)
-		rootOffline.SetMaxLon(area.MaxLon)
+		rootOffline.SetMinLat(area.Box.MinPos.Lat())
+		rootOffline.SetMinLon(area.Box.MinPos.Lon())
+		rootOffline.SetMaxLat(area.Box.MaxPos.Lat())
+		rootOffline.SetMaxLon(area.Box.MaxPos.Lon())
 		rootOffline.SetOverlap(s.Overlap)
 		for i, way := range area.Ways {
 			w := ways.At(i)
-			w.SetMinLat(way.MinLat)
-			w.SetMinLon(way.MinLon)
-			w.SetMaxLat(way.MaxLat)
-			w.SetMaxLon(way.MaxLon)
+			w.SetMinLat(way.Box.MinPos.Lat())
+			w.SetMinLon(way.Box.MinPos.Lon())
+			w.SetMaxLat(way.Box.MaxPos.Lat())
+			w.SetMaxLon(way.Box.MaxPos.Lon())
 			err := w.SetName(way.Name)
 			if err != nil {
 				slog.Error("could not set way name", "error", err)
@@ -321,23 +306,42 @@ func GenerateOffline(s OfflineSettings) {
 	slog.Info("Done Generating Offline Map")
 }
 
-func PointInBox(ax float64, ay float64, bxMin float64, byMin float64, bxMax float64, byMax float64) bool {
-	return ax > bxMin && ax < bxMax && ay > byMin && ay < byMax
-}
-
 var AREAS = generateAreas()
 
-func FindWaysAroundLocation(lat float64, lon float64) ([]byte, error) {
+func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 	for _, area := range AREAS {
-		inBox := PointInBox(lat, lon, area.MinLat, area.MinLon, area.MaxLat, area.MaxLon)
+		inBox := area.Box.PosInside(pos)
 		if inBox {
 			boundsName := GenerateBoundsFileName(area, DEFAULT_SETTINGS)
 			slog.Info("Loading bounds file", "filename", boundsName)
 			data, err := os.ReadFile(boundsName)
-			return data, errors.Wrap(err, "could not read current offline data file")
+			o := ReadOffline(data)
+			if !o.Loaded {
+				area := Area{}
+				areas := generateAreas()
+				for _, a := range areas {
+					if a.Box.PosInside(pos) {
+						area = a
+					}
+				}
+				o.box.Set(area.Box)
+			}
+			return o, errors.Wrap(err, "could not read current offline data file")
 		}
 	}
-	return []uint8{}, nil
+	area := Area{}
+	areas := generateAreas()
+	for _, a := range areas {
+		if a.Box.PosInside(pos) {
+			area = a
+		}
+	}
+	cBox := utils.Curry[m.Box]{}
+	cBox.Set(area.Box)
+	return Offline{
+		Loaded: false,
+		box: cBox,
+	}, nil
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {
