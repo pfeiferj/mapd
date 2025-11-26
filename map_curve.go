@@ -1,8 +1,6 @@
 package main
 
 import (
-	"math"
-
 	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
 )
@@ -68,32 +66,8 @@ func UpdateCurveSpeed(s *State) {
 		if tv.Velocity > float64(calcSpeed) {
 			continue
 		}
-		a_diff := s.CarAEgo - ms.Settings.CurveTargetAccel
-		accel_t := math.Abs(float64(a_diff / ms.Settings.CurveTargetJerk))
-		min_accel_v := calculate_velocity(float32(accel_t), ms.Settings.CurveTargetJerk, s.CarAEgo, calcSpeed)
-		max_d := float32(0)
-		if float32(tv.Velocity) > min_accel_v {
-			// calculate time needed based on target jerk
-			a := float32(0.5 * ms.Settings.CurveTargetJerk)
-			b := s.CarAEgo
-			c := calcSpeed - float32(tv.Velocity)
-			t_a := -1 * (float32(math.Sqrt(float64(b*b-4*a*c))) + b) / 2 * a
-			t := (float32(math.Sqrt(float64(b*b-4*a*c))) - b) / 2 * a
-			if !math.IsNaN(float64(t_a)) && t_a > 0 {
-				t = t_a
-			}
-			if math.IsNaN(float64(t)) {
-				continue
-			}
 
-			max_d = calculate_distance(t, ms.Settings.CurveTargetJerk, s.CarAEgo, s.CarVEgo)
-		} else {
-			max_d = calculate_distance(float32(accel_t), ms.Settings.CurveTargetJerk, s.CarAEgo, s.CarVEgo)
-			// calculate additional time needed based on target accel
-			t := math.Abs(float64((min_accel_v - float32(tv.Velocity)) / ms.Settings.CurveTargetAccel))
-			max_d += calculate_distance(float32(t), 0, ms.Settings.CurveTargetAccel, min_accel_v)
-
-		}
+		max_d := s.DistanceToReachSpeed(tv.Velocity, calcSpeed)
 
 		if float32(d) < max_d+float32(tv.Velocity)*ms.Settings.CurveTargetOffset {
 			if float32(tv.Velocity) < minValidV {
@@ -110,10 +84,10 @@ func UpdateCurveSpeed(s *State) {
 	} else {
 		s.CurveSpeed = minValidV
 		if s.MapCurveTriggerSpeed - s.CarVEgo > ms.CURVE_CALC_OFFSET {
-			s.MapCurveTriggerSpeed = s.CarVEgo
+			s.MapCurveTriggerSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
 		}
 		if s.MapCurveTriggerSpeed == 0 {
-			s.MapCurveTriggerSpeed = s.CarVEgo
+			s.MapCurveTriggerSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
 			s.MapCurveTriggerPos = minValidPos 
 		}
 	}
