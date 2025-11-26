@@ -16,13 +16,25 @@ var Settings = MapdSettings{
 	cancelDownload: make(chan bool, 1),
 }
 
+type SpeedLimitPriority string
+
+const (
+	PRIORITY_MAP = "map"
+	PRIORITY_EXTERNAL = "external"
+	PRIORITY_HIGHEST = "highest"
+	PRIORITY_LOWEST = "lowest"
+)
+
 type MapdSettings struct {
 	downloadProgress                    chan DownloadProgress
 	cancelDownload                      chan bool
 	downloadActive                      bool
+	externalSpeedLimit									float32
 	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
+	ExternalSpeedLimitControlEnabled    bool    `json:"external_speed_limit_control_enabled"`
+	SpeedLimitPriority                  string  `json:"speed_limit_priority"`
 	VisionCurveUseEnableSpeed           bool    `json:"vision_curve_use_enable_speed"`
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
 	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
@@ -175,6 +187,10 @@ func (s *MapdSettings) GetDownloadProgress() (progress DownloadProgress, success
 	return
 }
 
+func (s *MapdSettings) ExternalSpeedLimit() float32 {
+	return s.externalSpeedLimit
+}
+
 func (s *MapdSettings) Handle(input custom.MapdIn) {
 	switch input.Type() {
 	case custom.MapdInputType_reloadSettings:
@@ -213,6 +229,17 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.DefaultLaneWidth = input.Float()
 	case custom.MapdInputType_setCurveTargetLatA:
 		s.CurveTargetLatA = input.Float()
+	case custom.MapdInputType_setExternalSpeedLimitControl:
+		s.ExternalSpeedLimitControlEnabled = input.Bool()
+	case custom.MapdInputType_setSpeedLimitPriority:
+		priority, err := input.Str()
+		if err != nil {
+			slog.Warn("failed to read speed limit priority string", "error", err)
+			return
+		}
+		s.SpeedLimitPriority = priority
+	case custom.MapdInputType_setExternalSpeedLimit:
+		s.externalSpeedLimit = input.Float()
 	case custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed:
 		s.HoldSpeedLimitWhileChangingSetSpeed = input.Bool()
 	case custom.MapdInputType_setSpeedUpForNextSpeedLimit:
@@ -253,5 +280,44 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		}
 		s.LogLevel = logLevel
 		s.setLogLevel()
+	}
+}
+
+func (s *MapdSettings) PrioritySpeedLimit(mapLimit float32) float32 {
+	if s.SpeedLimitControlEnabled && !s.ExternalSpeedLimitControlEnabled {
+		return mapLimit
+	}
+	if s.ExternalSpeedLimitControlEnabled && !s.SpeedLimitControlEnabled {
+		return s.externalSpeedLimit
+	}
+	if !s.SpeedLimitControlEnabled && !s.ExternalSpeedLimitControlEnabled {
+		return 0
+	}
+	switch s.SpeedLimitPriority {
+	case PRIORITY_MAP:
+		if mapLimit == 0 {
+			return s.externalSpeedLimit
+		}
+		return mapLimit
+	case PRIORITY_EXTERNAL:
+		if s.externalSpeedLimit == 0 {
+			return mapLimit
+		}
+		return s.externalSpeedLimit
+	case PRIORITY_HIGHEST:
+		return max(mapLimit, s.externalSpeedLimit)
+	case PRIORITY_LOWEST:
+		if mapLimit == 0 {
+			return s.externalSpeedLimit
+		}
+		if s.externalSpeedLimit == 0 {
+			return mapLimit
+		}
+		return min(mapLimit, s.externalSpeedLimit)
+	default:
+		if mapLimit == 0 {
+			return s.externalSpeedLimit
+		}
+		return mapLimit
 	}
 }

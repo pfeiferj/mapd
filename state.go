@@ -58,8 +58,8 @@ func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := min(s.CarVCruise * ms.KPH_TO_MS, ms.MAX_OP_SPEED)
 	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500*time.Millisecond
 
-	if ms.Settings.SpeedLimitControlEnabled {
-		slSuggestedSpeed := float32(s.MaxSpeed)
+	if ms.Settings.SpeedLimitControlEnabled || ms.Settings.ExternalSpeedLimitControlEnabled {
+		slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
 		if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
 			slSuggestedSpeed = float32(s.LastSpeedLimitValue)
 		}
@@ -189,3 +189,4 @@ func (s *State) DistanceToReachSpeed(targetV float64, calcSpeed float32) float32
 	}
 	return max_d + float32(targetV) * ms.Settings.CurveTargetOffset
 }
+

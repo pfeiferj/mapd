@@ -2,6 +2,8 @@
   "vision_curve_speed_control_enabled": true,
   "curve_speed_control_enabled": true,
   "speed_limit_control_enabled": true,
+  "external_speed_limit_control_enabled": true,
+  "speed_limit_priority": "map",
   "vision_curve_use_enable_speed": false,
   "speed_limit_use_enable_speed": true,
   "curve_use_enable_speed": false,

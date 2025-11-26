@@ -121,6 +121,9 @@ enum MapdInputType {
   cancelDownload @27;
   setLogJson @28;
   setLogSource @29;
+  setExternalSpeedLimitControl @30;
+  setExternalSpeedLimit @31;
+  setSpeedLimitPriority @32;
 }
 
 enum WaySelectionType {
