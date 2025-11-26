@@ -124,6 +124,8 @@ enum MapdInputType {
   setExternalSpeedLimitControl @30;
   setExternalSpeedLimit @31;
   setSpeedLimitPriority @32;
+  setSpeedLimitChangeRequiresAccept @33;
+  acceptSpeedLimit @34;
 }
 
 enum WaySelectionType {
@@ -168,7 +170,7 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   oneWay @12 :Bool;
   lanes @13 :UInt8;
   tileLoaded @14 :Bool;
-  speedLimitOffset @15 :Float32;
+  speedLimitSuggestedSpeed @15 :Float32;
   suggestedSpeed @16 :Float32;
   estimatedRoadWidth @17 :Float32;
   roadContext @18 :RoadContext;
@@ -176,4 +178,5 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   visionCurveSpeed @20 :Float32;
   curveSpeed @21 :Float32;
   waySelectionType @22 :WaySelectionType;
+  speedLimitAccepted @23 :Bool;
 }

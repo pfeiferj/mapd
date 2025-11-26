@@ -7,9 +7,9 @@ These items are planned to be completed before creating a v2.0.0 release.
 - [x] Allow overriding download menu
 - [ ] Refactor objects for better code flow
 - [x] Improve logic for holding the curve triggered speed state
-- [ ] Output additional details about what is triggering the suggested speed (held speed limits, upcoming speed limit activated, etc.)
+- [x] Output additional details about what is triggering the suggested speed (held speed limits, upcoming speed limit activated, etc.)
 - [ ] Add accept speed limit and override logic options similar to frogpilot behavior
-- [ ] Add accept speed limit input for openpilot fork use
+- [x] Add accept speed limit input for openpilot fork use
 - [ ] Advanced integration docs
 - [ ] Github actions for building, linting, etc.
 - [ ] Docs on building, linting, etc.

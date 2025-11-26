@@ -30,6 +30,7 @@ type MapdSettings struct {
 	cancelDownload                      chan bool
 	downloadActive                      bool
 	externalSpeedLimit									float32
+	speedLimitAccepted									bool
 	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
 	CurveSpeedControlEnabled            bool    `json:"curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
@@ -37,6 +38,7 @@ type MapdSettings struct {
 	SpeedLimitPriority                  string  `json:"speed_limit_priority"`
 	VisionCurveUseEnableSpeed           bool    `json:"vision_curve_use_enable_speed"`
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
+	SpeedLimitChangeRequiresAccept      bool    `json:"speed_limit_change_requires_accept"`
 	CurveUseEnableSpeed                 bool    `json:"curve_use_enable_speed"`
 	LogLevel                            string  `json:"log_level"`
 	LogJson                             bool    `json:"log_json"`
@@ -246,6 +248,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.SpeedUpForNextSpeedLimit = input.Bool()
 	case custom.MapdInputType_setSlowDownForNextSpeedLimit:
 		s.SlowDownForNextSpeedLimit = input.Bool()
+	case custom.MapdInputType_acceptSpeedLimit:
+		s.AcceptSpeedLimit()
 	case custom.MapdInputType_setLogSource:
 		s.LogSource = input.Bool()
 		s.setupLogger()
@@ -320,4 +324,19 @@ func (s *MapdSettings) PrioritySpeedLimit(mapLimit float32) float32 {
 		}
 		return mapLimit
 	}
+}
+
+func (s *MapdSettings) ResetSpeedLimitAccepted() {
+	s.speedLimitAccepted = false
+}
+
+func (s *MapdSettings) SpeedLimitAccepted() bool {
+	if !s.SpeedLimitChangeRequiresAccept {
+		return true
+	}
+	return s.speedLimitAccepted
+}
+
+func (s *MapdSettings) AcceptSpeedLimit() {
+	s.speedLimitAccepted = true
 }

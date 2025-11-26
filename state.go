@@ -27,6 +27,8 @@ type State struct {
 	MaxSpeed                  float64
 	LastSpeedLimitDistance    float32
 	LastSpeedLimitValue       float64
+	LastSpeedLimitSuggestion  float32
+	AcceptedSpeedLimitValue   float32
 	LastSpeedLimitWayName     string
 	NextSpeedLimit            NextSpeedLimit
 	VisionCurveSpeed          float32
@@ -34,7 +36,7 @@ type State struct {
 	TimeLastSetSpeedAdjust    time.Time
 	CarVEgo                   float32
 	CarAEgo                   float32
-	CarVCruise                   float32
+	CarVCruise                float32
 	CurveSpeed                float32
 	NextSpeedLimitMA          m.MovingAverage
 	VisionCurveMA             m.MovingAverage
@@ -59,30 +61,21 @@ func (s *State) SuggestedSpeed() float32 {
 	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500*time.Millisecond
 
 	if ms.Settings.SpeedLimitControlEnabled || ms.Settings.ExternalSpeedLimitControlEnabled {
-		slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
-		if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
-			slSuggestedSpeed = float32(s.LastSpeedLimitValue)
+		slSuggestedSpeed := s.SpeedLimit()
+		if slSuggestedSpeed != s.LastSpeedLimitSuggestion {
+			ms.Settings.ResetSpeedLimitAccepted()
 		}
-		if slSuggestedSpeed > 0 {
-			slSuggestedSpeed += ms.Settings.SpeedLimitOffset
+		if ms.Settings.SpeedLimitAccepted() {
+			s.AcceptedSpeedLimitValue = slSuggestedSpeed
 		}
-		if s.NextSpeedLimit.Speedlimit > 0 {
-			offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-			distanceToReachSpeed := s.DistanceToReachSpeed(s.NextSpeedLimit.Speedlimit, s.CarVEgo)
-			if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
-				slSuggestedSpeed = float32(offsetNextSpeedLimit)
-			} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
-				slSuggestedSpeed = float32(offsetNextSpeedLimit)
-			}
-		}
-
 		if suggestedSpeed > slSuggestedSpeed {
 			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
-				suggestedSpeed = slSuggestedSpeed
+				suggestedSpeed = s.AcceptedSpeedLimitValue
 			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo-1 < slSuggestedSpeed {
-				suggestedSpeed = slSuggestedSpeed
+				suggestedSpeed = s.AcceptedSpeedLimitValue
 			}
 		}
+		s.LastSpeedLimitSuggestion = slSuggestedSpeed
 	}
 	if ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.checkEnableSpeed()) {
 		suggestedSpeed = s.VisionCurveSpeed
@@ -123,6 +116,9 @@ func (s *State) Send() error {
 
 	maxSpeed := s.CurrentWay.Way.MaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
+
+	speedLimitSuggestion := s.SpeedLimit()
+	output.SetSpeedLimitSuggestedSpeed(speedLimitSuggestion)
 
 	output.SetNextSpeedLimit(float32(s.NextSpeedLimit.Speedlimit))
 	output.SetNextSpeedLimitDistance(float32(s.NextSpeedLimit.Distance))
@@ -188,5 +184,25 @@ func (s *State) DistanceToReachSpeed(targetV float64, calcSpeed float32) float32
 		max_d += calculate_distance(float32(t), 0, targetA, min_accel_v)
 	}
 	return max_d + float32(targetV) * ms.Settings.CurveTargetOffset
+}
+
+func (s *State) SpeedLimit() float32 {
+	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
+	if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
+		slSuggestedSpeed = float32(s.LastSpeedLimitValue)
+	}
+	if slSuggestedSpeed > 0 {
+		slSuggestedSpeed += ms.Settings.SpeedLimitOffset
+	}
+	if s.NextSpeedLimit.Speedlimit > 0 {
+		offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
+		distanceToReachSpeed := s.DistanceToReachSpeed(s.NextSpeedLimit.Speedlimit, s.CarVEgo)
+		if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
+			slSuggestedSpeed = float32(offsetNextSpeedLimit)
+		} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
+			slSuggestedSpeed = float32(offsetNextSpeedLimit)
+		}
+	}
+	return slSuggestedSpeed
 }
 
