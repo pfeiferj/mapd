@@ -41,8 +41,6 @@ type State struct {
 	NextSpeedLimitMA          m.MovingAverage
 	VisionCurveMA             m.MovingAverage
 	CarStateUpdateTimeMA      m.MovingAverage
-	MapCurveTriggerSpeed      float32
-	MapCurveTriggerPos      	m.Position
 	DistanceSinceLastPosition float32
 	TimeLastPosition          time.Time
 	TimeLastModel             time.Time
@@ -151,12 +149,18 @@ func (s *State) Send() error {
 }
 
 func (s *State) DistanceToReachSpeed(targetV float64, calcSpeed float32) float32 {
-	targetA := ms.Settings.CurveTargetAccel
-	targetJ := ms.Settings.CurveTargetJerk
-	a_diff := s.CarAEgo - ms.Settings.CurveTargetAccel
+	// Always use absolute values and apply correct sign based on direction
+	targetA := float32(math.Abs(float64(ms.Settings.CurveTargetAccel)))
+	targetJ := float32(math.Abs(float64(ms.Settings.CurveTargetJerk)))
+
+	// Apply negative sign for deceleration
+	if targetV <= float64(calcSpeed) {
+		targetA = -targetA
+		targetJ = -targetJ
+	}
+
+	a_diff := s.CarAEgo - targetA
 	if targetV > float64(calcSpeed) {
-		targetA = float32(math.Abs(float64(targetA)))
-		targetJ = float32(math.Abs(float64(targetJ)))
 		a_diff = targetA - s.CarAEgo
 	}
 	accel_t := float64(a_diff / targetJ)
@@ -164,16 +168,33 @@ func (s *State) DistanceToReachSpeed(targetV float64, calcSpeed float32) float32
 	max_d := float32(0)
 	if float32(targetV) > min_accel_v {
 		// calculate time needed based on target jerk
+		// solving: targetV = calcSpeed + s.CarAEgo*t + (targetJ/2)*t²
 		a := float32(0.5 * targetJ)
 		b := s.CarAEgo
-		c := float32(math.Abs(float64(calcSpeed) - targetV))
-		t_a := -1 * (float32(math.Sqrt(float64(b*b-4*a*c))) + b) / 2 * a
-		t := (float32(math.Sqrt(float64(b*b-4*a*c))) - b) / 2 * a
-		if !math.IsNaN(float64(t_a)) && t_a > 0 {
-			t = t_a
+		c := float32(float64(calcSpeed) - targetV)
+
+		// Check discriminant before computing roots
+		discriminant := b*b - 4*a*c
+		if discriminant < 0 {
+			return 0 // No real solution exists
 		}
-		if math.IsNaN(float64(t)) {
-			return 0
+
+		sqrtDiscriminant := float32(math.Sqrt(float64(discriminant)))
+
+		// Calculate both roots
+		t1 := (-b + sqrtDiscriminant) / (2 * a)
+		t2 := (-b - sqrtDiscriminant) / (2 * a)
+
+		// Select the smallest positive root
+		var t float32
+		if t1 > 0 && t2 > 0 {
+			t = min(t1, t2)
+		} else if t1 > 0 {
+			t = t1
+		} else if t2 > 0 {
+			t = t2
+		} else {
+			return 0 // No positive solution (would mean negative time)
 		}
 
 		max_d = calculate_distance(t, targetJ, s.CarAEgo, s.CarVEgo)

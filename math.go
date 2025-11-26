@@ -97,6 +97,7 @@ func GetStateCurvatures(state *State) ([]m.Curvature, error) {
 type Velocity struct {
 	Pos  m.Position
 	Velocity  float64
+	CalcSpeed  float32
 }
 
 func GetTargetVelocities(curvatures []m.Curvature) (velocities []Velocity) {
