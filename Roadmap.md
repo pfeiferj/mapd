@@ -13,7 +13,7 @@ These items are planned to be completed before creating a v2.0.0 release.
 - [ ] Advanced integration docs
 - [ ] Github actions for building, linting, etc.
 - [ ] Docs on building, linting, etc.
-- [ ] Implement current speed limit input for fork use (car based, navigation based)
+- [x] Implement current speed limit input for fork use (car based, navigation based)
 
 
 ## Planned but unscheduled
