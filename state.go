@@ -8,9 +8,9 @@ import (
 	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
-	ms "pfeifer.dev/mapd/settings"
-	m "pfeifer.dev/mapd/math"
 	"pfeifer.dev/mapd/maps"
+	m "pfeifer.dev/mapd/math"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type State struct {
@@ -217,10 +217,24 @@ func (s *State) SpeedLimit() float32 {
 	}
 	if s.NextSpeedLimit.Speedlimit > 0 {
 		offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-		distanceToReachSpeed := s.DistanceToReachSpeed(s.NextSpeedLimit.Speedlimit, s.CarVEgo)
-		if s.NextSpeedLimit.Speedlimit > s.MaxSpeed && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
+		calcSpeed := s.CarVEgo
+		speedLimit := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
+		nextIsLower := speedLimit > float32(s.NextSpeedLimit.Speedlimit)
+		if s.NextSpeedLimit.CalcSpeed > s.CarVEgo && nextIsLower {
+			calcSpeed = s.NextSpeedLimit.CalcSpeed
+		} else if s.NextSpeedLimit.CalcSpeed < s.CarVEgo && !nextIsLower {
+			calcSpeed = s.NextSpeedLimit.CalcSpeed
+		}
+		distanceToReachSpeed := s.DistanceToReachSpeed(s.NextSpeedLimit.Speedlimit, calcSpeed)
+		if !nextIsLower && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
+			if s.CarVEgo - ms.CURVE_CALC_OFFSET < s.NextSpeedLimit.CalcSpeed {
+				s.NextSpeedLimit.CalcSpeed = s.CarVEgo - ms.CURVE_CALC_OFFSET
+			}
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
-		} else if s.NextSpeedLimit.Speedlimit < s.MaxSpeed && ms.Settings.SlowDownForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
+		} else if nextIsLower && ms.Settings.SlowDownForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
+			if s.CarVEgo + ms.CURVE_CALC_OFFSET > s.NextSpeedLimit.CalcSpeed || s.NextSpeedLimit.CalcSpeed == 0 {
+				s.NextSpeedLimit.CalcSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
+			}
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
 		}
 	}

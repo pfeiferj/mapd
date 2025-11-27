@@ -126,7 +126,7 @@ func main() {
 			if err != nil {
 				slog.Debug("could not get curvatures from current state", "error", err)
 			}
-			state.TargetVelocities = GetTargetVelocities(state.Curvatures)
+			state.TargetVelocities = GetTargetVelocities(state.Curvatures, state.TargetVelocities)
 			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 		}
 
