@@ -97,9 +97,10 @@ func GetStateCurvatures(state *State) ([]m.Curvature, error) {
 type Velocity struct {
 	Pos  m.Position
 	Velocity  float64
+	CalcSpeed  float32
 }
 
-func GetTargetVelocities(curvatures []m.Curvature) (velocities []Velocity) {
+func GetTargetVelocities(curvatures []m.Curvature, previousTargets []Velocity) (velocities []Velocity) {
 	velocities = make([]Velocity, len(curvatures))
 	for i, curv := range curvatures {
 		if curv.Curvature == 0 {
@@ -107,6 +108,11 @@ func GetTargetVelocities(curvatures []m.Curvature) (velocities []Velocity) {
 		}
 		velocities[i].Velocity = math.Pow(float64(ms.Settings.CurveTargetLatA)/curv.Curvature, 1.0/2)
 		velocities[i].Pos = curv.Pos
+		for _, t := range previousTargets {
+			if velocities[i].Pos.Equals(t.Pos) {
+				velocities[i].CalcSpeed = t.CalcSpeed
+			}
+		}
 	}
 	return velocities
 }

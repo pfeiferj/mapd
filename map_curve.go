@@ -2,7 +2,6 @@ package main
 
 import (
 	ms "pfeifer.dev/mapd/settings"
-	m "pfeifer.dev/mapd/math"
 )
 
 //func calculate_accel(t float32, target_jerk float32, a_ego float32) float32 {
@@ -40,12 +39,8 @@ func UpdateCurveSpeed(s *State) {
 	forwardPoints := make([]Velocity, forwardSize)
 	forwardDistances := make([]float32, forwardSize)
 
-	pastTriggerPos := true
 	for i := range forwardSize {
 		forwardPoints[i] = s.TargetVelocities[i+match_idx]
-		if forwardPoints[i].Pos.Equals(s.MapCurveTriggerPos) {
-			pastTriggerPos = false
-		}
 		forwardDistances[i] = distances[i+match_idx] - s.DistanceSinceLastPosition
 		if forwardDistances[i] <= 0 {
 			forwardDistances[i] = distances[i+match_idx]
@@ -53,42 +48,31 @@ func UpdateCurveSpeed(s *State) {
 	}
 
 	minValidV := float32(1000)
-	minValidPos := m.Position{}
-	if pastTriggerPos {
-		s.MapCurveTriggerSpeed = max(s.MapCurveTriggerSpeed, s.CarVEgo + ms.CURVE_CALC_OFFSET)
-	}
-	calcSpeed := s.CarVEgo
-	if s.MapCurveTriggerSpeed > 0 && s.MapCurveTriggerSpeed > s.CarVEgo {
-		calcSpeed = s.MapCurveTriggerSpeed
-	}
 	for i, d := range forwardDistances {
 		tv := forwardPoints[i]
-		if tv.Velocity > float64(calcSpeed) {
+		if tv.Velocity > float64(s.CarVEgo) + ms.CURVE_CALC_OFFSET {
 			continue
+		}
+
+		calcSpeed := s.CarVEgo
+		if tv.CalcSpeed > 0 && tv.CalcSpeed > calcSpeed {
+			calcSpeed = tv.CalcSpeed
 		}
 
 		max_d := s.DistanceToReachSpeed(tv.Velocity, calcSpeed)
 
-		if float32(d) < max_d+float32(tv.Velocity)*ms.Settings.CurveTargetOffset {
+		if float32(d) < max_d || (tv.Velocity > float64(s.CarVEgo) && tv.CalcSpeed > 0) {
+			if s.CarVEgo + ms.CURVE_CALC_OFFSET > tv.CalcSpeed {
+				tv.CalcSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
+			}
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)
-				minValidPos = tv.Pos
 			}
 		}
 	}
 	if minValidV == float32(1000) {
 		s.CurveSpeed = 0
-		if s.MapCurveTriggerSpeed > s.SuggestedSpeed() {
-			s.MapCurveTriggerSpeed = 0
-		}
 	} else {
 		s.CurveSpeed = minValidV
-		if s.MapCurveTriggerSpeed - s.CarVEgo > ms.CURVE_CALC_OFFSET {
-			s.MapCurveTriggerSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
-		}
-		if s.MapCurveTriggerSpeed == 0 {
-			s.MapCurveTriggerSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
-			s.MapCurveTriggerPos = minValidPos 
-		}
 	}
 }

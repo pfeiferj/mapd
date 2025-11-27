@@ -38,6 +38,29 @@ var settingsList = []list.Item{
 		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.VisionCurveSpeedControlEnabled) },
 	},
 	settingsItem{
+		title:       "External Speed Limit Control Enabled",
+		desc:        "When enabled mapd will use fork provided speed limits to determine a suggested speed",
+		MessageType: custom.MapdInputType_setExternalSpeedLimitControl,
+		Type:        Enable,
+		state:       settingsInput,
+		value:  		 func() string { return fmt.Sprintf("%t", ms.Settings.ExternalSpeedLimitControlEnabled) },
+
+	},
+	settingsItem{
+		title:       "Set Speed Limit Priority",
+		desc:        "Sets the prioritization method for available speed limits",
+		MessageType: custom.MapdInputType_setSpeedLimitPriority,
+		Type:        Options,
+		state:       settingsInput,
+		options: []list.Item{
+			settingsItem{title: "map", value: func()string{return ""}},
+			settingsItem{title: "external", value: func()string{return ""}},
+			settingsItem{title: "highest", value: func()string{return ""}},
+			settingsItem{title: "lowest", value: func()string{return ""}},
+		},
+		value:  		 func() string { return fmt.Sprintf("%s", ms.Settings.SpeedLimitPriority) },
+	},
+	settingsItem{
 		title:       "Speed Limit Offset",
 		desc:        "The offset that gets applied to a speed limit to determine a target speed",
 		MessageType: custom.MapdInputType_setSpeedLimitOffset,

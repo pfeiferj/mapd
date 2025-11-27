@@ -28,7 +28,7 @@ const (
 	MAX_OP_SPEED           = 90 * MPH_TO_MS
 	ACCEPTABLE_BEARING_DELTA_SIN = 0.7071067811865475 // sin(45°) - max acceptable bearing mismatch
 	MIN_WAY_DIST = 500 // meters. how many meters to look ahead before stopping gathering next ways.
-	CURVE_CALC_OFFSET = 8 * MPH_TO_MS
+	CURVE_CALC_OFFSET = 10 * MPH_TO_MS
 )
 
 //go:embed download_menu.json
