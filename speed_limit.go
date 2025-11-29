@@ -40,7 +40,7 @@ type NextSpeedLimit struct {
 	Pos m.Position
 	Speedlimit float64
 	Distance   float32
-	CalcSpeed  float32
+	TriggerDistance  float32
 }
 
 func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLimit {
@@ -104,7 +104,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 			state.LastSpeedLimitWayName = nextWay.Way.Name()
 
 			if state.NextSpeedLimit.Pos.Equals(result.Pos) {
-				result.CalcSpeed = state.NextSpeedLimit.CalcSpeed
+				result.TriggerDistance = state.NextSpeedLimit.TriggerDistance
 			}
 			return result
 		}

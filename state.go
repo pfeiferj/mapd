@@ -51,7 +51,7 @@ func (s *State) checkEnableSpeed() bool {
 	if ms.Settings.EnableSpeed == 0 {
 		return true
 	}
-	return math.Abs(float64(s.CarSetSpeed-ms.Settings.EnableSpeed)) < ms.ENABLE_SPEED_RANGE
+	return abs(s.CarSetSpeed-ms.Settings.EnableSpeed) < ms.ENABLE_SPEED_RANGE
 }
 
 func (s *State) SuggestedSpeed() float32 {
@@ -148,65 +148,6 @@ func (s *State) Send() error {
 	return s.Publisher.Send(msg)
 }
 
-func (s *State) DistanceToReachSpeed(targetV float64, calcSpeed float32) float32 {
-	// Always use absolute values and apply correct sign based on direction
-	targetA := float32(math.Abs(float64(ms.Settings.CurveTargetAccel)))
-	targetJ := float32(math.Abs(float64(ms.Settings.CurveTargetJerk)))
-
-	// Apply negative sign for deceleration
-	if targetV <= float64(calcSpeed) {
-		targetA = -targetA
-		targetJ = -targetJ
-	}
-
-	a_diff := s.CarAEgo - targetA
-	if targetV > float64(calcSpeed) {
-		a_diff = targetA - s.CarAEgo
-	}
-	accel_t := float64(a_diff / targetJ)
-	min_accel_v := calculate_velocity(float32(accel_t), targetJ, s.CarAEgo, calcSpeed)
-	max_d := float32(0)
-	if float32(targetV) > min_accel_v {
-		// calculate time needed based on target jerk
-		// solving: targetV = calcSpeed + s.CarAEgo*t + (targetJ/2)*t²
-		a := float32(0.5 * targetJ)
-		b := s.CarAEgo
-		c := float32(float64(calcSpeed) - targetV)
-
-		// Check discriminant before computing roots
-		discriminant := b*b - 4*a*c
-		if discriminant < 0 {
-			return 0 // No real solution exists
-		}
-
-		sqrtDiscriminant := float32(math.Sqrt(float64(discriminant)))
-
-		// Calculate both roots
-		t1 := (-b + sqrtDiscriminant) / (2 * a)
-		t2 := (-b - sqrtDiscriminant) / (2 * a)
-
-		// Select the smallest positive root
-		var t float32
-		if t1 > 0 && t2 > 0 {
-			t = min(t1, t2)
-		} else if t1 > 0 {
-			t = t1
-		} else if t2 > 0 {
-			t = t2
-		} else {
-			return 0 // No positive solution (would mean negative time)
-		}
-
-		max_d = calculate_distance(t, targetJ, s.CarAEgo, s.CarVEgo)
-	} else {
-		max_d = calculate_distance(float32(accel_t), targetJ, s.CarAEgo, s.CarVEgo)
-		// calculate additional time needed based on target accel
-		t := math.Abs(float64((min_accel_v - float32(targetV)) / targetA))
-		max_d += calculate_distance(float32(t), 0, targetA, min_accel_v)
-	}
-	return max_d + float32(targetV) * ms.Settings.CurveTargetOffset
-}
-
 func (s *State) SpeedLimit() float32 {
 	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
 	if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
@@ -217,27 +158,24 @@ func (s *State) SpeedLimit() float32 {
 	}
 	if s.NextSpeedLimit.Speedlimit > 0 {
 		offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
-		calcSpeed := s.CarVEgo
 		speedLimit := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
 		nextIsLower := speedLimit > float32(s.NextSpeedLimit.Speedlimit)
-		if s.NextSpeedLimit.CalcSpeed > s.CarVEgo && nextIsLower {
-			calcSpeed = s.NextSpeedLimit.CalcSpeed
-		} else if s.NextSpeedLimit.CalcSpeed < s.CarVEgo && !nextIsLower {
-			calcSpeed = s.NextSpeedLimit.CalcSpeed
+		distanceToReachSpeed := CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, float32(offsetNextSpeedLimit), ms.Settings.CurveTargetAccel, ms.Settings.CurveTargetJerk)
+		if s.NextSpeedLimit.TriggerDistance > distanceToReachSpeed {
+			distanceToReachSpeed = s.NextSpeedLimit.TriggerDistance
 		}
-		distanceToReachSpeed := s.DistanceToReachSpeed(s.NextSpeedLimit.Speedlimit, calcSpeed)
+		if distanceToReachSpeed > s.NextSpeedLimit.TriggerDistance {
+			s.NextSpeedLimit.Distance = distanceToReachSpeed + 10
+		}
 		if !nextIsLower && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
-			if s.CarVEgo - ms.CURVE_CALC_OFFSET < s.NextSpeedLimit.CalcSpeed {
-				s.NextSpeedLimit.CalcSpeed = s.CarVEgo - ms.CURVE_CALC_OFFSET
-			}
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
 		} else if nextIsLower && ms.Settings.SlowDownForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
-			if s.CarVEgo + ms.CURVE_CALC_OFFSET > s.NextSpeedLimit.CalcSpeed || s.NextSpeedLimit.CalcSpeed == 0 {
-				s.NextSpeedLimit.CalcSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
-			}
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
 		}
 	}
 	return slSuggestedSpeed
 }
 
+func abs[T float64 | float32](val T) float64 {
+	return math.Abs(float64(val))
+}
