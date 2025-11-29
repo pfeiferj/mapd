@@ -36,11 +36,11 @@ func UpdateCurveSpeed(s *State) {
 		match_idx = 0
 	}
 	forwardSize := len(s.TargetVelocities) - match_idx
-	forwardPoints := make([]Velocity, forwardSize)
+	forwardPoints := make([]*Velocity, forwardSize)
 	forwardDistances := make([]float32, forwardSize)
 
 	for i := range forwardSize {
-		forwardPoints[i] = s.TargetVelocities[i+match_idx]
+		forwardPoints[i] = &s.TargetVelocities[i+match_idx]
 		forwardDistances[i] = distances[i+match_idx] - s.DistanceSinceLastPosition
 		if forwardDistances[i] <= 0 {
 			forwardDistances[i] = distances[i+match_idx]
@@ -54,16 +54,14 @@ func UpdateCurveSpeed(s *State) {
 			continue
 		}
 
-		calcSpeed := s.CarVEgo
-		if tv.CalcSpeed > 0 && tv.CalcSpeed > calcSpeed {
-			calcSpeed = tv.CalcSpeed
+		max_d := tv.TriggerDistance
+		if max_d == 0 {
+			max_d = CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, float32(tv.Velocity), ms.Settings.CurveTargetAccel, ms.Settings.CurveTargetJerk)
 		}
 
-		max_d := s.DistanceToReachSpeed(tv.Velocity, calcSpeed)
-
-		if float32(d) < max_d || (tv.Velocity > float64(s.CarVEgo) && tv.CalcSpeed > 0) {
-			if s.CarVEgo + ms.CURVE_CALC_OFFSET > tv.CalcSpeed {
-				tv.CalcSpeed = s.CarVEgo + ms.CURVE_CALC_OFFSET
+		if float32(d) < max_d {
+			if tv.TriggerDistance != max_d {
+				tv.TriggerDistance = max_d + 15
 			}
 			if float32(tv.Velocity) < minValidV {
 				minValidV = float32(tv.Velocity)

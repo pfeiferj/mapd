@@ -5,8 +5,8 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 func GetStateCurvatures(state *State) ([]m.Curvature, error) {
@@ -97,7 +97,7 @@ func GetStateCurvatures(state *State) ([]m.Curvature, error) {
 type Velocity struct {
 	Pos  m.Position
 	Velocity  float64
-	CalcSpeed  float32
+	TriggerDistance  float32
 }
 
 func GetTargetVelocities(curvatures []m.Curvature, previousTargets []Velocity) (velocities []Velocity) {
@@ -110,7 +110,7 @@ func GetTargetVelocities(curvatures []m.Curvature, previousTargets []Velocity) (
 		velocities[i].Pos = curv.Pos
 		for _, t := range previousTargets {
 			if velocities[i].Pos.Equals(t.Pos) {
-				velocities[i].CalcSpeed = t.CalcSpeed
+				velocities[i].TriggerDistance = t.TriggerDistance
 			}
 		}
 	}
