@@ -262,6 +262,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.PressGasToOverrideSpeedLimit = input.Bool()
 	case custom.MapdInputType_setAdjustSetSpeedToAcceptSpeedLimit:
 		s.AdjustSetSpeedToAcceptSpeedLimit = input.Bool()
+	case custom.MapdInputType_setAcceptSpeedLimitTimeout:
+		s.AcceptSpeedLimitTimeout = input.Float()
 	case custom.MapdInputType_setLogSource:
 		s.LogSource = input.Bool()
 		s.setupLogger()
