@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ParamsPath    string = "/data/params/d"
-	BasePath      string = GetBasePath()
+	ParamsPath string = "/data/params/d"
+	BasePath   string = GetBasePath()
 )
 
 func GetBaseOpPath() string {
@@ -152,12 +152,16 @@ func PutParam(path string, data []byte) error {
 		// if we didn't obtain the lock let's try again after a short delay
 		time.Sleep(1 * time.Millisecond)
 	}
-	defer func() { if err := fileLock.Unlock(); err != nil {
+	defer func() {
+		if err := fileLock.Unlock(); err != nil {
 			slog.Error("could not unlock params directory", "error", err)
-	} }()
-	defer func() { if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
+		}
+	}()
+	defer func() {
+		if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
 			slog.Error("could not remove params lock file", "error", err)
-	} }()
+		}
+	}()
 
 	err = os.Rename(tmpName, path)
 	if err != nil {
@@ -204,12 +208,16 @@ func RemoveParam(path string) error {
 		// if we didn't obtain the lock let's try again after a short delay
 		time.Sleep(1 * time.Millisecond)
 	}
-	defer func() { if err := fileLock.Unlock(); err != nil {
+	defer func() {
+		if err := fileLock.Unlock(); err != nil {
 			slog.Error("could not unlock params directory", "error", err)
-	} }()
-	defer func() { if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
+		}
+	}()
+	defer func() {
+		if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
 			slog.Error("could not remove params lock file", "error", err)
-	} }()
+		}
+	}()
 
 	os.Remove(path)
 

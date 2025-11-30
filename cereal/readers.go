@@ -1,8 +1,8 @@
 package cereal
 
 import (
-	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/car"
+	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/cereal/log"
 )
 

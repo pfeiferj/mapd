@@ -5,20 +5,20 @@ import "math"
 // JerkProfile represents a complete jerk-limited motion profile
 type JerkProfile struct {
 	// Phase 1: Jerk from a0 to aMax
-	T1       float32 // Duration of first jerk phase
-	V1       float32 // Velocity at end of phase 1
-	D1       float32 // Distance traveled in phase 1
-	A1       float32 // Acceleration at end of phase 1 (should equal aMax or final accel if target reached early)
+	T1 float32 // Duration of first jerk phase
+	V1 float32 // Velocity at end of phase 1
+	D1 float32 // Distance traveled in phase 1
+	A1 float32 // Acceleration at end of phase 1 (should equal aMax or final accel if target reached early)
 
 	// Phase 2: Constant acceleration
-	T2       float32 // Duration of constant acceleration phase
-	V2       float32 // Velocity at end of phase 2
-	D2       float32 // Distance traveled in phase 2
+	T2 float32 // Duration of constant acceleration phase
+	V2 float32 // Velocity at end of phase 2
+	D2 float32 // Distance traveled in phase 2
 
 	// Phase 3: Jerk from aMax to 0
-	T3       float32 // Duration of final jerk phase
-	V3       float32 // Velocity at end of phase 3 (should equal target velocity)
-	D3       float32 // Distance traveled in phase 3
+	T3 float32 // Duration of final jerk phase
+	V3 float32 // Velocity at end of phase 3 (should equal target velocity)
+	D3 float32 // Distance traveled in phase 3
 
 	// Total
 	TotalTime     float32 // Total time for profile
@@ -29,11 +29,12 @@ type JerkProfile struct {
 // with jerk-limited acceleration profile.
 //
 // Parameters:
-//   v0: Current velocity (m/s)
-//   a0: Current acceleration (m/s²)
-//   vTarget: Target velocity (m/s)
-//   aMax: Maximum acceleration magnitude (m/s²) - always positive
-//   jMax: Maximum jerk magnitude (m/s³) - always positive
+//
+//	v0: Current velocity (m/s)
+//	a0: Current acceleration (m/s²)
+//	vTarget: Target velocity (m/s)
+//	aMax: Maximum acceleration magnitude (m/s²) - always positive
+//	jMax: Maximum jerk magnitude (m/s³) - always positive
 //
 // Returns the total distance required and complete motion profile
 func CalculateJerkLimitedDistance(v0, a0, vTarget, aMax, jMax float32) (float32, JerkProfile) {

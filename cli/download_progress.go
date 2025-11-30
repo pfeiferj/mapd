@@ -34,7 +34,7 @@ func (m downloadProgressModel) View() string {
 			str, err := l.At(i)
 			if err == nil {
 				locations += str
-				if i < l.Len() - 1 {
+				if i < l.Len()-1 {
 					locations += ","
 				}
 			}

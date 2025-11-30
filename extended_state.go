@@ -7,20 +7,19 @@ import (
 
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/custom"
-	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
+	ms "pfeifer.dev/mapd/settings"
 )
-
 
 type ExtendedState struct {
 	DownloadProgress ms.DownloadProgress
-	Pub cereal.Publisher[custom.MapdExtendedOut]
-	lastSend time.Time
-	state *State
+	Pub              cereal.Publisher[custom.MapdExtendedOut]
+	lastSend         time.Time
+	state            *State
 }
 
 func (s *ExtendedState) Send() error {
-	if time.Since(s.lastSend) > 1 * time.Second {
+	if time.Since(s.lastSend) > 1*time.Second {
 		s.lastSend = time.Now()
 		msg, out := s.Pub.NewMessage(true)
 		s.setDownloadProgress(out)

@@ -1,14 +1,16 @@
 package maps
 
-import(
+import (
 	"math"
 	"strings"
+
 	"github.com/pkg/errors"
-	"pfeifer.dev/mapd/cereal/offline"
+
 	"pfeifer.dev/mapd/cereal/log"
-	u "pfeifer.dev/mapd/utils"
+	"pfeifer.dev/mapd/cereal/offline"
 	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
+	u "pfeifer.dev/mapd/utils"
 )
 
 type RoadContext int
@@ -55,10 +57,10 @@ type OnWayResult struct {
 }
 
 type DistanceResult struct {
-	LineStart      m.Position
-	LineEnd        m.Position
-	LinePosition   m.LinePosition
-	Distance       float32
+	LineStart    m.Position
+	LineEnd      m.Position
+	LinePosition m.LinePosition
+	Distance     float32
 }
 
 type NextWayResult struct {
@@ -71,27 +73,27 @@ type NextWayResult struct {
 type Way struct {
 	Way offline.Way
 
-	//calculated values
-	width u.Curry[float32]
-	context u.Curry[RoadContext]
-	isFreeway u.Curry[bool]
-	name u.Curry[string]
-	distance u.Curry[float32]
-	rank u.Curry[int]
-	priority u.Curry[int]
+	// calculated values
+	width              u.Curry[float32]
+	context            u.Curry[RoadContext]
+	isFreeway          u.Curry[bool]
+	name               u.Curry[string]
+	distance           u.Curry[float32]
+	rank               u.Curry[int]
+	priority           u.Curry[int]
 	distanceMultiplier u.Curry[float32]
 
-	//values from offline file
-	oneWay u.Curry[bool]
-	wayName u.Curry[string]
-	wayRef u.Curry[string]
-	maxSpeed u.Curry[float64]
-	box u.Curry[m.Box]
-	nodes u.Curry[[]m.Position]
-	lanes u.Curry[int]
-	advisorySpeed u.Curry[float64]
-	hazard u.Curry[string]
-	maxSpeedForward u.Curry[float64]
+	// values from offline file
+	oneWay           u.Curry[bool]
+	wayName          u.Curry[string]
+	wayRef           u.Curry[string]
+	maxSpeed         u.Curry[float64]
+	box              u.Curry[m.Box]
+	nodes            u.Curry[[]m.Position]
+	lanes            u.Curry[int]
+	advisorySpeed    u.Curry[float64]
+	hazard           u.Curry[string]
+	maxSpeedForward  u.Curry[float64]
 	maxSpeedBackward u.Curry[float64]
 }
 
@@ -104,12 +106,11 @@ func (w *Way) IsForwardFrom(matchNode m.Position) bool {
 		return true
 	}
 
-	lastNode := nodes[len(nodes) - 1]
+	lastNode := nodes[len(nodes)-1]
 	return !lastNode.Equals(matchNode)
 }
 
 func IsForward(lineStart m.Position, lineEnd m.Position, bearing float64) bool {
-
 	vec := lineStart.VectorTo(lineEnd)
 	wayBearing := vec.Bearing()
 	bearingDelta := math.Abs(bearing*ms.TO_RADIANS - wayBearing)
@@ -190,7 +191,7 @@ func (w *Way) MaxSpeedBackward() float64 {
 }
 
 func (w *Way) _box() m.Box {
-	return m.Box {
+	return m.Box{
 		MinPos: m.NewPosition(w.Way.MinLat(), w.Way.MinLon()),
 		MaxPos: m.NewPosition(w.Way.MaxLat(), w.Way.MaxLon()),
 	}
@@ -252,7 +253,6 @@ func (w *Way) OnWay(location log.GpsLocationData, distanceMultiplier float32) (O
 	return res, nil
 }
 
-
 func (w *Way) BearingAlignment(location log.GpsLocationData) (float32, error) {
 	pos := m.NewPosition(location.Latitude(), location.Longitude())
 	d, err := w.DistanceFrom(pos)
@@ -287,7 +287,7 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 	minIdx := 0
 	for i := 0; i < len(nodes)-1; i++ {
 		nodeStart := nodes[i]
-		nodeEnd := nodes[i + 1]
+		nodeEnd := nodes[i+1]
 		line := m.Line{Start: nodeStart, End: nodeEnd}
 		linePosition := line.NearestPosition(pos)
 		distance := pos.DistanceTo(linePosition.Pos)
@@ -303,7 +303,7 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 	onWayDistance := minNodeStart.DistanceTo(minLinePosition.Pos)
 	for i := range minIdx {
 		nodeStart := nodes[i]
-		nodeEnd := nodes[i + 1]
+		nodeEnd := nodes[i+1]
 		onWayDistance += nodeStart.DistanceTo(nodeEnd)
 	}
 
@@ -325,9 +325,9 @@ func (w *Way) GetStartEnd(isForward bool) (m.Position, m.Position) {
 	}
 
 	if isForward {
-		return nodes[0], nodes[len(nodes) - 1]
+		return nodes[0], nodes[len(nodes)-1]
 	}
-	return nodes[len(nodes) - 1], nodes[0]
+	return nodes[len(nodes)-1], nodes[0]
 }
 
 func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, error) {
@@ -351,7 +351,7 @@ func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, e
 		}
 
 		fNode := wNodes[0]
-		lNode := wNodes[len(wNodes) - 1]
+		lNode := wNodes[len(wNodes)-1]
 		if fNode.Equals(matchNode) || lNode.Equals(matchNode) {
 			matchingWays = append(matchingWays, way)
 		}
@@ -370,7 +370,7 @@ func (w *Way) isValidConnection(matchNode, bearingNode m.Position, maxCurvature 
 	if matchNode.Equals(nodes[0]) {
 		nextBearingNode = nodes[1]
 	} else {
-		nextBearingNode = nodes[len(nodes) - 2]
+		nextBearingNode = nodes[len(nodes)-2]
 	}
 
 	curv := m.CalculateCurvature(bearingNode, matchNode, nextBearingNode)
@@ -398,7 +398,7 @@ func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
 		if !stopFiltering {
 			continue
 		}
-		
+
 		dist += lastPos.DistanceTo(node)
 		lastPos = node
 	}
@@ -415,7 +415,7 @@ func (w *Way) _distance() float32 {
 	totalDistance := float32(0.0)
 	for i := range len(nodes) - 1 {
 		nodeStart := nodes[i]
-		nodeEnd := nodes[i + 1]
+		nodeEnd := nodes[i+1]
 		distance := nodeStart.DistanceTo(nodeEnd)
 		totalDistance += distance
 	}
@@ -423,7 +423,7 @@ func (w *Way) _distance() float32 {
 	return totalDistance
 }
 
-func (w *Way) Distance() (float32) {
+func (w *Way) Distance() float32 {
 	return w.distance.Value(w._distance)
 }
 
@@ -631,9 +631,9 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 	var matchNode m.Position
 	var matchBearingNode m.Position
 	if isForward {
-		matchNode = nodes[len(nodes) - 1]
+		matchNode = nodes[len(nodes)-1]
 		if len(nodes) > 1 {
-			matchBearingNode = nodes[len(nodes) - 2]
+			matchBearingNode = nodes[len(nodes)-2]
 		}
 	} else {
 		matchNode = nodes[0]

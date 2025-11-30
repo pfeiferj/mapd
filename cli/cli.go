@@ -8,8 +8,8 @@ import (
 
 	"github.com/urfave/cli/v3"
 	"pfeifer.dev/mapd/maps"
-	"pfeifer.dev/mapd/params"
 	m "pfeifer.dev/mapd/math"
+	"pfeifer.dev/mapd/params"
 )
 
 func Handle() {
@@ -90,7 +90,7 @@ func Handle() {
 				Usage: "Triggers a generation of map data from 'map.osm.pbf'",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					offlineSettings := maps.OfflineSettings{
-						Box:								m.Box{
+						Box: m.Box{
 							MinPos: m.NewPosition(cmd.Float64("minlat"), cmd.Float64("minlon")),
 							MaxPos: m.NewPosition(cmd.Float64("maxlat"), cmd.Float64("maxlon")),
 						},

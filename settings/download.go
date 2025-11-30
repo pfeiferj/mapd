@@ -90,8 +90,8 @@ type Bounds struct {
 type DownloadProgress struct {
 	TotalFiles          int                                `json:"total_files"`
 	DownloadedFiles     int                                `json:"downloaded_files"`
-	Canceled     bool                                      `json:"canceled"`
-	Active     bool                                        `json:"active"`
+	Canceled            bool                               `json:"canceled"`
+	Active              bool                               `json:"active"`
 	LocationsToDownload []string                           `json:"locations_to_download"`
 	LocationDetails     map[string]*DownloadLocationDetail `json:"location_details"`
 }
@@ -102,9 +102,9 @@ type DownloadLocationDetail struct {
 }
 
 type download struct {
-	progress DownloadProgress
+	progress     DownloadProgress
 	progressChan chan DownloadProgress
-	cancelChan chan bool
+	cancelChan   chan bool
 }
 
 func (p *DownloadProgress) addLocationDetails(path string) {
@@ -113,19 +113,18 @@ func (p *DownloadProgress) addLocationDetails(path string) {
 	}
 }
 
-
 func Download(paths string, progressChan chan DownloadProgress, cancelChan chan bool) {
 	slog.Info("download", "paths", paths)
 	pathsSplit := strings.Split(paths, ",")
-	d := download {
+	d := download{
 		progress: DownloadProgress{
 			LocationsToDownload: pathsSplit,
-			TotalFiles: countTotalFiles(pathsSplit),
-			LocationDetails: make(map[string]*DownloadLocationDetail),
-			Active: true,
+			TotalFiles:          countTotalFiles(pathsSplit),
+			LocationDetails:     make(map[string]*DownloadLocationDetail),
+			Active:              true,
 		},
 		progressChan: progressChan,
-		cancelChan: cancelChan,
+		cancelChan:   cancelChan,
 	}
 
 	for _, p := range pathsSplit {
@@ -142,7 +141,7 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 		}
 	}
 	d.progress.Active = false
-	select { //nonblocking update of progress
+	select { // nonblocking update of progress
 	case d.progressChan <- d.progress:
 	default:
 	}
@@ -171,12 +170,12 @@ func (d *download) downloadBounds(bounds Bounds, locationName string) (err error
 	d.progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
 	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
 		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
-			select { //nonblocking update of progress
+			select { // nonblocking update of progress
 			case d.progressChan <- d.progress:
 			default:
 			}
 			select { // cancel if sent message
-			case cancel := <- d.cancelChan:
+			case cancel := <-d.cancelChan:
 				if cancel {
 					return nil, true
 				}

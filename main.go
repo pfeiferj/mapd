@@ -8,8 +8,8 @@ import (
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
-	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 
 	state := State{}
 	extendedState := ExtendedState{
-		Pub: cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
+		Pub:   cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
 		state: &state,
 	}
 	defer extendedState.Pub.Pub.Msgq.Close()

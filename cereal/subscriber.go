@@ -7,10 +7,10 @@ import (
 	"pfeifer.dev/mapd/settings"
 )
 
-type Reader[T any] func (log.Event) (T, error)
+type Reader[T any] func(log.Event) (T, error)
 
 type Subscriber[T any] struct {
-	Sub gomsgq.MsgqSubscriber
+	Sub    gomsgq.MsgqSubscriber
 	reader Reader[T]
 }
 
@@ -49,5 +49,4 @@ func NewSubscriber[T any](name string, reader Reader[T], conflate bool) (subscri
 	subscriber.Sub = sub
 	subscriber.reader = reader
 	return subscriber
-	
 }
