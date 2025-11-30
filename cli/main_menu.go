@@ -101,7 +101,7 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if success {
 			m.extendedData = extendedData
 			settingsData, _ := extendedData.Settings()
-			ms.Settings.Unmarshal([]byte(settingsData))	
+			ms.Settings.Unmarshal([]byte(settingsData))
 			m.extendedDataValid = true
 		}
 		m.output, _ = m.output.Update(msg, &m)

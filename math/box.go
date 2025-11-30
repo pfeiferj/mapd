@@ -1,7 +1,8 @@
 package math
 
-import(
+import (
 	"math"
+
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -47,7 +48,7 @@ func (a *Box) Equals(b Box) bool {
 
 func (b *Box) Overlap(overlap float64) Box {
 	return Box{
-		MinPos: NewPosition(b.MinPos.Lat() - overlap, b.MinPos.Lon() - overlap),
-		MaxPos: NewPosition(b.MaxPos.Lat() + overlap, b.MaxPos.Lon() + overlap),
+		MinPos: NewPosition(b.MinPos.Lat()-overlap, b.MinPos.Lon()-overlap),
+		MaxPos: NewPosition(b.MaxPos.Lat()+overlap, b.MaxPos.Lon()+overlap),
 	}
 }

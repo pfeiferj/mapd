@@ -7,14 +7,14 @@ import (
 	"pfeifer.dev/mapd/settings"
 )
 
-type MessageCreator[T any] func (log.Event) (T, error)
+type MessageCreator[T any] func(log.Event) (T, error)
 
 type Publisher[T any] struct {
-	Pub gomsgq.MsgqPublisher
+	Pub     gomsgq.MsgqPublisher
 	creator MessageCreator[T]
 }
 
-func (p *Publisher[T]) Send(msg *capnp.Message) (error) {
+func (p *Publisher[T]) Send(msg *capnp.Message) error {
 	b, err := msg.Marshal()
 	if err != nil {
 		return err

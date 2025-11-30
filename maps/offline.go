@@ -28,11 +28,11 @@ func ReadOffline(data []uint8) Offline {
 }
 
 type Offline struct {
-	Loaded bool
-	offline offline.Offline
+	Loaded     bool
+	offline    offline.Offline
 	box        u.Curry[m.Box]
 	overlapBox u.Curry[m.Box]
-	ways	     u.Curry[[]Way]
+	ways       u.Curry[[]Way]
 	overlap    u.Curry[float64]
 }
 

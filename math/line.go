@@ -6,7 +6,7 @@ type Line struct {
 
 type LinePosition struct {
 	Pos Position
-	T float64
+	T   float64
 }
 
 func (l *Line) NearestPosition(pos Position) LinePosition {

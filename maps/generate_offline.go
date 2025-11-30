@@ -39,8 +39,8 @@ type TmpWay struct {
 }
 
 type Area struct {
-	Box    m.Box
-	Ways   []TmpWay
+	Box  m.Box
+	Ways []TmpWay
 }
 
 func (a *Area) OverlapBox(overlap float64) m.Box {
@@ -58,11 +58,9 @@ type OfflineSettings struct {
 	Overlap            float64
 }
 
-var (
-	DEFAULT_SETTINGS       = OfflineSettings{
-		OutputDirectory: fmt.Sprintf("%s/offline", params.GetBaseOpPath()),
-	}
-)
+var DEFAULT_SETTINGS = OfflineSettings{
+	OutputDirectory: fmt.Sprintf("%s/offline", params.GetBaseOpPath()),
+}
 
 func EnsureOfflineMapsDirectories(s OfflineSettings) {
 	if err := os.MkdirAll(s.OutputDirectory, 0o775); err != nil {
@@ -94,7 +92,7 @@ func generateAreas() []Area {
 			a := &areas[index]
 			a.Box = m.Box{
 				MinPos: m.NewPosition(i, j),
-				MaxPos: m.NewPosition(i + ms.AREA_BOX_DEGREES, j + ms.AREA_BOX_DEGREES),
+				MaxPos: m.NewPosition(i+ms.AREA_BOX_DEGREES, j+ms.AREA_BOX_DEGREES),
 			}
 			index += 1
 		}
@@ -214,7 +212,7 @@ func GenerateOffline(s OfflineSettings) {
 		}
 
 		for _, way := range scannedWays {
-			
+
 			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
 			if overlaps {
 				area.Ways = append(area.Ways, way)
@@ -340,7 +338,7 @@ func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 	cBox.Set(area.Box)
 	return Offline{
 		Loaded: false,
-		box: cBox,
+		box:    cBox,
 	}, nil
 }
 

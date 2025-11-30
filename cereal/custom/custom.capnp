@@ -95,7 +95,7 @@ enum MapdInputType {
   setTargetLateralAccel @1;
   setSpeedLimitOffset @2;
   setSpeedLimitControl @3;
-  setCurveSpeedControl @4;
+  setMapCurveSpeedControl @4;
   setVisionCurveSpeedControl @5;
   setLogLevel @6;
   setVisionCurveTargetLatA @7;
@@ -104,14 +104,14 @@ enum MapdInputType {
   saveSettings @10;
   setEnableSpeed @11;
   setVisionCurveUseEnableSpeed @12;
-  setCurveUseEnableSpeed @13;
+  setMapCurveUseEnableSpeed @13;
   setSpeedLimitUseEnableSpeed @14;
   setHoldLastSeenSpeedLimit @15;
-  setCurveTargetJerk @16;
-  setCurveTargetAccel @17;
-  setCurveTargetOffset @18;
+  setTargetSpeedJerk @16;
+  setTargetSpeedAccel @17;
+  setTargetSpeedTimeOffset @18;
   setDefaultLaneWidth @19;
-  setCurveTargetLatA @20;
+  setMapCurveTargetLatA @20;
   loadDefaultSettings @21;
   loadRecommendedSettings @22;
   setSlowDownForNextSpeedLimit @23;
@@ -126,6 +126,10 @@ enum MapdInputType {
   setSpeedLimitPriority @32;
   setSpeedLimitChangeRequiresAccept @33;
   acceptSpeedLimit @34;
+  setPressGasToAcceptSpeedLimit @35;
+  setAdjustSetSpeedToAcceptSpeedLimit @36;
+  setAcceptSpeedLimitTimeout @37;
+  setPressGasToOverrideSpeedLimit @38;
 }
 
 enum WaySelectionType {
@@ -176,7 +180,7 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   roadContext @18 :RoadContext;
   distanceFromWayCenter @19 :Float32;
   visionCurveSpeed @20 :Float32;
-  curveSpeed @21 :Float32;
+  mapCurveSpeed @21 :Float32;
   waySelectionType @22 :WaySelectionType;
   speedLimitAccepted @23 :Bool;
 }

@@ -10,8 +10,8 @@ import (
 	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cereal/offline"
 	"pfeifer.dev/mapd/maps"
-	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type WayCandidate struct {
@@ -22,7 +22,6 @@ type WayCandidate struct {
 	HierarchyRank    int
 	Context          maps.RoadContext
 }
-
 
 // Updated CurrentWay struct with stability fields
 type CurrentWay struct {
@@ -108,7 +107,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 				ConfidenceCounter: currentWay.ConfidenceCounter + 1,
 				LastChangeTime:    currentWay.LastChangeTime,
 				StableDistance:    newStableDistance,
-				SelectionType: custom.WaySelectionType_current,
+				SelectionType:     custom.WaySelectionType_current,
 			}, nil
 		}
 		if err != nil {
@@ -132,7 +131,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 				ConfidenceCounter: 1,
 				LastChangeTime:    time.Now(),
 				StableDistance:    onWay.Distance.Distance,
-				SelectionType: custom.WaySelectionType_predicted,
+				SelectionType:     custom.WaySelectionType_predicted,
 			}, nil
 		}
 		if err != nil {
@@ -156,7 +155,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 					ConfidenceCounter: 1,
 					LastChangeTime:    time.Now(),
 					StableDistance:    selectedOnWay.Distance.Distance,
-					SelectionType: custom.WaySelectionType_possible,
+					SelectionType:     custom.WaySelectionType_possible,
 				}, nil
 			}
 			if err != nil {

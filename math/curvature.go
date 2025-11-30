@@ -6,7 +6,7 @@ import (
 
 type Curvature struct {
 	Curvature, ArcLength, Angle float64
-	Pos Position
+	Pos                         Position
 }
 
 func CalculateCurvature(a Position, b Position, c Position) Curvature {
@@ -18,7 +18,7 @@ func CalculateCurvature(a Position, b Position, c Position) Curvature {
 
 	area := float32(m.Sqrt(float64(sp * (sp - lengthA) * (sp - lengthB) * (sp - lengthC))))
 
-	lengthProd := lengthA*lengthB*lengthC
+	lengthProd := lengthA * lengthB * lengthC
 	if lengthProd == 0 {
 		return Curvature{Pos: b}
 	}

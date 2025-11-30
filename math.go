@@ -72,7 +72,7 @@ func GetStateCurvatures(state *State) ([]m.Curvature, error) {
 		}
 		// also include nodes within 15 meters
 		for i := merge_or_split_node - 3; i >= 0; i-- {
-			
+
 			if positions[merge_or_split_node].DistanceTo(positions[i]) > 15 {
 				break
 			}
@@ -95,9 +95,9 @@ func GetStateCurvatures(state *State) ([]m.Curvature, error) {
 }
 
 type Velocity struct {
-	Pos  m.Position
-	Velocity  float64
-	TriggerDistance  float32
+	Pos             m.Position
+	Velocity        float64
+	TriggerDistance float32
 }
 
 func GetTargetVelocities(curvatures []m.Curvature, previousTargets []Velocity) (velocities []Velocity) {
@@ -106,7 +106,7 @@ func GetTargetVelocities(curvatures []m.Curvature, previousTargets []Velocity) (
 		if curv.Curvature == 0 {
 			continue
 		}
-		velocities[i].Velocity = math.Pow(float64(ms.Settings.CurveTargetLatA)/curv.Curvature, 1.0/2)
+		velocities[i].Velocity = math.Pow(float64(ms.Settings.MapCurveTargetLatA)/curv.Curvature, 1.0/2)
 		velocities[i].Pos = curv.Pos
 		for _, t := range previousTargets {
 			if velocities[i].Pos.Equals(t.Pos) {
@@ -161,4 +161,3 @@ func GetCurvatures(positions []m.Position) (curvatures []m.Curvature, err error)
 
 	return curvatures, nil
 }
-

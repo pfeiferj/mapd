@@ -5,7 +5,7 @@ type Curry[T any] struct {
 	val T
 }
 
-func (c *Curry[T]) Value(setter func ()T) T {
+func (c *Curry[T]) Value(setter func() T) T {
 	if c.set {
 		return c.val
 	}

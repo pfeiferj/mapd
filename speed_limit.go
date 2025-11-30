@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	ms "pfeifer.dev/mapd/settings"
 	m "pfeifer.dev/mapd/math"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 func ParseMaxSpeed(maxspeed string) float64 {
@@ -37,10 +37,10 @@ func ParseMaxSpeed(maxspeed string) float64 {
 }
 
 type NextSpeedLimit struct {
-	Pos m.Position
-	Speedlimit float64
-	Distance   float32
-	TriggerDistance  float32
+	Pos             m.Position
+	Speedlimit      float64
+	Distance        float32
+	TriggerDistance float32
 }
 
 func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLimit {
@@ -70,7 +70,7 @@ func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLim
 
 		if nextMaxSpeed != currentMaxSpeed && nextMaxSpeed > 0 {
 			result := NextSpeedLimit{
-				Pos:   nextWay.StartPosition,
+				Pos:        nextWay.StartPosition,
 				Speedlimit: nextMaxSpeed,
 				Distance:   cumulativeDistance,
 			}
