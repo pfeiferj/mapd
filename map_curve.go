@@ -4,18 +4,6 @@ import (
 	ms "pfeifer.dev/mapd/settings"
 )
 
-//func calculate_accel(t float32, target_jerk float32, a_ego float32) float32 {
-//  return a_ego  + target_jerk * t
-//}
-
-func calculate_velocity(t float32, target_jerk float32, a_ego float32, v_ego float32) float32 {
-	return v_ego + a_ego*t + target_jerk/2*(t*t)
-}
-
-func calculate_distance(t float32, target_jerk float32, a_ego float32, v_ego float32) float32 {
-	return t*v_ego + a_ego/2*(t*t) + target_jerk/6*(t*t*t)
-}
-
 func UpdateCurveSpeed(s *State) {
 	distances := make([]float32, len(s.TargetVelocities))
 	match_idx := -1
@@ -57,6 +45,7 @@ func UpdateCurveSpeed(s *State) {
 		max_d := tv.TriggerDistance
 		if max_d == 0 {
 			max_d = CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, float32(tv.Velocity), ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
+			max_d += ms.Settings.TargetSpeedTimeOffset * s.CarVEgo
 		}
 
 		if float32(d) < max_d {

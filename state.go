@@ -205,6 +205,7 @@ func (s *State) SpeedLimit() float32 {
 		speedLimit := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
 		nextIsLower := speedLimit > s.NextSpeedLimit.Value
 		distanceToReachSpeed := CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, offsetNextSpeedLimit, ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
+		distanceToReachSpeed += ms.Settings.TargetSpeedTimeOffset * s.CarVEgo
 		if s.NextSpeedLimit.TriggerDistance > distanceToReachSpeed {
 			distanceToReachSpeed = s.NextSpeedLimit.TriggerDistance
 		}
