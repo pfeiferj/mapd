@@ -21,6 +21,7 @@ func ReadOffline(data []uint8) Offline {
 		if err != nil {
 			slog.Warn("could not read offline message", "error", err)
 		}
+		// allow us to read as much as we want
 		offlineMaps.Message().ResetReadLimit(math.MaxUint64)
 		return Offline{offline: offlineMaps, Loaded: true}
 	}
