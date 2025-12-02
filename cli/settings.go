@@ -202,7 +202,7 @@ var settingsList = []list.Item{
 		value:       func() string { return fmt.Sprintf("%t", ms.Settings.HoldLastSeenSpeedLimit) },
 	},
 	settingsItem{
-		title:       "Curve Target Jerk (m/s^3)",
+		title:       "Target Speed Jerk (m/s^3)",
 		desc:        "The target amount of jerk to use when determining speed change activation distance (map curve and speed limit)",
 		MessageType: custom.MapdInputType_setTargetSpeedJerk,
 		Type:        Float,
@@ -210,7 +210,7 @@ var settingsList = []list.Item{
 		value:       func() string { return fmt.Sprintf("%f m/s^3", ms.Settings.TargetSpeedJerk) },
 	},
 	settingsItem{
-		title:       "Curve Target Accel (m/s^2)",
+		title:       "Target Speed Accel (m/s^2)",
 		desc:        "The target amount of acceleration to use when determining speed change activation distance (map curve and speed limit)",
 		MessageType: custom.MapdInputType_setTargetSpeedAccel,
 		Type:        Float,

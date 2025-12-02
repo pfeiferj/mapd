@@ -28,7 +28,30 @@ func main() {
 	}
 	defer extendedState.Pub.Pub.Msgq.Close()
 
-	state.NextSpeedLimitMA.Init(10)
+	nextSpeedLimit := Upcoming[float32]{
+		CheckWay: checkWayForSpeedLimitChange,
+		DefaultValue: 0,
+		Value: 0,
+	}
+	nextSpeedLimit.DistanceMA.Init(10)
+	state.NextSpeedLimit = nextSpeedLimit
+
+	nextAdvisorySpeed := Upcoming[float32]{
+		CheckWay: checkWayForAdvisorySpeedChange,
+		DefaultValue: 0,
+		Value: 0,
+	}
+	nextAdvisorySpeed.DistanceMA.Init(10)
+	state.NextAdvisorySpeed = nextAdvisorySpeed
+
+	nextHazard := Upcoming[string]{
+		CheckWay: checkWayForHazardChange,
+		DefaultValue: "",
+		Value: "",
+	}
+	nextHazard.DistanceMA.Init(10)
+	state.NextHazard = nextHazard
+
 	state.CarStateUpdateTimeMA.Init(100)
 	state.VisionCurveMA.Init(20)
 
@@ -127,12 +150,13 @@ func main() {
 				slog.Debug("could not get curvatures from current state", "error", err)
 			}
 			state.TargetVelocities = GetTargetVelocities(state.Curvatures, state.TargetVelocities)
-			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
 		}
 
 		if gpsSuccess || carStateSuccess {
 			UpdateCurveSpeed(&state)
-			state.NextSpeedLimit = calculateNextSpeedLimit(&state, state.MaxSpeed)
+			state.NextSpeedLimit.Update(&state)
+			state.NextAdvisorySpeed.Update(&state)
+			state.NextHazard.Update(&state)
 		}
 
 		// send at beginning of next loop

@@ -1,6 +1,8 @@
 package cereal
 
 import (
+	"math"
+
 	"capnproto.org/go/capnp/v3"
 	"github.com/pfeiferj/gomsgq"
 	"pfeifer.dev/mapd/cereal/log"
@@ -23,6 +25,9 @@ func (s *Subscriber[T]) Read() (obj T, success bool) {
 	if err != nil {
 		return obj, false
 	}
+
+	// allow us to read as much as we want
+	msg.ResetReadLimit(math.MaxUint64)
 
 	event, err := log.ReadRootEvent(msg)
 	if err != nil {

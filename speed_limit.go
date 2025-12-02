@@ -1,12 +1,10 @@
 package main
 
 import (
-	"log/slog"
-	"math"
 	"strconv"
 	"strings"
 
-	m "pfeifer.dev/mapd/math"
+	"pfeifer.dev/mapd/maps"
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -36,80 +34,28 @@ func ParseMaxSpeed(maxspeed string) float64 {
 	return 0
 }
 
-type NextSpeedLimit struct {
-	Pos             m.Position
-	Speedlimit      float64
-	Distance        float32
-	TriggerDistance float32
+func checkWayForSpeedLimitChange(state *State, parent *Upcoming[float32], way maps.NextWayResult) (valid bool, val float32) {
+	nextMaxSpeed := way.Way.MaxSpeed()
+	if way.IsForward && way.Way.MaxSpeedForward() > 0 {
+		nextMaxSpeed = way.Way.MaxSpeedForward()
+	} else if !way.IsForward && way.Way.MaxSpeedBackward() > 0 {
+		nextMaxSpeed = way.Way.MaxSpeedBackward()
+	}
+
+	if nextMaxSpeed != state.MaxSpeed && nextMaxSpeed > 0 {
+		return true, float32(nextMaxSpeed)
+	}
+
+	return false, parent.DefaultValue
 }
 
-func calculateNextSpeedLimit(state *State, currentMaxSpeed float64) NextSpeedLimit {
-	if len(state.NextWays) == 0 {
-		return NextSpeedLimit{}
+func checkWayForAdvisorySpeedChange(state *State, parent *Upcoming[float32], way maps.NextWayResult) (valid bool, val float32) {
+
+	nextAdvisorySpeed := way.Way.AdvisorySpeed()
+
+	if nextAdvisorySpeed != state.CurrentWay.Way.AdvisorySpeed() && nextAdvisorySpeed > 0 {
+		return true, float32(nextAdvisorySpeed)
 	}
 
-	// Find the next speed limit change
-	cumulativeDistance := float32(0.0)
-
-	if len(state.CurrentWay.Way.Nodes()) > 0 {
-		pos := m.NewPosition(state.Location.Latitude(), state.Location.Longitude())
-		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(pos, state.CurrentWay.OnWay.IsForward)
-		if err == nil && distToEnd > 0 {
-			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - state.DistanceSinceLastPosition
-		}
-	}
-
-	// Look through next ways for speed limit change
-	for _, nextWay := range state.NextWays {
-		nextMaxSpeed := nextWay.Way.MaxSpeed()
-		if nextWay.IsForward && nextWay.Way.MaxSpeedForward() > 0 {
-			nextMaxSpeed = nextWay.Way.MaxSpeedForward()
-		} else if !nextWay.IsForward && nextWay.Way.MaxSpeedBackward() > 0 {
-			nextMaxSpeed = nextWay.Way.MaxSpeedBackward()
-		}
-
-		if nextMaxSpeed != currentMaxSpeed && nextMaxSpeed > 0 {
-			result := NextSpeedLimit{
-				Pos:        nextWay.StartPosition,
-				Speedlimit: nextMaxSpeed,
-				Distance:   cumulativeDistance,
-			}
-
-			if nextMaxSpeed == state.LastSpeedLimitValue && nextWay.Way.Name() == state.LastSpeedLimitWayName {
-				diff := float64(state.LastSpeedLimitDistance - cumulativeDistance)
-				if math.Abs(float64(diff)) > 100 { // something bad happened, reset state
-					state.LastSpeedLimitDistance = cumulativeDistance
-					state.DistanceSinceLastPosition = 0
-					diff = 0
-					state.NextSpeedLimitMA.Reset()
-				}
-				smoothed_diff := diff
-				if state.DistanceSinceLastPosition == 0 {
-					smoothed_diff = state.NextSpeedLimitMA.Update(diff)
-				}
-				result.Distance = state.LastSpeedLimitDistance - float32(smoothed_diff)
-
-				slog.Debug("Smoothed speed limit distance",
-					"raw_distance", cumulativeDistance,
-					"smoothed_distance", result.Distance,
-					"last_distance", state.LastSpeedLimitDistance,
-					"way", nextWay.Way.Name,
-				)
-
-			} else {
-				state.NextSpeedLimitMA.Reset()
-			}
-			state.LastSpeedLimitDistance = result.Distance
-			state.LastSpeedLimitValue = nextMaxSpeed
-			state.LastSpeedLimitWayName = nextWay.Way.Name()
-
-			if state.NextSpeedLimit.Pos.Equals(result.Pos) {
-				result.TriggerDistance = state.NextSpeedLimit.TriggerDistance
-			}
-			return result
-		}
-		cumulativeDistance += nextWay.Way.Distance()
-	}
-
-	return NextSpeedLimit{}
+	return false, parent.DefaultValue
 }

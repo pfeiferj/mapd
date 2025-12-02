@@ -30,7 +30,6 @@ type State struct {
 	LastSpeedLimitSuggestion  float32
 	AcceptedSpeedLimitValue   float32
 	LastSpeedLimitWayName     string
-	NextSpeedLimit            NextSpeedLimit
 	VisionCurveSpeed          float32
 	CarSetSpeed               float32
 	SpeedLimitAcceptSetSpeed  float32
@@ -42,7 +41,6 @@ type State struct {
 	LastCarSetSpeed           float32
 	GasPressed                bool
 	MapCurveSpeed             float32
-	NextSpeedLimitMA          m.MovingAverage
 	VisionCurveMA             m.MovingAverage
 	CarStateUpdateTimeMA      m.MovingAverage
 	DistanceSinceLastPosition float32
@@ -50,6 +48,9 @@ type State struct {
 	TimeLastModel             time.Time
 	TimeLastCarState          time.Time
 	TimeLastSpeedLimitChange  time.Time
+	NextSpeedLimit            Upcoming[float32]
+	NextAdvisorySpeed         Upcoming[float32]
+	NextHazard                Upcoming[string]
 }
 
 func (s *State) checkEnableSpeed() bool {
@@ -155,14 +156,20 @@ func (s *State) Send() error {
 	speedLimitSuggestion := s.SpeedLimit()
 	output.SetSpeedLimitSuggestedSpeed(speedLimitSuggestion)
 
-	output.SetNextSpeedLimit(float32(s.NextSpeedLimit.Speedlimit))
-	output.SetNextSpeedLimitDistance(float32(s.NextSpeedLimit.Distance))
+	output.SetNextSpeedLimit(s.NextSpeedLimit.Value)
+	output.SetNextSpeedLimitDistance(s.NextSpeedLimit.Distance)
 
 	hazard := s.CurrentWay.Way.Hazard()
 	output.SetHazard(hazard)
 
+	output.SetNextHazard(s.NextHazard.Value)
+	output.SetNextHazardDistance(s.NextHazard.Distance)
+
 	advisorySpeed := s.CurrentWay.Way.AdvisorySpeed()
 	output.SetAdvisorySpeed(float32(advisorySpeed))
+
+	output.SetNextAdvisorySpeed(s.NextAdvisorySpeed.Value)
+	output.SetNextHazardDistance(s.NextAdvisorySpeed.Distance)
 
 	oneWay := s.CurrentWay.Way.OneWay()
 	output.SetOneWay(oneWay)
@@ -193,11 +200,12 @@ func (s *State) SpeedLimit() float32 {
 	if slSuggestedSpeed > 0 {
 		slSuggestedSpeed += ms.Settings.SpeedLimitOffset
 	}
-	if s.NextSpeedLimit.Speedlimit > 0 {
-		offsetNextSpeedLimit := s.NextSpeedLimit.Speedlimit + float64(ms.Settings.SpeedLimitOffset)
+	if s.NextSpeedLimit.Value > 0 {
+		offsetNextSpeedLimit := s.NextSpeedLimit.Value + ms.Settings.SpeedLimitOffset
 		speedLimit := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
-		nextIsLower := speedLimit > float32(s.NextSpeedLimit.Speedlimit)
-		distanceToReachSpeed := CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, float32(offsetNextSpeedLimit), ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
+		nextIsLower := speedLimit > s.NextSpeedLimit.Value
+		distanceToReachSpeed := CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, offsetNextSpeedLimit, ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
+		distanceToReachSpeed += ms.Settings.TargetSpeedTimeOffset * s.CarVEgo
 		if s.NextSpeedLimit.TriggerDistance > distanceToReachSpeed {
 			distanceToReachSpeed = s.NextSpeedLimit.TriggerDistance
 		}
