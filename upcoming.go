@@ -28,7 +28,7 @@ func (u *Upcoming[T]) Reset() {
 }
 
 func (u *Upcoming[T]) Update(state *State) {
-	if len(state.NextWays) != 0 {
+	if len(state.NextWays) == 0 {
 		u.Reset()
 		return
 	}

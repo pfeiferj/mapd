@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	ms "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/maps"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 func ParseMaxSpeed(maxspeed string) float64 {
@@ -35,7 +35,6 @@ func ParseMaxSpeed(maxspeed string) float64 {
 }
 
 func checkWayForSpeedLimitChange(state *State, parent *Upcoming[float32], way maps.NextWayResult) (valid bool, val float32) {
-
 	nextMaxSpeed := way.Way.MaxSpeed()
 	if way.IsForward && way.Way.MaxSpeedForward() > 0 {
 		nextMaxSpeed = way.Way.MaxSpeedForward()
