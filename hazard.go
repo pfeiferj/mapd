@@ -5,7 +5,6 @@ import (
 )
 
 func checkWayForHazardChange(state *State, parent *Upcoming[string], way maps.NextWayResult) (valid bool, val string) {
-
 	nextHazard := way.Way.Hazard()
 
 	if nextHazard != state.CurrentWay.Way.Hazard() && nextHazard != "" {
@@ -14,4 +13,3 @@ func checkWayForHazardChange(state *State, parent *Upcoming[string], way maps.Ne
 
 	return false, parent.DefaultValue
 }
-

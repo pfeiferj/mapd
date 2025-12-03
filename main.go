@@ -22,38 +22,13 @@ func main() {
 	}
 
 	state := State{}
+	state.Init()
+
 	extendedState := ExtendedState{
 		Pub:   cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
 		state: &state,
 	}
 	defer extendedState.Pub.Pub.Msgq.Close()
-
-	nextSpeedLimit := Upcoming[float32]{
-		CheckWay: checkWayForSpeedLimitChange,
-		DefaultValue: 0,
-		Value: 0,
-	}
-	nextSpeedLimit.DistanceMA.Init(10)
-	state.NextSpeedLimit = nextSpeedLimit
-
-	nextAdvisorySpeed := Upcoming[float32]{
-		CheckWay: checkWayForAdvisorySpeedChange,
-		DefaultValue: 0,
-		Value: 0,
-	}
-	nextAdvisorySpeed.DistanceMA.Init(10)
-	state.NextAdvisorySpeed = nextAdvisorySpeed
-
-	nextHazard := Upcoming[string]{
-		CheckWay: checkWayForHazardChange,
-		DefaultValue: "",
-		Value: "",
-	}
-	nextHazard.DistanceMA.Init(10)
-	state.NextHazard = nextHazard
-
-	state.CarStateUpdateTimeMA.Init(100)
-	state.VisionCurveMA.Init(20)
 
 	pub := cereal.NewPublisher("mapdOut", cereal.MapdOutCreator)
 	defer pub.Pub.Msgq.Close()
@@ -103,20 +78,17 @@ func main() {
 		carData, carStateSuccess := car.Read()
 		if carStateSuccess {
 			state.UpdateCarState(carData)
-			state.TimeLastCarState = time.Now()
 		}
 
 		modelData, modelSuccess := model.Read()
 		if modelSuccess {
-			state.TimeLastModel = time.Now()
 			state.VisionCurveSpeed = calcVisionCurveSpeed(modelData, &state)
 		}
 
 		location, gpsSuccess := gps.Read()
 		if gpsSuccess {
-			state.TimeLastPosition = time.Now()
 			state.DistanceSinceLastPosition = 0
-			state.Location = location
+			state.Position = m.PosFromLocation(location)
 			box := state.Data.Box()
 			pos := m.PosFromLocation(location)
 			if len(state.Data.Ways()) == 0 || !box.PosInside(pos) {
@@ -127,17 +99,9 @@ func main() {
 				}
 			}
 
-			state.LastWay = state.CurrentWay
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, &state.Data, location)
 			if err != nil {
 				slog.Debug("could not get current way", "error", err)
-			}
-
-			state.MaxSpeed = state.CurrentWay.Way.MaxSpeed()
-			if state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedForward() > 0 {
-				state.MaxSpeed = state.CurrentWay.Way.MaxSpeedForward()
-			} else if !state.CurrentWay.OnWay.IsForward && state.CurrentWay.Way.MaxSpeedBackward() > 0 {
-				state.MaxSpeed = state.CurrentWay.Way.MaxSpeedBackward()
 			}
 
 			state.NextWays, err = NextWays(location, state.CurrentWay, &state.Data, state.CurrentWay.OnWay.IsForward)
@@ -154,7 +118,7 @@ func main() {
 
 		if gpsSuccess || carStateSuccess {
 			UpdateCurveSpeed(&state)
-			state.NextSpeedLimit.Update(&state)
+			state.SpeedLimit.NextLimit.Update(&state)
 			state.NextAdvisorySpeed.Update(&state)
 			state.NextHazard.Update(&state)
 		}

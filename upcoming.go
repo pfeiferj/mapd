@@ -7,14 +7,26 @@ import (
 	m "pfeifer.dev/mapd/math"
 )
 
+func NewUpcoming[T any](maLength int, defaultValue T, checkWay CheckWay[T]) Upcoming[T] {
+	u := Upcoming[T]{
+		CheckWay:     checkWay,
+		DefaultValue: defaultValue,
+		Value:        defaultValue,
+	}
+	u.DistanceMA.Init(maLength)
+	return u
+}
+
+type CheckWay[T any] func(*State, *Upcoming[T], maps.NextWayResult) (valid bool, val T)
+
 type Upcoming[T any] struct {
-	CheckWay func(*State, *Upcoming[T], maps.NextWayResult) (valid bool, val T)
-	DefaultValue T
-	Value T
-	Position m.Position
-	Distance float32
-	RawDistance float32
-	DistanceMA m.MovingAverage
+	CheckWay        CheckWay[T]
+	DefaultValue    T
+	Value           T
+	Position        m.Position
+	Distance        float32
+	RawDistance     float32
+	DistanceMA      m.MovingAverage
 	TriggerDistance float32
 }
 
@@ -36,8 +48,7 @@ func (u *Upcoming[T]) Update(state *State) {
 	cumulativeDistance := float32(0.0)
 
 	if len(state.CurrentWay.Way.Nodes()) > 0 {
-		pos := m.NewPosition(state.Location.Latitude(), state.Location.Longitude())
-		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(pos, state.CurrentWay.OnWay.IsForward)
+		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(state.Position, state.CurrentWay.OnWay.IsForward)
 		if err == nil && distToEnd > 0 {
 			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - state.DistanceSinceLastPosition
 		}

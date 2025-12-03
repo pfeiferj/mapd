@@ -1,6 +1,7 @@
 package main
 
 import (
+	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
 )
 
@@ -38,14 +39,14 @@ func UpdateCurveSpeed(s *State) {
 	minValidV := float32(1000)
 	for i, d := range forwardDistances {
 		tv := forwardPoints[i]
-		if tv.Velocity > float64(s.CarVEgo)+ms.CURVE_CALC_OFFSET {
+		if tv.Velocity > float64(s.Car.VEgo)+ms.CURVE_CALC_OFFSET {
 			continue
 		}
 
 		max_d := tv.TriggerDistance
 		if max_d == 0 {
-			max_d = CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, float32(tv.Velocity), ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
-			max_d += ms.Settings.TargetSpeedTimeOffset * s.CarVEgo
+			max_d = m.CalculateJerkLimitedDistanceSimple(s.Car.VEgo, s.Car.AEgo, float32(tv.Velocity), ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
+			max_d += ms.Settings.TargetSpeedTimeOffset * s.Car.VEgo
 		}
 
 		if float32(d) < max_d {
