@@ -97,13 +97,12 @@ func (s *State) SuggestedSpeed() float32 {
 			s.AcceptedSpeedLimitValue = slSuggestedSpeed
 		}
 		s.LastSpeedLimitSuggestion = slSuggestedSpeed
-		if s.SpeedLimitOverrideSpeed > 0 {
-			slSuggestedSpeed = s.SpeedLimitOverrideSpeed
-		}
-		if suggestedSpeed > slSuggestedSpeed {
+		if s.SpeedLimitOverrideSpeed > 0 && suggestedSpeed > s.SpeedLimitOverrideSpeed && s.SpeedLimitOverrideSpeed > s.AcceptedSpeedLimitValue {
+			suggestedSpeed = s.SpeedLimitOverrideSpeed
+		} else if suggestedSpeed > s.AcceptedSpeedLimitValue {
 			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
 				suggestedSpeed = s.AcceptedSpeedLimitValue
-			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo-1 < slSuggestedSpeed {
+			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo-1 < s.AcceptedSpeedLimitValue {
 				suggestedSpeed = s.AcceptedSpeedLimitValue
 			}
 		}
@@ -152,6 +151,9 @@ func (s *State) Send() error {
 
 	maxSpeed := s.CurrentWay.Way.MaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
+	if maxSpeed > 0 {
+		s.LastSpeedLimitValue = maxSpeed
+	}
 
 	speedLimitSuggestion := s.SpeedLimit()
 	output.SetSpeedLimitSuggestedSpeed(speedLimitSuggestion)
@@ -210,7 +212,7 @@ func (s *State) SpeedLimit() float32 {
 			distanceToReachSpeed = s.NextSpeedLimit.TriggerDistance
 		}
 		if distanceToReachSpeed > s.NextSpeedLimit.TriggerDistance {
-			s.NextSpeedLimit.Distance = distanceToReachSpeed + 10
+			s.NextSpeedLimit.TriggerDistance = distanceToReachSpeed + 10
 		}
 		if !nextIsLower && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
