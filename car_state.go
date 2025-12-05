@@ -7,7 +7,7 @@ import (
 )
 
 type CarState struct {
-	SetSpeed   utils.TrackedState[float32]
+	SetSpeed   utils.Float32Tracker
 	VEgo       float32
 	AEgo       float32
 	VCruise    float32
@@ -24,8 +24,6 @@ func (c *CarState) Update(carData car.CarState) {
 }
 
 func (c *CarState) Init() {
-	c.SetSpeed.Equal = utils.Float32Compare
-	c.SetSpeed.Null = utils.Float32Null
 	c.SetSpeed.AllowNullLastValue = true
 	c.UpdateTime.Init(100)
 }
