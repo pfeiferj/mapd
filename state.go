@@ -49,27 +49,10 @@ func (s *State) SuggestedSpeed() float32 {
 	setSpeedChanging := time.Since(s.Car.SetSpeed.UpdatedTime) < 1500*time.Millisecond
 
 	if ms.Settings.SpeedLimitControlEnabled || ms.Settings.ExternalSpeedLimitControlEnabled {
-		suggestedSpeedUpdated := s.SpeedLimit.Suggestion.Update(s.SpeedLimit.SuggestSpeedLimit(s.CurrentWay, s.Car))
-		if suggestedSpeedUpdated {
-			ms.Settings.ResetSpeedLimitAccepted()
-			s.SpeedLimit.SetSpeedWhenAccepted = 0
-		}
-		if ms.Settings.SpeedLimitAccepted() {
-			if s.SpeedLimit.AcceptedLimit != s.SpeedLimit.Suggestion.Value {
-				s.SpeedLimit.OverrideSpeed = 0
-			}
-			s.SpeedLimit.AcceptedLimit = s.SpeedLimit.Suggestion.Value
-		}
-		slSuggestedSpeed := s.SpeedLimit.AcceptedLimit
-		if s.SpeedLimit.OverrideSpeed > 0  && s.SpeedLimit.OverrideSpeed > slSuggestedSpeed {
-			slSuggestedSpeed = s.SpeedLimit.OverrideSpeed
-		}
-		if suggestedSpeed > slSuggestedSpeed {
-			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
-				suggestedSpeed = slSuggestedSpeed
-			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.Car.VEgo-1 < s.SpeedLimit.AcceptedLimit {
-				suggestedSpeed = slSuggestedSpeed
-			}
+		s.SpeedLimit.UpdateAcceptedLimitValue(s.CurrentWay, s.Car)
+		slSuggestedSpeed := s.SpeedLimit.SpeedLimitFinalSuggestion(s.checkEnableSpeed(), setSpeedChanging, s.Car.VEgo)
+		if suggestedSpeed > slSuggestedSpeed && slSuggestedSpeed > 0 {
+			suggestedSpeed = slSuggestedSpeed
 		}
 	}
 	if ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.checkEnableSpeed()) {
