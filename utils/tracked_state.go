@@ -27,7 +27,7 @@ func (t *TrackedState[T]) Update(val T) (updated bool) {
 }
 
 func Float32Compare(a float32, b float32) bool {
-	return a != b
+	return a == b
 }
 
 func Float32Null(a float32) bool {

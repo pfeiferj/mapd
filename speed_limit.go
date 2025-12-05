@@ -21,6 +21,14 @@ type SpeedLimitState struct {
 }
 
 func (s *SpeedLimitState) Init() {
+	s.Limit.Equal = utils.Float32Compare
+	s.Limit.Null = utils.Float32Null
+	s.Limit.AllowNullLastValue = false
+
+	s.Suggestion.Equal = utils.Float32Compare
+	s.Suggestion.Null = utils.Float32Null
+	s.Suggestion.AllowNullLastValue = true
+
 	s.NextLimit = NewUpcoming(10, 0, checkWayForSpeedLimitChange)
 }
 

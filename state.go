@@ -60,13 +60,15 @@ func (s *State) SuggestedSpeed() float32 {
 			}
 			s.SpeedLimit.AcceptedLimit = s.SpeedLimit.Suggestion.Value
 		}
-		if s.SpeedLimit.OverrideSpeed > 0 && suggestedSpeed > s.SpeedLimit.OverrideSpeed && s.SpeedLimit.OverrideSpeed > s.SpeedLimit.AcceptedLimit {
-			suggestedSpeed = s.SpeedLimit.OverrideSpeed
-		} else if suggestedSpeed > s.SpeedLimit.AcceptedLimit {
+		slSuggestedSpeed := s.SpeedLimit.AcceptedLimit
+		if s.SpeedLimit.OverrideSpeed > 0  && s.SpeedLimit.OverrideSpeed > slSuggestedSpeed {
+			slSuggestedSpeed = s.SpeedLimit.OverrideSpeed
+		}
+		if suggestedSpeed > slSuggestedSpeed {
 			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
-				suggestedSpeed = s.SpeedLimit.AcceptedLimit
+				suggestedSpeed = slSuggestedSpeed
 			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.Car.VEgo-1 < s.SpeedLimit.AcceptedLimit {
-				suggestedSpeed = s.SpeedLimit.AcceptedLimit
+				suggestedSpeed = slSuggestedSpeed
 			}
 		}
 	}
