@@ -1,4 +1,4 @@
-package main
+package math
 
 import "math"
 
@@ -68,7 +68,7 @@ func CalculateJerkLimitedDistance(v0, a0, vTarget, aMax, jMax float32) (float32,
 	aDiff := aTarget - a0
 
 	// Check if we need to change acceleration at all
-	if abs(aDiff) < 0.001 {
+	if Abs(aDiff) < 0.001 {
 		// Already at target acceleration, skip to constant acceleration phase
 		profile.T1 = 0
 		profile.V1 = v0
@@ -77,7 +77,7 @@ func CalculateJerkLimitedDistance(v0, a0, vTarget, aMax, jMax float32) (float32,
 		jTarget = 0 // No jerk needed
 	} else {
 		// Time to reach target acceleration
-		profile.T1 = float32(abs(aDiff / jTarget))
+		profile.T1 = float32(Abs(aDiff / jTarget))
 
 		// Check if we reach target velocity before reaching target acceleration
 		// Velocity after jerk phase: v = v0 + a0*t + 0.5*j*t²
@@ -127,7 +127,7 @@ func CalculateJerkLimitedDistance(v0, a0, vTarget, aMax, jMax float32) (float32,
 	vRemaining := vTarget - profile.V1
 	needsPhase2 := (accelerating && vRemaining > 0.001) || (!accelerating && vRemaining < -0.001)
 
-	if needsPhase2 && abs(profile.A1) > 0.001 {
+	if needsPhase2 && Abs(profile.A1) > 0.001 {
 		// Time for constant acceleration: t = Δv / a
 		profile.T2 = vRemaining / profile.A1
 		profile.V2 = vTarget

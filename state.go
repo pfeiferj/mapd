@@ -1,13 +1,11 @@
 package main
 
 import (
-	"math"
 	"time"
 
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
-	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/maps"
 	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
@@ -16,94 +14,61 @@ import (
 type State struct {
 	Publisher                 *cereal.Publisher[custom.MapdOut]
 	Data                      maps.Offline
+	Car                       CarState
 	CurrentWay                CurrentWay
-	LastWay                   CurrentWay
+	SpeedLimit                SpeedLimitState
 	NextWays                  []maps.NextWayResult
-	Location                  log.GpsLocationData
-	LastLocation              log.GpsLocationData
-	StableWayCounter          int
+	Position                  m.Position
 	Curvatures                []m.Curvature
 	TargetVelocities          []Velocity
-	MaxSpeed                  float64
-	LastSpeedLimitDistance    float32
-	LastSpeedLimitValue       float64
-	LastSpeedLimitSuggestion  float32
-	AcceptedSpeedLimitValue   float32
-	LastSpeedLimitWayName     string
+	DistanceSinceLastPosition float32
 	VisionCurveSpeed          float32
-	CarSetSpeed               float32
-	SpeedLimitAcceptSetSpeed  float32
-	SpeedLimitOverrideSpeed   float32
-	TimeLastSetSpeedAdjust    time.Time
-	CarVEgo                   float32
-	CarAEgo                   float32
-	CarVCruise                float32
-	LastCarSetSpeed           float32
-	GasPressed                bool
 	MapCurveSpeed             float32
 	VisionCurveMA             m.MovingAverage
-	CarStateUpdateTimeMA      m.MovingAverage
-	DistanceSinceLastPosition float32
-	TimeLastPosition          time.Time
-	TimeLastModel             time.Time
-	TimeLastCarState          time.Time
-	TimeLastSpeedLimitChange  time.Time
-	NextSpeedLimit            Upcoming[float32]
 	NextAdvisorySpeed         Upcoming[float32]
 	NextHazard                Upcoming[string]
+}
+
+func (s *State) Init() {
+	s.Car.Init()
+	s.VisionCurveMA.Init(20)
+	s.NextHazard = NewUpcoming(10, "", checkWayForHazardChange)
+	s.NextAdvisorySpeed = NewUpcoming(10, 0, checkWayForAdvisorySpeedChange)
+	s.SpeedLimit.Init()
 }
 
 func (s *State) checkEnableSpeed() bool {
 	if ms.Settings.EnableSpeed == 0 {
 		return true
 	}
-	return abs(s.CarSetSpeed-ms.Settings.EnableSpeed) < ms.ENABLE_SPEED_RANGE
-}
-
-func (s *State) UpdateSpeedLimitAccept() {
-	timeout := ms.Settings.AcceptSpeedLimitTimeout
-	if timeout > 0 && time.Since(s.TimeLastSpeedLimitChange) > time.Duration(timeout)*time.Second {
-		return
-	}
-	if ms.Settings.PressGasToAcceptSpeedLimit && s.GasPressed {
-		ms.Settings.AcceptSpeedLimit()
-	}
-	if ms.Settings.AdjustSetSpeedToAcceptSpeedLimit && s.TimeLastSetSpeedAdjust.After(s.TimeLastSpeedLimitChange) {
-		if ms.Settings.SpeedLimitAccepted() && s.SpeedLimitAcceptSetSpeed != s.CarSetSpeed {
-			ms.Settings.ResetSpeedLimitAccepted()
-		}
-		if s.SpeedLimitAcceptSetSpeed == 0 {
-			s.SpeedLimitAcceptSetSpeed = s.CarSetSpeed
-			ms.Settings.AcceptSpeedLimit()
-		}
-	}
+	return m.Abs(s.Car.SetSpeed.Value-ms.Settings.EnableSpeed) < ms.ENABLE_SPEED_RANGE
 }
 
 func (s *State) SuggestedSpeed() float32 {
-	suggestedSpeed := min(s.CarVCruise*ms.KPH_TO_MS, ms.MAX_OP_SPEED)
-	setSpeedChanging := time.Since(s.TimeLastSetSpeedAdjust) < 1500*time.Millisecond
+	suggestedSpeed := min(s.Car.VCruise*ms.KPH_TO_MS, ms.MAX_OP_SPEED)
+	setSpeedChanging := time.Since(s.Car.SetSpeed.UpdatedTime) < 1500*time.Millisecond
 
 	if ms.Settings.SpeedLimitControlEnabled || ms.Settings.ExternalSpeedLimitControlEnabled {
-		slSuggestedSpeed := s.SpeedLimit()
-		if slSuggestedSpeed != s.LastSpeedLimitSuggestion {
+		suggestedSpeedUpdated := s.SpeedLimit.Suggestion.Update(s.SpeedLimit.SuggestSpeedLimit(s.CurrentWay, s.Car))
+		if suggestedSpeedUpdated {
 			ms.Settings.ResetSpeedLimitAccepted()
-			s.SpeedLimitAcceptSetSpeed = 0
-			s.TimeLastSpeedLimitChange = time.Now()
+			s.SpeedLimit.SetSpeedWhenAccepted = 0
 		}
 		if ms.Settings.SpeedLimitAccepted() {
-			if s.AcceptedSpeedLimitValue != slSuggestedSpeed {
-				s.SpeedLimitOverrideSpeed = 0
+			if s.SpeedLimit.AcceptedLimit != s.SpeedLimit.Suggestion.Value {
+				s.SpeedLimit.OverrideSpeed = 0
 			}
-			s.AcceptedSpeedLimitValue = slSuggestedSpeed
+			s.SpeedLimit.AcceptedLimit = s.SpeedLimit.Suggestion.Value
 		}
-		s.LastSpeedLimitSuggestion = slSuggestedSpeed
-		if s.SpeedLimitOverrideSpeed > 0 && suggestedSpeed > s.SpeedLimitOverrideSpeed && s.SpeedLimitOverrideSpeed > s.AcceptedSpeedLimitValue {
-			suggestedSpeed = s.SpeedLimitOverrideSpeed
-		} else if suggestedSpeed > s.AcceptedSpeedLimitValue {
+		slSuggestedSpeed := s.SpeedLimit.AcceptedLimit
+		if s.SpeedLimit.OverrideSpeed > 0  && s.SpeedLimit.OverrideSpeed > slSuggestedSpeed {
+			slSuggestedSpeed = s.SpeedLimit.OverrideSpeed
+		}
+		if suggestedSpeed > slSuggestedSpeed {
 			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
-				suggestedSpeed = s.AcceptedSpeedLimitValue
-			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.CarVEgo-1 < s.AcceptedSpeedLimitValue {
-				suggestedSpeed = s.AcceptedSpeedLimitValue
+				suggestedSpeed = slSuggestedSpeed
+			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.Car.VEgo-1 < s.SpeedLimit.AcceptedLimit {
+				suggestedSpeed = slSuggestedSpeed
 			}
 		}
 	}
@@ -120,22 +85,9 @@ func (s *State) SuggestedSpeed() float32 {
 }
 
 func (s *State) UpdateCarState(carData car.CarState) {
-	s.LastCarSetSpeed = s.CarSetSpeed
-	carSetSpeed := carData.VCruise() * ms.KPH_TO_MS
-	if s.CarSetSpeed != carSetSpeed {
-		s.CarSetSpeed = carSetSpeed
-		s.TimeLastSetSpeedAdjust = time.Now()
-	}
-	s.CarVEgo = carData.VEgo()
-	s.CarAEgo = carData.AEgo()
-	s.CarVCruise = carData.VCruise()
-	s.GasPressed = carData.GasPressed()
-	tdiff := time.Since(s.TimeLastCarState)
-	seconds := s.CarStateUpdateTimeMA.Update(tdiff.Seconds())
-	s.DistanceSinceLastPosition += float32(seconds) * s.CarVEgo
-	if ms.Settings.PressGasToOverrideSpeedLimit && s.GasPressed {
-		s.SpeedLimitOverrideSpeed = s.CarVEgo
-	}
+	s.Car.Update(carData)
+	s.DistanceSinceLastPosition += float32(s.Car.UpdateTime.DiffMA.Estimate) * s.Car.VEgo
+	s.SpeedLimit.Update(s.Car)
 }
 
 func (s *State) Send() error {
@@ -149,17 +101,13 @@ func (s *State) Send() error {
 
 	output.SetRoadName(s.CurrentWay.Way.Name())
 
-	maxSpeed := s.CurrentWay.Way.MaxSpeed()
+	maxSpeed := s.CurrentWay.MaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
-	if maxSpeed > 0 {
-		s.LastSpeedLimitValue = maxSpeed
-	}
 
-	speedLimitSuggestion := s.SpeedLimit()
-	output.SetSpeedLimitSuggestedSpeed(speedLimitSuggestion)
+	output.SetSpeedLimitSuggestedSpeed(s.SpeedLimit.Suggestion.Value)
 
-	output.SetNextSpeedLimit(s.NextSpeedLimit.Value)
-	output.SetNextSpeedLimitDistance(s.NextSpeedLimit.Distance)
+	output.SetNextSpeedLimit(s.SpeedLimit.NextLimit.Value)
+	output.SetNextSpeedLimitDistance(s.SpeedLimit.NextLimit.Distance)
 
 	hazard := s.CurrentWay.Way.Hazard()
 	output.SetHazard(hazard)
@@ -192,37 +140,4 @@ func (s *State) Send() error {
 	output.SetWaySelectionType(s.CurrentWay.SelectionType)
 
 	return s.Publisher.Send(msg)
-}
-
-func (s *State) SpeedLimit() float32 {
-	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
-	if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
-		slSuggestedSpeed = float32(s.LastSpeedLimitValue)
-	}
-	if slSuggestedSpeed > 0 {
-		slSuggestedSpeed += ms.Settings.SpeedLimitOffset
-	}
-	if s.NextSpeedLimit.Value > 0 {
-		offsetNextSpeedLimit := s.NextSpeedLimit.Value + ms.Settings.SpeedLimitOffset
-		speedLimit := ms.Settings.PrioritySpeedLimit(float32(s.MaxSpeed))
-		nextIsLower := speedLimit > s.NextSpeedLimit.Value
-		distanceToReachSpeed := CalculateJerkLimitedDistanceSimple(s.CarVEgo, s.CarAEgo, offsetNextSpeedLimit, ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
-		distanceToReachSpeed += ms.Settings.TargetSpeedTimeOffset * s.CarVEgo
-		if s.NextSpeedLimit.TriggerDistance > distanceToReachSpeed {
-			distanceToReachSpeed = s.NextSpeedLimit.TriggerDistance
-		}
-		if distanceToReachSpeed > s.NextSpeedLimit.TriggerDistance {
-			s.NextSpeedLimit.TriggerDistance = distanceToReachSpeed + 10
-		}
-		if !nextIsLower && ms.Settings.SpeedUpForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
-			slSuggestedSpeed = float32(offsetNextSpeedLimit)
-		} else if nextIsLower && ms.Settings.SlowDownForNextSpeedLimit && s.NextSpeedLimit.Distance < distanceToReachSpeed {
-			slSuggestedSpeed = float32(offsetNextSpeedLimit)
-		}
-	}
-	return slSuggestedSpeed
-}
-
-func abs[T float64 | float32](val T) float64 {
-	return math.Abs(float64(val))
 }

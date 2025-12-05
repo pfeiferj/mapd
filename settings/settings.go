@@ -63,6 +63,13 @@ type MapdSettings struct {
 }
 
 func (s *MapdSettings) Default() {
+	err := json.Unmarshal(defaultsJson, s) //load included default settings first to ensure all values have a default
+	if err != nil {
+		slog.Warn("failed to load default settings", "error", err)
+		return
+	}
+
+	// overwrite default values with custom defaults
 	if _, err := os.Stat("/data/openpilot/mapd_defaults.json"); err == nil {
 		defaults, err := os.ReadFile("/data/openpilot/mapd_defaults.json")
 		if err != nil {
@@ -71,12 +78,6 @@ func (s *MapdSettings) Default() {
 		err = json.Unmarshal(defaults, s)
 		if err != nil {
 			slog.Warn("failed to load custom default settings", "error", err)
-			return
-		}
-	} else {
-		err := json.Unmarshal(defaultsJson, s)
-		if err != nil {
-			slog.Warn("failed to load default settings", "error", err)
 			return
 		}
 	}

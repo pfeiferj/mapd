@@ -3,10 +3,89 @@ package main
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"pfeifer.dev/mapd/maps"
+	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
+
+type SpeedLimitState struct {
+	Limit                utils.TrackedState[float32]
+	Suggestion           utils.TrackedState[float32]
+	SetSpeedWhenAccepted float32
+	OverrideSpeed        float32
+	AcceptedLimit        float32
+	NextLimit            Upcoming[float32]
+}
+
+func (s *SpeedLimitState) Init() {
+	s.Limit.Equal = utils.Float32Compare
+	s.Limit.Null = utils.Float32Null
+	s.Limit.AllowNullLastValue = false
+
+	s.Suggestion.Equal = utils.Float32Compare
+	s.Suggestion.Null = utils.Float32Null
+	s.Suggestion.AllowNullLastValue = true
+
+	s.NextLimit = NewUpcoming(10, 0, checkWayForSpeedLimitChange)
+}
+
+func (s *SpeedLimitState) Update(car CarState) {
+	if ms.Settings.PressGasToOverrideSpeedLimit && car.GasPressed {
+		s.OverrideSpeed = car.VEgo
+	}
+	s.UpdateLimitAccepted(car)
+}
+
+func (s *SpeedLimitState) UpdateLimitAccepted(car CarState) {
+	timeout := ms.Settings.AcceptSpeedLimitTimeout
+	if timeout > 0 && time.Since(s.Limit.UpdatedTime) > time.Duration(timeout)*time.Second {
+		return
+	}
+	if ms.Settings.PressGasToAcceptSpeedLimit && car.GasPressed {
+		ms.Settings.AcceptSpeedLimit()
+	}
+	if ms.Settings.AdjustSetSpeedToAcceptSpeedLimit && car.SetSpeed.UpdatedTime.After(s.Limit.UpdatedTime) {
+		if ms.Settings.SpeedLimitAccepted() && s.SetSpeedWhenAccepted != car.SetSpeed.Value {
+			ms.Settings.ResetSpeedLimitAccepted()
+		}
+		if s.SetSpeedWhenAccepted == 0 {
+			s.SetSpeedWhenAccepted = car.SetSpeed.Value
+			ms.Settings.AcceptSpeedLimit()
+		}
+	}
+}
+
+func (s *SpeedLimitState) SuggestSpeedLimit(currentWay CurrentWay, car CarState) float32 {
+	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(currentWay.MaxSpeed()))
+	if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
+		slSuggestedSpeed = float32(s.Limit.LastValue)
+	}
+	if slSuggestedSpeed > 0 {
+		slSuggestedSpeed += ms.Settings.SpeedLimitOffset
+	}
+	if s.NextLimit.Value > 0 {
+		offsetNextSpeedLimit := s.NextLimit.Value + ms.Settings.SpeedLimitOffset
+		s.Limit.Update(ms.Settings.PrioritySpeedLimit(float32(currentWay.MaxSpeed())))
+		nextIsLower := s.Limit.Value > s.NextLimit.Value
+		distanceToReachSpeed := m.CalculateJerkLimitedDistanceSimple(car.VEgo, car.AEgo, offsetNextSpeedLimit, ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
+		distanceToReachSpeed += ms.Settings.TargetSpeedTimeOffset * car.VEgo
+		if s.NextLimit.TriggerDistance > distanceToReachSpeed {
+			distanceToReachSpeed = s.NextLimit.TriggerDistance
+		}
+		if distanceToReachSpeed > s.NextLimit.TriggerDistance {
+			s.NextLimit.TriggerDistance = distanceToReachSpeed + 10
+		}
+		if !nextIsLower && ms.Settings.SpeedUpForNextSpeedLimit && s.NextLimit.Distance < distanceToReachSpeed {
+			slSuggestedSpeed = float32(offsetNextSpeedLimit)
+		} else if nextIsLower && ms.Settings.SlowDownForNextSpeedLimit && s.NextLimit.Distance < distanceToReachSpeed {
+			slSuggestedSpeed = float32(offsetNextSpeedLimit)
+		}
+	}
+	return slSuggestedSpeed
+}
 
 func ParseMaxSpeed(maxspeed string) float64 {
 	splitSpeed := strings.Split(maxspeed, " ")
@@ -42,7 +121,7 @@ func checkWayForSpeedLimitChange(state *State, parent *Upcoming[float32], way ma
 		nextMaxSpeed = way.Way.MaxSpeedBackward()
 	}
 
-	if nextMaxSpeed != state.MaxSpeed && nextMaxSpeed > 0 {
+	if nextMaxSpeed != state.CurrentWay.MaxSpeed() && nextMaxSpeed > 0 {
 		return true, float32(nextMaxSpeed)
 	}
 
@@ -50,7 +129,6 @@ func checkWayForSpeedLimitChange(state *State, parent *Upcoming[float32], way ma
 }
 
 func checkWayForAdvisorySpeedChange(state *State, parent *Upcoming[float32], way maps.NextWayResult) (valid bool, val float32) {
-
 	nextAdvisorySpeed := way.Way.AdvisorySpeed()
 
 	if nextAdvisorySpeed != state.CurrentWay.Way.AdvisorySpeed() && nextAdvisorySpeed > 0 {

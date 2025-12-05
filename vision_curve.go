@@ -28,7 +28,7 @@ func calcVisionCurveSpeed(model log.ModelDataV2, state *State) float32 {
 
 	predictedLatAccels := make([]float32, zOrientRate.Len())
 	maxLatA := float32(0)
-	vEgo := state.CarVEgo
+	vEgo := state.Car.VEgo
 	if vEgo < 0.1 {
 		vEgo = 0.1
 	}

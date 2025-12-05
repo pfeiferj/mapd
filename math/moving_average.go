@@ -22,7 +22,7 @@ func (a *MovingAverage) Reset() {
 func (a *MovingAverage) Update(val float64) float64 {
 	corrected := val
 	if corrected == 0 { // prevent divide by zero issues
-		corrected = 0.1
+		corrected = 0.01
 	}
 	if !a.initialized {
 		for i := range a.values {
@@ -41,4 +41,8 @@ func (a *MovingAverage) Update(val float64) float64 {
 	}
 	a.Estimate = total / float64(a.size)
 	return a.Estimate
+}
+
+func (a *MovingAverage) Raw() float64 {
+	return a.values[a.index]
 }

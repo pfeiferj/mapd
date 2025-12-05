@@ -12,6 +12,7 @@ import (
 	"pfeifer.dev/mapd/maps"
 	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 type WayCandidate struct {
@@ -34,6 +35,21 @@ type CurrentWay struct {
 	LastChangeTime    time.Time
 	StableDistance    float32
 	SelectionType     custom.WaySelectionType
+	maxSpeed          utils.Curry[float64]
+}
+
+func (w *CurrentWay) _maxSpeed() float64 {
+	maxSpeed := w.Way.MaxSpeed()
+	if w.OnWay.IsForward && w.Way.MaxSpeedForward() > 0 {
+		maxSpeed = w.Way.MaxSpeedForward()
+	} else if !w.OnWay.IsForward && w.Way.MaxSpeedBackward() > 0 {
+		maxSpeed = w.Way.MaxSpeedBackward()
+	}
+	return maxSpeed
+}
+
+func (w *CurrentWay) MaxSpeed() float64 {
+	return w.maxSpeed.Value(w._maxSpeed)
 }
 
 func selectBestWayAdvanced(possibleWays []maps.Way, location log.GpsLocationData, currentWay maps.Way) maps.Way {
