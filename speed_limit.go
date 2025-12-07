@@ -12,8 +12,8 @@ import (
 )
 
 type SpeedLimitState struct {
-	Limit                utils.TrackedState[float32]
-	Suggestion           utils.TrackedState[float32]
+	Limit                utils.Float32Tracker
+	Suggestion           utils.Float32Tracker
 	SetSpeedWhenAccepted float32
 	OverrideSpeed        float32
 	AcceptedLimit        float32
@@ -21,25 +21,27 @@ type SpeedLimitState struct {
 }
 
 func (s *SpeedLimitState) Init() {
-	s.Limit.Equal = utils.Float32Compare
-	s.Limit.Null = utils.Float32Null
 	s.Limit.AllowNullLastValue = false
-
-	s.Suggestion.Equal = utils.Float32Compare
-	s.Suggestion.Null = utils.Float32Null
 	s.Suggestion.AllowNullLastValue = true
 
 	s.NextLimit = NewUpcoming(10, 0, checkWayForSpeedLimitChange)
 }
 
-func (s *SpeedLimitState) Update(car CarState) {
-	if ms.Settings.PressGasToOverrideSpeedLimit && car.GasPressed {
+func (s *SpeedLimitState) Update(currentWay CurrentWay, car CarState) {
+	if ms.Settings.PressGasToOverrideSpeedLimit && car.GasPressed && car.VEgo > s.AcceptedLimit {
 		s.OverrideSpeed = car.VEgo
 	}
-	s.UpdateLimitAccepted(car)
+	if s.OverrideSpeed < s.AcceptedLimit {
+		s.OverrideSpeed = 0
+	}
+	if car.SetSpeedChanging {
+		s.OverrideSpeed = 0
+	}
+	s.UpdateLimitAcceptedState(car)
+	s.UpdateAcceptedLimitValue(currentWay, car)
 }
 
-func (s *SpeedLimitState) UpdateLimitAccepted(car CarState) {
+func (s *SpeedLimitState) UpdateLimitAcceptedState(car CarState) {
 	timeout := ms.Settings.AcceptSpeedLimitTimeout
 	if timeout > 0 && time.Since(s.Limit.UpdatedTime) > time.Duration(timeout)*time.Second {
 		return
@@ -58,7 +60,33 @@ func (s *SpeedLimitState) UpdateLimitAccepted(car CarState) {
 	}
 }
 
-func (s *SpeedLimitState) SuggestSpeedLimit(currentWay CurrentWay, car CarState) float32 {
+func (s *SpeedLimitState) UpdateAcceptedLimitValue(currentWay CurrentWay, car CarState) {
+		suggestedSpeedUpdated := s.Suggestion.Update(s.SuggestNewSpeedLimit(currentWay, car))
+		if suggestedSpeedUpdated {
+			ms.Settings.ResetSpeedLimitAccepted()
+			s.SetSpeedWhenAccepted = 0
+		}
+		if ms.Settings.SpeedLimitAccepted() {
+			if s.AcceptedLimit != s.Suggestion.Value {
+				s.OverrideSpeed = 0
+			}
+			s.AcceptedLimit = s.Suggestion.Value
+		}
+}
+func (s *SpeedLimitState) SpeedLimitFinalSuggestion(enableSpeedActive bool, setSpeedChanging bool, vEgo float32) float32 {
+	slSuggestedSpeed := s.AcceptedLimit
+	if s.OverrideSpeed > 0  && s.OverrideSpeed > slSuggestedSpeed {
+		slSuggestedSpeed = s.OverrideSpeed
+	}
+	if !ms.Settings.SpeedLimitUseEnableSpeed || enableSpeedActive {
+		return slSuggestedSpeed
+	} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && vEgo-1 < s.AcceptedLimit {
+		return slSuggestedSpeed
+	}
+	return 0
+}
+
+func (s *SpeedLimitState) SuggestNewSpeedLimit(currentWay CurrentWay, car CarState) float32 {
 	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(currentWay.MaxSpeed()))
 	if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
 		slSuggestedSpeed = float32(s.Limit.LastValue)

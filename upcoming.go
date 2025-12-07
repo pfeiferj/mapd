@@ -1,8 +1,6 @@
 package main
 
 import (
-	"math"
-
 	"pfeifer.dev/mapd/maps"
 	m "pfeifer.dev/mapd/math"
 )
@@ -13,7 +11,6 @@ func NewUpcoming[T any](maLength int, defaultValue T, checkWay CheckWay[T]) Upco
 		DefaultValue: defaultValue,
 		Value:        defaultValue,
 	}
-	u.DistanceMA.Init(maLength)
 	return u
 }
 
@@ -26,12 +23,10 @@ type Upcoming[T any] struct {
 	Position        m.Position
 	Distance        float32
 	RawDistance     float32
-	DistanceMA      m.MovingAverage
 	TriggerDistance float32
 }
 
 func (u *Upcoming[T]) Reset() {
-	u.DistanceMA.Reset()
 	u.Distance = 0
 	u.RawDistance = 0
 	u.TriggerDistance = 0
@@ -49,31 +44,20 @@ func (u *Upcoming[T]) Update(state *State) {
 
 	if len(state.CurrentWay.Way.Nodes()) > 0 {
 		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(state.Position, state.CurrentWay.OnWay.IsForward)
-		if err == nil && distToEnd > 0 {
-			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - state.DistanceSinceLastPosition
+		if err == nil {
+			cumulativeDistance = distToEnd
 		}
 	}
 	for _, nextWay := range state.NextWays {
 		valid, val := u.CheckWay(state, u, nextWay)
 		if valid {
+			cumulativeDistance -= state.DistanceSinceLastPosition
 			if u.Position.Equals(nextWay.StartPosition) {
-				diff := float64(u.Distance - cumulativeDistance)
-				if math.Abs(float64(diff)) > 100 { // something bad happened, reset state
+				u.Distance = min(u.Distance, cumulativeDistance)
+				if m.Abs(u.Distance - cumulativeDistance) > 100 {
 					u.Distance = cumulativeDistance
-					state.DistanceSinceLastPosition = 0
-					diff = 0
-					u.DistanceMA.Reset()
 				}
-				smoothed_diff := diff
-
-				// only update on position updates and resets
-				if state.DistanceSinceLastPosition == 0 {
-					smoothed_diff = u.DistanceMA.Update(diff)
-				}
-
-				u.Distance = u.Distance - float32(smoothed_diff)
 			} else {
-				u.DistanceMA.Reset()
 				u.Distance = cumulativeDistance
 				u.TriggerDistance = 0
 			}

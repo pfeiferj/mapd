@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
@@ -37,45 +35,20 @@ func (s *State) Init() {
 	s.SpeedLimit.Init()
 }
 
-func (s *State) checkEnableSpeed() bool {
-	if ms.Settings.EnableSpeed == 0 {
-		return true
-	}
-	return m.Abs(s.Car.SetSpeed.Value-ms.Settings.EnableSpeed) < ms.ENABLE_SPEED_RANGE
-}
 
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := min(s.Car.VCruise*ms.KPH_TO_MS, ms.MAX_OP_SPEED)
-	setSpeedChanging := time.Since(s.Car.SetSpeed.UpdatedTime) < 1500*time.Millisecond
 
 	if ms.Settings.SpeedLimitControlEnabled || ms.Settings.ExternalSpeedLimitControlEnabled {
-		suggestedSpeedUpdated := s.SpeedLimit.Suggestion.Update(s.SpeedLimit.SuggestSpeedLimit(s.CurrentWay, s.Car))
-		if suggestedSpeedUpdated {
-			ms.Settings.ResetSpeedLimitAccepted()
-			s.SpeedLimit.SetSpeedWhenAccepted = 0
-		}
-		if ms.Settings.SpeedLimitAccepted() {
-			if s.SpeedLimit.AcceptedLimit != s.SpeedLimit.Suggestion.Value {
-				s.SpeedLimit.OverrideSpeed = 0
-			}
-			s.SpeedLimit.AcceptedLimit = s.SpeedLimit.Suggestion.Value
-		}
-		slSuggestedSpeed := s.SpeedLimit.AcceptedLimit
-		if s.SpeedLimit.OverrideSpeed > 0  && s.SpeedLimit.OverrideSpeed > slSuggestedSpeed {
-			slSuggestedSpeed = s.SpeedLimit.OverrideSpeed
-		}
-		if suggestedSpeed > slSuggestedSpeed {
-			if !ms.Settings.SpeedLimitUseEnableSpeed || s.checkEnableSpeed() {
-				suggestedSpeed = slSuggestedSpeed
-			} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && s.Car.VEgo-1 < s.SpeedLimit.AcceptedLimit {
-				suggestedSpeed = slSuggestedSpeed
-			}
+		slSuggestedSpeed := s.SpeedLimit.SpeedLimitFinalSuggestion(s.Car.EnableSpeedActive, s.Car.SetSpeedChanging, s.Car.VEgo)
+		if suggestedSpeed > slSuggestedSpeed && slSuggestedSpeed > 0 {
+			suggestedSpeed = slSuggestedSpeed
 		}
 	}
-	if ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.checkEnableSpeed()) {
+	if ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.Car.EnableSpeedActive) {
 		suggestedSpeed = s.VisionCurveSpeed
 	}
-	if ms.Settings.MapCurveSpeedControlEnabled && s.MapCurveSpeed > 0 && (s.MapCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.MapCurveUseEnableSpeed || s.checkEnableSpeed()) {
+	if ms.Settings.MapCurveSpeedControlEnabled && s.MapCurveSpeed > 0 && (s.MapCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.MapCurveUseEnableSpeed || s.Car.EnableSpeedActive) {
 		suggestedSpeed = s.MapCurveSpeed
 	}
 	if suggestedSpeed < 0 {
@@ -87,7 +60,10 @@ func (s *State) SuggestedSpeed() float32 {
 func (s *State) UpdateCarState(carData car.CarState) {
 	s.Car.Update(carData)
 	s.DistanceSinceLastPosition += float32(s.Car.UpdateTime.DiffMA.Estimate) * s.Car.VEgo
-	s.SpeedLimit.Update(s.Car)
+	s.SpeedLimit.NextLimit.Update(s)
+	s.NextAdvisorySpeed.Update(s)
+	s.NextHazard.Update(s)
+	s.SpeedLimit.Update(s.CurrentWay, s.Car)
 }
 
 func (s *State) Send() error {

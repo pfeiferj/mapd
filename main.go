@@ -78,6 +78,7 @@ func main() {
 		carData, carStateSuccess := car.Read()
 		if carStateSuccess {
 			state.UpdateCarState(carData)
+			UpdateCurveSpeed(&state)
 		}
 
 		modelData, modelSuccess := model.Read()
@@ -114,13 +115,6 @@ func main() {
 				slog.Debug("could not get curvatures from current state", "error", err)
 			}
 			state.TargetVelocities = GetTargetVelocities(state.Curvatures, state.TargetVelocities)
-		}
-
-		if gpsSuccess || carStateSuccess {
-			UpdateCurveSpeed(&state)
-			state.SpeedLimit.NextLimit.Update(&state)
-			state.NextAdvisorySpeed.Update(&state)
-			state.NextHazard.Update(&state)
 		}
 
 		// send at beginning of next loop
