@@ -31,6 +31,7 @@ func (c *CarState) Update(carData car.CarState) {
 	} else {
 		c.EnableSpeedActive = m.Abs(c.SetSpeed.Value-ms.Settings.EnableSpeed) < ms.ENABLE_SPEED_RANGE
 	}
+	c.UpdateTime.Update()
 }
 
 func (c *CarState) Init() {

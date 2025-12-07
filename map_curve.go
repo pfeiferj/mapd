@@ -9,7 +9,20 @@ func UpdateCurveSpeed(s *State) {
 	distances := make([]float32, len(s.TargetVelocities))
 	match_idx := -1
 	for i, tv := range s.TargetVelocities {
-		d := s.CurrentWay.OnWay.Distance.LinePosition.Pos.DistanceTo(tv.Pos)
+		d, found, _ := s.CurrentWay.Way.DistanceToNode(s.Position, s.CurrentWay.OnWay.IsForward, tv.Pos)
+		if !found {
+			distance := float32(0.0)
+			for _, nextWay := range s.NextWays {
+				distance, found, _ = nextWay.Way.DistanceToNode(nextWay.StartPosition, nextWay.IsForward, tv.Pos)
+				d += distance
+				if found {
+					break
+				}
+			}
+			if !found {
+				d = s.CurrentWay.OnWay.Distance.LinePosition.Pos.DistanceTo(tv.Pos)
+			}
+		}
 
 		distances[i] = d
 

@@ -378,22 +378,33 @@ func (w *Way) isValidConnection(matchNode, bearingNode m.Position, maxCurvature 
 }
 
 func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
+	nodes := w.Nodes()
+	if len(nodes) == 0 {
+		return 0, nil
+	}
+	dist, _, err := w.DistanceToNode(pos, isForward, nodes[len(nodes) - 1])
+	return dist, err
+}
+
+func (w *Way) DistanceToNode(pos m.Position, isForward bool, finalNode m.Position) (float32, bool, error) {
 	distanceResult, err := w.DistanceFrom(pos)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	dist := float32(0.0)
 	stopFiltering := false
 	nodes := w.Nodes()
 	lastPos := distanceResult.LinePosition.Pos
+	found := false
 	for i := range nodes {
 		index := i
 		if !isForward {
 			index = len(nodes) - 1 - i
 		}
 		node := nodes[index]
-		if node.Equals(lastPos) && !stopFiltering {
+		if (node.Equals(distanceResult.LineStart) || node.Equals(distanceResult.LineEnd)) && !stopFiltering {
 			stopFiltering = true
+			continue
 		}
 		if !stopFiltering {
 			continue
@@ -401,8 +412,12 @@ func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
 
 		dist += lastPos.DistanceTo(node)
 		lastPos = node
+		if lastPos.Equals(finalNode) {
+			found = true
+			break
+		}
 	}
-	return dist, nil
+	return dist, found, nil
 }
 
 func (w *Way) _distance() float32 {
