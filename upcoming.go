@@ -50,7 +50,8 @@ func (u *Upcoming[T]) Update(state *State) {
 	if len(state.CurrentWay.Way.Nodes()) > 0 {
 		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(state.Position, state.CurrentWay.OnWay.IsForward)
 		if err == nil && distToEnd > 0 {
-			cumulativeDistance = distToEnd - state.CurrentWay.OnWay.Distance.Distance - state.DistanceSinceLastPosition
+			cumulativeDistance = distToEnd - state.DistanceSinceLastPosition
+			cumulativeDistance = max(cumulativeDistance, 0)
 		}
 	}
 	for _, nextWay := range state.NextWays {

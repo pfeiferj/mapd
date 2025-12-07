@@ -382,11 +382,11 @@ func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
 	if err != nil {
 		return 0, err
 	}
-	dist := pos.DistanceTo(distanceResult.LineEnd)
+	dist := float32(0.0)
 	stopFiltering := false
 	nodes := w.Nodes()
-	lastPos := distanceResult.LineEnd
-	for i := 0; i < len(nodes); i++ {
+	lastPos := distanceResult.LinePosition.Pos
+	for i := range nodes {
 		index := i
 		if !isForward {
 			index = len(nodes) - 1 - i

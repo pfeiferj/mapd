@@ -27,11 +27,18 @@ func (s *SpeedLimitState) Init() {
 	s.NextLimit = NewUpcoming(10, 0, checkWayForSpeedLimitChange)
 }
 
-func (s *SpeedLimitState) Update(car CarState) {
-	if ms.Settings.PressGasToOverrideSpeedLimit && car.GasPressed {
+func (s *SpeedLimitState) Update(currentWay CurrentWay, car CarState) {
+	if ms.Settings.PressGasToOverrideSpeedLimit && car.GasPressed && car.VEgo > s.AcceptedLimit {
 		s.OverrideSpeed = car.VEgo
 	}
+	if s.OverrideSpeed < s.AcceptedLimit {
+		s.OverrideSpeed = 0
+	}
+	if car.SetSpeedChanging {
+		s.OverrideSpeed = 0
+	}
 	s.UpdateLimitAcceptedState(car)
+	s.UpdateAcceptedLimitValue(currentWay, car)
 }
 
 func (s *SpeedLimitState) UpdateLimitAcceptedState(car CarState) {
