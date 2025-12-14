@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	ms.Settings.Default() // set defaults so settings not already in param are defaulted
 	settingsLoaded := ms.Settings.Load() // try loading settings before cli
 
 	cli.Handle()
