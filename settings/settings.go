@@ -11,7 +11,10 @@ import (
 	"pfeifer.dev/mapd/params"
 )
 
+const SETTINGS_VERSION = 1 // Used for migrations
+
 var Settings = MapdSettings{
+	SettingsVersion: SETTINGS_VERSION,
 	downloadProgress: make(chan DownloadProgress, 1),
 	cancelDownload:   make(chan bool, 1),
 }
@@ -31,6 +34,7 @@ type MapdSettings struct {
 	downloadActive                      bool
 	externalSpeedLimit                  float32
 	speedLimitAccepted                  bool
+	SettingsVersion                     float32 `json:"settings_version"`
 	PressGasToAcceptSpeedLimit          bool    `json:"press_gas_to_accept_speed_limit"`
 	PressGasToOverrideSpeedLimit        bool    `json:"press_gas_to_override_speed_limit"`
 	AdjustSetSpeedToAcceptSpeedLimit    bool    `json:"adjust_set_speed_to_accept_speed_limit"`
@@ -144,6 +148,7 @@ func (s *MapdSettings) LoadWithRetries(tries int) {
 }
 
 func (s *MapdSettings) Save() {
+	s.SettingsVersion = SETTINGS_VERSION
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		slog.Error("failed to marshal settings to json", "error", err)
