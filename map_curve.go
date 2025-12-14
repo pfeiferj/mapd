@@ -59,7 +59,7 @@ func UpdateCurveSpeed(s *State) {
 		max_d := tv.TriggerDistance
 		if max_d == 0 {
 			max_d = m.CalculateJerkLimitedDistanceSimple(s.Car.VEgo, s.Car.AEgo, float32(tv.Velocity), ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
-			max_d += ms.Settings.TargetSpeedTimeOffset * s.Car.VEgo
+			max_d += ms.Settings.TargetSpeedTimeOffset * float32(tv.Velocity)
 		}
 
 		if float32(d) < max_d {

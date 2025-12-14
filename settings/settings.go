@@ -103,7 +103,6 @@ func (s *MapdSettings) Recommended() {
 }
 
 func (s *MapdSettings) Load() (success bool) {
-	s.Default() // set defaults so settings not already in param are defaulted
 	data, err := params.GetParam(params.MAPD_SETTINGS)
 	if err != nil {
 		slog.Warn("failed to read MAPD_SETTINGS param", "error", err)
@@ -201,6 +200,7 @@ func (s *MapdSettings) ExternalSpeedLimit() float32 {
 func (s *MapdSettings) Handle(input custom.MapdIn) {
 	switch input.Type() {
 	case custom.MapdInputType_reloadSettings:
+		s.Default()
 		s.Load()
 	case custom.MapdInputType_saveSettings:
 		go s.Save()
