@@ -83,3 +83,28 @@ This message contains a lot of data that typically won't be needed during
 debugging. As such I recommend not having it added to the logs so that we are
 not unnecessarily using comma's storage for comma connect users.
 
+### settings
+The settings value in mapdExtendedOut is a json encoding of the currently active
+settings. The json is the same format as the MapdSettings param.
+
+### downloadProgress
+* active: Indicates whether mapd is currently downloading maps
+* cancelled: Indicates if the last download was cancelled
+* totalFiles: How many files will be downloaded
+* downloadedFiles: How many files have been downloaded
+* locations: a list of locations that are being downloaded
+* locationDetails: a list of download progress details for each location that is
+  being downloaded
+    * location: which location these details are for
+    * totalFiles: how many files will be downloaded for the location
+    * downloadedFiles: how many files have been downloaded for the location
+
+### path
+A list points of the current path mapd has attached to and their target
+velocities and calculated curvatures.
+* latitude: latitude of the position on the path.
+* longitude: longitude of the position on the path.
+* curvature: The curvature that was calculated for the point on the path
+* targetVelocity: The velocity mapd has calculated will reach the target lateral
+  acceleration at the point on the path.
+

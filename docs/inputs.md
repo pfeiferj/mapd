@@ -65,3 +65,16 @@ sent which will cause mapd to stop downloading files once the current file is
 finished downloading.
 
 To get the progress of a download see outputs.md
+
+## Accept Speed Limit
+mapd allows for custom logic for accepting a pending speed limit by sending a
+message to mapd. A MapdIn cereal message with the type acceptSpeedLimit will
+cause mapd to accept the currently pending speed limit.
+
+## Custom Speed Limit
+mapd allows for supplying speed limits from custom sources by sending MapdIn
+cereal messages. The cereal message should have the type setExternalSpeedLimit
+and the speed limit should be supplied in meters/second in the float field.
+externalSpeedLimitControl must be enabled in the settings for the values to be
+used. You can set the prioritization logic through the speedLimitPriority
+setting.
