@@ -42,7 +42,7 @@ func main() {
 	defer cli.Sub.Msgq.Close()
 
 	gps := cereal.GetGpsSub()
-	defer gps.Sub.Msgq.Close()
+	defer gps.Close()
 
 	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true)
 	defer car.Sub.Msgq.Close()
