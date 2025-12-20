@@ -2,53 +2,39 @@ package cereal
 
 import (
 	"log/slog"
-	"time"
 
 	"pfeifer.dev/mapd/cereal/log"
-	"pfeifer.dev/mapd/settings"
 )
 
-func GetGpsSub() (gpsSub Subscriber[log.GpsLocationData]) {
-	sub := NewSubscriber("gpsLocation", GpsLocationReader, true)
-	subExt := NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true)
+type GpsSub struct {
+	gpsLocation Subscriber[log.GpsLocationData]
+	gpsLocationExternal Subscriber[log.GpsLocationData]
+	useExt bool
+}
 
-	for range 500 {
-		time.Sleep(settings.LOOP_DELAY)
-
-		if sub.Sub.Ready() {
-			err, err2 := subExt.Sub.Msgq.Close()
-			if err != nil {
-				panic(err)
-			}
-			if err2 != nil {
-				panic(err2)
-			}
-			slog.Info("Using gpsLocation")
-			gpsSub = sub
-			return gpsSub
-		}
-
-		if subExt.Sub.Ready() {
-			slog.Info("Using gpsLocationExternal")
-			err, err2 := sub.Sub.Msgq.Close()
-			if err != nil {
-				panic(err)
-			}
-			if err2 != nil {
-				panic(err2)
-			}
-			gpsSub = subExt
-			return gpsSub
+func (s *GpsSub) Read() (locationData log.GpsLocationData, success bool) {
+	if s.useExt {
+		return s.gpsLocationExternal.Read()
+	} else {
+		locationData, success = s.gpsLocationExternal.Read()
+		if success {
+			s.useExt = true
+			slog.Info("Found gpsLocationExternal, switching to external GPS provider")
+			return locationData, success
 		}
 	}
-	err, err2 := subExt.Sub.Msgq.Close()
-	if err != nil {
-		panic(err)
+	return s.gpsLocation.Read()
+}
+
+func (s *GpsSub) Close() {
+	s.gpsLocation.Sub.Msgq.Close()
+	s.gpsLocationExternal.Sub.Msgq.Close()
+}
+
+func GetGpsSub() (gpsSub GpsSub) {
+	return GpsSub{
+		gpsLocation: NewSubscriber("gpsLocation", GpsLocationReader, true),
+		gpsLocationExternal: NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true),
+		useExt: false,
 	}
-	if err2 != nil {
-		panic(err2)
-	}
-	slog.Info("Using gpsLocation")
-	gpsSub = sub
-	return gpsSub
 }
