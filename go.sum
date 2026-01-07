@@ -69,6 +69,10 @@ github.com/pfeiferj/gomsgq v0.1.3 h1:OItU6BUytyIDWFwBwG1vdqxw1qabZf5YzYcpdaGnmok
 github.com/pfeiferj/gomsgq v0.1.3/go.mod h1:egKAzaiP4IwQ4rk+G/P7k7LZ0DXwtOx4bDocuOBrhQU=
 github.com/pfeiferj/gomsgq v0.1.4 h1:ep/xwkbPRF/jjknqyPve4V9TiJSftUbLFMRzY8InCPo=
 github.com/pfeiferj/gomsgq v0.1.4/go.mod h1:egKAzaiP4IwQ4rk+G/P7k7LZ0DXwtOx4bDocuOBrhQU=
+github.com/pfeiferj/gomsgq v0.1.6 h1:uSuH030m8cLc8l8e5YKj0NAiQ1xYRzHqFpidtJIAKIU=
+github.com/pfeiferj/gomsgq v0.1.6/go.mod h1:egKAzaiP4IwQ4rk+G/P7k7LZ0DXwtOx4bDocuOBrhQU=
+github.com/pfeiferj/gomsgq v0.1.7 h1:MWk+HFkmJ/LiL/DFaxZP82cJJ0takLUb1z/rRPixaqo=
+github.com/pfeiferj/gomsgq v0.1.7/go.mod h1:egKAzaiP4IwQ4rk+G/P7k7LZ0DXwtOx4bDocuOBrhQU=
 github.com/philhofer/fwd v1.1.2 h1:bnDivRJ1EWPjUIRXV5KfORO897HTbpFAQddBdE8t7Gw=
 github.com/philhofer/fwd v1.1.2/go.mod h1:qkPdfjR2SIEbspLqpe1tO4n5yICnr2DY7mqEx2tUTP0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
