@@ -13,7 +13,7 @@
       ```
 2. Add mapdOut as a service in openpilot cereal/services.py
    ```python
-   "mapdOut": (True, 20., 20),
+   "mapdOut": (True, 20., 20, QueueSize.MEDIUM),
    ```
 3. Add MapdSettings to openpilot common/params\_keys.h
    ```c++

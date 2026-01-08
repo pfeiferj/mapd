@@ -8,6 +8,7 @@ that is needed in less realtime and thus is output at a rate of 1hz.
 Contains the primary outputs of mapd used during driving.
 
 Output Frequency: 20hz
+Queue Size: MEDIUM (2mb)
 
 Suggested openpilot cereal settings:
 Frequency: 20
@@ -73,6 +74,7 @@ previously found values.
 Contains additional data typically not needed during driving.
 
 Output Frequency: 1hz
+Queue Size: MEDIUM (2mb)
 
 Suggested openpilot cereal settings:
 Frequency: 1

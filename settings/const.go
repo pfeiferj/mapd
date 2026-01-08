@@ -4,10 +4,13 @@ import (
 	_ "embed"
 	"math"
 	"time"
+
+	"github.com/pfeiferj/gomsgq"
 )
 
 const (
 	// Queue sizes matching openpilot's services.py
+	QUEUE_SIZE_LEGACY        = 10 * 1024 * 1024 // 10MB - Used by all services in previous versions of msgq/openpilot
 	QUEUE_SIZE_BIG           = 10 * 1024 * 1024 // 10MB - modelV2, video encoders
 	QUEUE_SIZE_MEDIUM        = 2 * 1024 * 1024  // 2MB - CAN, controlsState
 	QUEUE_SIZE_SMALL         = 250 * 1024       // 250KB - most services
@@ -63,15 +66,20 @@ var ServiceQueueSize = map[string]int64{
 	"ubloxGnss":           QUEUE_SIZE_SMALL,
 	"qcomGnss":            QUEUE_SIZE_SMALL,
 	"gnssMeasurements":    QUEUE_SIZE_SMALL,
+
 	// mapd
-	"mapdOut":         QUEUE_SIZE_SMALL,
-	"mapdExtendedOut": QUEUE_SIZE_SMALL,
-	"mapdIn":          QUEUE_SIZE_SMALL,
-	"mapdCli":         QUEUE_SIZE_SMALL,
+	"mapdOut":         QUEUE_SIZE_MEDIUM,
+	"mapdExtendedOut": QUEUE_SIZE_MEDIUM,
+	"mapdIn":          QUEUE_SIZE_MEDIUM,
+	"mapdCli":         QUEUE_SIZE_MEDIUM,
 }
 
 // GetSegmentSize returns the appropriate segment size for a service
 func GetSegmentSize(service string) int64 {
+	isPrefixed := gomsgq.IsPrefixedMsgq()
+	if !isPrefixed {
+		return QUEUE_SIZE_LEGACY
+	}
 	if size, ok := ServiceQueueSize[service]; ok {
 		return size
 	}
