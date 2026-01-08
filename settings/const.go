@@ -63,6 +63,11 @@ var ServiceQueueSize = map[string]int64{
 	"ubloxGnss":           QUEUE_SIZE_SMALL,
 	"qcomGnss":            QUEUE_SIZE_SMALL,
 	"gnssMeasurements":    QUEUE_SIZE_SMALL,
+	// mapd
+	"mapdOut":         QUEUE_SIZE_SMALL,
+	"mapdExtendedOut": QUEUE_SIZE_SMALL,
+	"mapdIn":          QUEUE_SIZE_SMALL,
+	"mapdCli":         QUEUE_SIZE_SMALL,
 }
 
 // GetSegmentSize returns the appropriate segment size for a service
@@ -70,7 +75,8 @@ func GetSegmentSize(service string) int64 {
 	if size, ok := ServiceQueueSize[service]; ok {
 		return size
 	}
-	return DEFAULT_SEGMENT_SIZE
+	// Default to SMALL (250KB) to matches op default queue size
+	return QUEUE_SIZE_SMALL
 }
 
 //go:embed download_menu.json
