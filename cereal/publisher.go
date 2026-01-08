@@ -49,7 +49,7 @@ func (p *Publisher[T]) NewMessage(valid bool) (msg *capnp.Message, obj T) {
 
 func NewPublisher[T any](name string, creator MessageCreator[T]) (publisher Publisher[T]) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init(name, settings.DEFAULT_SEGMENT_SIZE)
+	err := msgq.Init(name, settings.GetSegmentSize(name))
 	if err != nil {
 		panic(err)
 	}
