@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	DEFAULT_SEGMENT_SIZE         = 10 * 1024 * 1024
+	DEFAULT_SEGMENT_SIZE         = 1 * 1024 * 1024
 	LOOP_DELAY                   = 50 * time.Millisecond
 	MS_TO_KPH                    = 3.6
 	MS_TO_MPH                    = 2.237
