@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -38,9 +39,15 @@ func (i downloadItem) Description() string {
 func (i downloadItem) FilterValue() string { return i.title }
 
 func getDownloadModel() downloadModel {
-	dItems := []downloadItem{}
 	menu := ms.GetDownloadMenu()
+	var keys []string
 	for k := range menu {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	dItems := []downloadItem{}
+	for _, k := range keys {
 		dItem := downloadItem{title: k}
 		dItems = append(dItems, dItem)
 	}
@@ -64,8 +71,14 @@ func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd)
 			it := m.list.SelectedItem().(downloadItem)
 			m.path = it.title
 
-			items := []list.Item{}
+			var subKeys []string
 			for k := range m.menu[m.path] {
+				subKeys = append(subKeys, k)
+			}
+			sort.Strings(subKeys)
+
+			items := []list.Item{}
+			for _, k := range subKeys {
 				dItem := downloadItem{title: m.menu[m.path][k].FullName, desc: k}
 				items = append(items, dItem)
 			}
