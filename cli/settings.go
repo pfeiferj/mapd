@@ -396,7 +396,7 @@ type settingsModel struct {
 func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.Type == tea.KeyEnter && m.state == showSettingsMenu {
+		if msg.Type == tea.KeyEnter && m.state == showSettingsMenu && m.list.FilterState() != list.Filtering {
 			it := m.list.SelectedItem().(settingsItem)
 			m.selectedItem = it
 			m.state = it.state
@@ -453,7 +453,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				m.list.ResetSelected()
 			}
 			return m, nil
-		} else if msg.Type == tea.KeyEnter && m.state == unitsInput {
+		} else if msg.Type == tea.KeyEnter && m.state == unitsInput && m.list.FilterState() != list.Filtering {
 			switch m.list.SelectedItem().(settingsItem).title {
 			case "m/s":
 				m.speedUnit = Ms
@@ -466,7 +466,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 			m.prompt = m.selectedItem.title
 			m.textInput.Reset()
 			m.textInput.Focus()
-		} else if msg.Type == tea.KeyEnter && m.state == settingsInput {
+		} else if msg.Type == tea.KeyEnter && m.state == settingsInput && m.list.FilterState() != list.Filtering {
 			m.state = showSettingsMenu
 
 			msg, input := mm.pub.NewMessage(true)

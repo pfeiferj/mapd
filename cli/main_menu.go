@@ -84,7 +84,7 @@ func (m uiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
-		if msg.Type == tea.KeyEnter && m.state == showMenu {
+		if msg.Type == tea.KeyEnter && m.state == showMenu && m.list.FilterState() != list.Filtering {
 			it := m.list.SelectedItem().(item)
 			m.state = it.state
 			return m, nil

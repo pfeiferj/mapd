@@ -67,7 +67,7 @@ func getDownloadModel() downloadModel {
 func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if msg.Type == tea.KeyEnter && m.state == showRootDownloadMenu {
+		if msg.Type == tea.KeyEnter && m.state == showRootDownloadMenu && m.list.FilterState() != list.Filtering {
 			it := m.list.SelectedItem().(downloadItem)
 			m.path = it.title
 
@@ -87,7 +87,7 @@ func (m downloadModel) Update(msg tea.Msg, mm *uiModel) (downloadModel, tea.Cmd)
 
 			m.state = showSubDownloadMenu
 			return m, nil
-		} else if msg.Type == tea.KeyEnter && m.state == showSubDownloadMenu {
+		} else if msg.Type == tea.KeyEnter && m.state == showSubDownloadMenu && m.list.FilterState() != list.Filtering {
 			it := m.list.SelectedItem().(downloadItem)
 			m.state = showRootDownloadMenu
 			mm.state = showMenu
