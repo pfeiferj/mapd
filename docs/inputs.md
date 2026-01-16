@@ -3,7 +3,9 @@
 Mapd uses cereal messages for communication between openpilot and mapd. For
 runtime data inputs mapd will subscribe to standard openpilot cereal services
 and does not require any configuration to do so. For inputs specific to mapd the
-mapd service subscribes to the mapdIn cereal service. There are two main types
+mapd service subscribes to the mapdIn cereal service. The mapdIn cereal service
+should be set to the medium queue size (2mb) in openpilot unless using a version
+of openpilot that does not support cereal queue sizes. There are two main types
 of things that can be sent through the mapdIn cereal messages, settings and
 action triggers.
 
