@@ -34,6 +34,8 @@ type MapdSettings struct {
 	downloadActive                      bool
 	externalSpeedLimit                  float32
 	speedLimitAccepted                  bool
+	meteredConnection                   bool
+	AllowCellularDownloads              bool    `json:"allow_cellular_downloads"`
 	SettingsVersion                     float32 `json:"settings_version"`
 	PressGasToAcceptSpeedLimit          bool    `json:"press_gas_to_accept_speed_limit"`
 	PressGasToOverrideSpeedLimit        bool    `json:"press_gas_to_override_speed_limit"`
@@ -209,6 +211,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Load()
 	case custom.MapdInputType_saveSettings:
 		go s.Save()
+	case custom.MapdInputType_setAllowCellularDownloads:
+		s.AllowCellularDownloads = input.Bool()
 	case custom.MapdInputType_setVisionCurveMinTargetV:
 		s.VisionCurveMinTargetV = input.Float()
 	case custom.MapdInputType_setVisionCurveTargetLatA:
@@ -359,4 +363,12 @@ func (s *MapdSettings) SpeedLimitAccepted() bool {
 
 func (s *MapdSettings) AcceptSpeedLimit() {
 	s.speedLimitAccepted = true
+}
+
+func (s *MapdSettings) SetMeteredConnection(metered bool) {
+	s.meteredConnection = metered
+}
+
+func (s *MapdSettings) IsMeteredConnection() bool {
+	return s.meteredConnection
 }

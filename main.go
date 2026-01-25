@@ -50,6 +50,9 @@ func main() {
 	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true)
 	defer model.Sub.Msgq.Close()
 
+	deviceState := cereal.NewSubscriber("deviceState", cereal.DeviceStateReader, true)
+	defer deviceState.Sub.Msgq.Close()
+
 	for {
 		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
 		if err != nil {
@@ -60,6 +63,11 @@ func main() {
 			slog.Error("Failed to send extended update", "error", err)
 		}
 		time.Sleep(ms.LOOP_DELAY)
+
+		deviceData, deviceSuccess := deviceState.Read()
+		if deviceSuccess {
+			ms.Settings.SetMeteredConnection(deviceData.NetworkMetered())
+		}
 
 		// handle settings inputs from openpilot/cli
 		input, inputSuccess := sub.Read()

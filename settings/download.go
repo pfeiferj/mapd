@@ -47,6 +47,9 @@ func GetDownloadMenu() (menu DownloadMenu) {
 }
 
 func DownloadFile(url string, filepath string) (err error) {
+	if !Settings.AllowCellularDownloads && Settings.IsMeteredConnection() {
+		return errors.New("Current connection is metered and cellular downloads are disabled, not downloading file.")
+	}
 	slog.Info("Downloading", "url", url)
 	// Create the file
 	out, err := os.Create(filepath)

@@ -1,4 +1,5 @@
 {
+  "allow_cellular_downloads": false,
   "press_gas_to_accept_speed_limit": false,
   "press_gas_to_override_speed_limit": false,
   "adjust_set_speed_to_accept_speed_limit": false,

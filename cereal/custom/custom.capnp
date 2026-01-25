@@ -130,6 +130,7 @@ enum MapdInputType {
   setAdjustSetSpeedToAcceptSpeedLimit @36;
   setAcceptSpeedLimitTimeout @37;
   setPressGasToOverrideSpeedLimit @38;
+  setAllowCellularDownloads @39;
 }
 
 enum WaySelectionType {
