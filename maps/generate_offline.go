@@ -36,6 +36,7 @@ type TmpWay struct {
 	Box              m.Box
 	OneWay           bool
 	Nodes            []TmpNode
+	Id               int64
 }
 
 type Area struct {
@@ -146,6 +147,7 @@ func GenerateOffline(s OfflineSettings) {
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
 				OneWay:           tags["oneway"] == "yes",
+				Id:               int64(way.ID),
 			}
 			index++
 
@@ -232,6 +234,7 @@ func GenerateOffline(s OfflineSettings) {
 		rootOffline.SetOverlap(s.Overlap)
 		for i, way := range area.Ways {
 			w := ways.At(i)
+			w.SetId(way.Id)
 			w.SetMinLat(way.Box.MinPos.Lat())
 			w.SetMinLon(way.Box.MinPos.Lon())
 			w.SetMaxLat(way.Box.MaxPos.Lat())
