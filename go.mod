@@ -3,7 +3,7 @@ module pfeifer.dev/mapd
 go 1.25.1
 
 require (
-	capnproto.org/go/capnp/v3 v3.1.0-alpha.1
+	capnproto.org/go/capnp/v3 v3.1.0-alpha.2
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
