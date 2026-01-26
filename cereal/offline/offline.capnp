@@ -19,6 +19,7 @@ struct Way {
   maxSpeedForward @12 :Float64;
   maxSpeedBackward @13 :Float64;
   id @14 :Int64;
+  specialNodes @15 :List(Node);
 }
 
 struct Coordinates {
@@ -33,4 +34,18 @@ struct Offline {
   maxLon @3 :Float64;
   ways @4 :List(Way);
   overlap @5 :Float64;
+}
+
+enum NodeType {
+  unknown @0;
+  trafficLight @1;
+  stopSign @2;
+  crosswalk @3;
+  speedBump @4;
+}
+
+struct Node {
+  type @0 :NodeType;
+  latitude @1 :Float64;
+  longitude @2 :Float64;
 }

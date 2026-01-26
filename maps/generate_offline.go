@@ -24,6 +24,13 @@ type TmpNode struct {
 	Latitude  float64
 	Longitude float64
 }
+
+type TmpNodeDetail struct {
+	Latitude  float64
+	Longitude float64
+	Type      offline.NodeType
+}
+
 type TmpWay struct {
 	Name             string
 	Ref              string
@@ -36,6 +43,7 @@ type TmpWay struct {
 	Box              m.Box
 	OneWay           bool
 	Nodes            []TmpNode
+	SpecialNodes     []TmpNodeDetail
 	Id               int64
 }
 
@@ -116,6 +124,7 @@ func GenerateOffline(s OfflineSettings) {
 	scanner.SkipRelations = true
 	defer scanner.Close()
 
+	nodeMap := make(map[osm.NodeID]TmpNodeDetail)
 	scannedWays := []TmpWay{}
 	areas := generateAreas()
 	index := 0
@@ -127,11 +136,36 @@ func GenerateOffline(s OfflineSettings) {
 	slog.Info("Scanning Ways")
 	for scanner.Scan() {
 		var way *osm.Way
+		var node *osm.Node
 		switch o := scanner.Object(); o.(type) {
 		case *osm.Way:
 			way = o.(*osm.Way)
+		case *osm.Node:
+			node = o.(*osm.Node)
 		default:
 			way = nil
+		}
+		if node != nil {
+			nodeType := offline.NodeType_unknown
+			highway := node.Tags.Find("highway")
+			calming := node.Tags.Find("traffic_calming")
+			if highway == "traffic_signals" {
+				nodeType = offline.NodeType_trafficLight
+			} else if highway == "stop" {
+				nodeType = offline.NodeType_stopSign
+			} else if highway == "crossing" {
+				nodeType = offline.NodeType_crosswalk
+			} else if calming == "bump" || calming == "hump" || calming == "table" {
+				nodeType = offline.NodeType_speedBump
+			}
+			if nodeType != offline.NodeType_unknown {
+				tmpNode := TmpNodeDetail{
+					Latitude:  node.Lat,
+					Longitude: node.Lon,
+					Type:      nodeType,
+				}
+				nodeMap[node.ID] = tmpNode
+			}
 		}
 		if way != nil && len(way.Nodes) > 1 {
 			tags := way.TagMap()
@@ -155,6 +189,7 @@ func GenerateOffline(s OfflineSettings) {
 			minLon := float64(180)
 			maxLat := float64(-90)
 			maxLon := float64(-180)
+			tmpNodes := []TmpNodeDetail{}
 			for i, n := range way.Nodes {
 				if n.Lat < minLat {
 					minLat = n.Lat
@@ -170,7 +205,12 @@ func GenerateOffline(s OfflineSettings) {
 				}
 				tmpWay.Nodes[i].Latitude = n.Lat
 				tmpWay.Nodes[i].Longitude = n.Lon
+				tmpNode, exists := nodeMap[n.ID]
+				if exists {
+					tmpNodes = append(tmpNodes, tmpNode)
+				}
 			}
+			tmpWay.SpecialNodes = tmpNodes
 			tmpWay.Box.MinPos = m.NewPosition(minLat, minLon)
 			tmpWay.Box.MaxPos = m.NewPosition(maxLat, maxLon)
 			if minLat < allMinLat {
@@ -213,14 +253,6 @@ func GenerateOffline(s OfflineSettings) {
 			panic("unexpected capnp error, exiting")
 		}
 
-		for _, way := range scannedWays {
-
-			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
-			if overlaps {
-				area.Ways = append(area.Ways, way)
-			}
-		}
-
 		slog.Info("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
 		if err != nil {
@@ -232,6 +264,7 @@ func GenerateOffline(s OfflineSettings) {
 		rootOffline.SetMaxLat(area.Box.MaxPos.Lat())
 		rootOffline.SetMaxLon(area.Box.MaxPos.Lon())
 		rootOffline.SetOverlap(s.Overlap)
+
 		for i, way := range area.Ways {
 			w := ways.At(i)
 			w.SetId(way.Id)
@@ -269,6 +302,13 @@ func GenerateOffline(s OfflineSettings) {
 				n := nodes.At(j)
 				n.SetLatitude(node.Latitude)
 				n.SetLongitude(node.Longitude)
+			}
+			specialNodes, err := w.NewSpecialNodes(int32(len(way.SpecialNodes)))
+			for i, node := range way.SpecialNodes {
+				n := specialNodes.At(i)
+				n.SetLatitude(node.Latitude)
+				n.SetLongitude(node.Longitude)
+				n.SetType(node.Type)
 			}
 		}
 

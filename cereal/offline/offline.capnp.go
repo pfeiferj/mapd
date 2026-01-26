@@ -15,12 +15,12 @@ type Way capnp.Struct
 const Way_TypeID = 0xa4b9c59286b69600
 
 func NewWay(s *capnp.Segment) (Way, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 80, PointerCount: 4})
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 80, PointerCount: 5})
 	return Way(st), err
 }
 
 func NewRootWay(s *capnp.Segment) (Way, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 80, PointerCount: 4})
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 80, PointerCount: 5})
 	return Way(st), err
 }
 
@@ -221,12 +221,36 @@ func (s Way) SetId(v int64) {
 	capnp.Struct(s).SetUint64(72, uint64(v))
 }
 
+func (s Way) SpecialNodes() (Node_List, error) {
+	p, err := capnp.Struct(s).Ptr(4)
+	return Node_List(p.List()), err
+}
+
+func (s Way) HasSpecialNodes() bool {
+	return capnp.Struct(s).HasPtr(4)
+}
+
+func (s Way) SetSpecialNodes(v Node_List) error {
+	return capnp.Struct(s).SetPtr(4, v.ToPtr())
+}
+
+// NewSpecialNodes sets the specialNodes field to a newly
+// allocated Node_List, preferring placement in s's segment.
+func (s Way) NewSpecialNodes(n int32) (Node_List, error) {
+	l, err := NewNode_List(capnp.Struct(s).Segment(), n)
+	if err != nil {
+		return Node_List{}, err
+	}
+	err = capnp.Struct(s).SetPtr(4, l.ToPtr())
+	return l, err
+}
+
 // Way_List is a list of Way.
 type Way_List = capnp.StructList[Way]
 
 // NewWay creates a new list of Way.
 func NewWay_List(s *capnp.Segment, sz int32) (Way_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 80, PointerCount: 4}, sz)
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 80, PointerCount: 5}, sz)
 	return capnp.StructList[Way](l), err
 }
 
@@ -445,52 +469,213 @@ func (f Offline_Future) Struct() (Offline, error) {
 	return Offline(p.Struct()), err
 }
 
-const schema_da3a0d9284ca402f = "x\xda\xa4\xd4Mh\\U\x14\x07\xf0\xff\xff\xde\xf7f" +
-	"\xf21I\x1c\xee[\x88\x18\x02\xae\xdaHMcua" +
-	"(\xb4T(\x12\x84\xf6\xfa\x16Y\xca%\xef\x8d\x8eN" +
-	"\xde\x1b\xde\x8c\xc9\x8c\x1bA\xc4\x85+\x0dU,$0" +
-	"\x85)\xa4\x10\xa1\x82J]\x08.\xaa\xa0VhAA" +
-	"\xa5B7B\x17n\x14\x17\xae|r\xde0\x1f\x01\xc1" +
-	"EWs\xef\xef\x9c\xb9\xf7\xc09\xf7\x9d\xbc\xc3\xb3\xde" +
-	"\xea\\\xaa\xa0\xec\xa3~)\xbfs\xfe\x95\xca\xd7\x1b\x8f" +
-	"\xef\xc2.R\xe5+g\xbf}kwn\xed\x17xe" +
-	"\xe0\xd4\"\xd7iVY\x06\xcc\x09\xee\x80\xff|\xf0\xd9" +
-	"\xdb\xbb_}\xde\xb7\x8b\x9c\x19\xa7\xfaE\xee{\x9c\xa1" +
-	"\xb9\"\xb9\xa7\xf6yA\x83\xf9\xbd\xce\xb6\x0b\xff|\xf1" +
-	";9\xd9\x9fH/r\x8e\xfb\xcb4\xcf\xf8\xb2|\xda" +
-	"\xdf N\xe4\x9bq\x16\xbb\xc6J\xea\xd5j\x8dz\x12" +
-	"\xaf\xa4\x83\xdf'6]3i\xae=\x9b\xa6YTO" +
-	"\\;n\x01\x17I;\xa5=\xc0#P=\xbe\x0e\xd8" +
-	"c\x9a\xf6)\xc5*\x19Pp\xf5\x05\xc0\x9e\xd4\xb4\xa7" +
-	"\x15\xf3\x86k\xd7\xdb\xafE1\x00\xceBq\x16\xcc\x1b" +
-	"i\xf2\x92 \x18\x8flX\x82\xfe\xcf\x126\\wp" +
-	"\xf5\xe9\xe1\xd5\xe6}.\x03\xe1\xbb\xd4\x0c\xf78\xbe\xdd" +
-	"\\\xe6c@xI\xbcGE\xaa\x80\x0a0\xfb\\\x07" +
-	"\xc2=\xe1\x03I\xd7\x0c\xa8\x01s\x95k@\xd8\x13?" +
-	"\x14\xf7T@\x0f0\xd7\x0a\xef\x8b_\x17\xf7u@\x1f" +
-	"0\x1f\x15~ \xfe\x89x\xc9\x0bX\x02\xcc\xc7\x85\x1f" +
-	"\x8a\xdf\x10/\xab\xa0h\xde\xa7|\x12\x08\xaf\x8b\xdf\x12" +
-	"\x9f:\x16p\x0a0\xdf\x14~S\xfc\xb6\xf8t)\xe0" +
-	"4`\xbeg\x06\x84\xb7\xc4\x7f\x12\x9f\xd1\x01g\x00\xf3" +
-	"cq\xfem\xf1\xbbT\\\x9d}\x8e\x01g\x01\xf3s" +
-	"\x11\xf8A\x02\xf7\xe4\x0f\x95r\xc0\x0a`~\xe5\x9b@" +
-	"xW\xfc\xbe\xf8\xdcT\xc09\xc0\xfc\xc6w\x80\xf0\xbe" +
-	"\xf8_\xe2\xf3\xd3\x01\xe7\x01\xf3\x07\x1f\x01\xc2\xdf\xc5\xff" +
-	"\xa6\xe2B\xe2\xb6bV\xa0X\x01\xcbY\\\x1b\xae\xf3" +
-	"-\xd7\x09\x9bq\x1cMt\xf4\xccV=y\xde\xb5\x8f" +
-	"l\xd3d\xbcu\x9d#Q\xd7\x99\x88.%i\x14\xb7" +
-	"8\x0f^\xd4\xe4C\xe3G\x01\x0a.5\\\x12\xb7X" +
-	"\x82b\x09\xcc]\xb4]o\xa5Y\x17KE\x0d\xa33" +
-	"_v\xaf\xbb,\x1a\xd6x&M\xe2\x0d\xd7%\xa1\xc8" +
-	"\x89\x92y>\xcdv\\\x16\x8dGq\x149\xe76_" +
-	"-B\xa3\x98\xaeG\xf4\xa1\xe8\xff\xeft^\xa8\xd5\x16" +
-	"d+\x03\xfa\xf0\xe8m\\^\x03\xec%M\xdb\x9bx" +
-	"\x1b\xfb\x82\x1fj\xda\xbebU\x0df\xb3zEpO" +
-	"\xd3\x1e\xc8`\xeab0\xabW\x05{\x9a\xf6P\x91^" +
-	"1\x94\xd5k\xcb\x80\xedk\xda/e\"\xbdb\"\xab" +
-	"_\x9c\x03\xec\x0dM{S=P#\x16v\\w\xdc" +
-	"\x87\xe1\xf7f\xd0\x857\xd2\xed8k\xb8\xe60\xf7\xdf" +
-	"\x00\x00\x00\xff\xff\x0d\xa6\xf7\xc2"
+type NodeType uint16
+
+// NodeType_TypeID is the unique identifier for the type NodeType.
+const NodeType_TypeID = 0xdb6107251569f79c
+
+// Values of NodeType.
+const (
+	NodeType_unknown      NodeType = 0
+	NodeType_trafficLight NodeType = 1
+	NodeType_stopSign     NodeType = 2
+	NodeType_crosswalk    NodeType = 3
+	NodeType_speedBump    NodeType = 4
+)
+
+// String returns the enum's constant name.
+func (c NodeType) String() string {
+	switch c {
+	case NodeType_unknown:
+		return "unknown"
+	case NodeType_trafficLight:
+		return "trafficLight"
+	case NodeType_stopSign:
+		return "stopSign"
+	case NodeType_crosswalk:
+		return "crosswalk"
+	case NodeType_speedBump:
+		return "speedBump"
+
+	default:
+		return ""
+	}
+}
+
+// NodeTypeFromString returns the enum value with a name,
+// or the zero value if there's no such value.
+func NodeTypeFromString(c string) NodeType {
+	switch c {
+	case "unknown":
+		return NodeType_unknown
+	case "trafficLight":
+		return NodeType_trafficLight
+	case "stopSign":
+		return NodeType_stopSign
+	case "crosswalk":
+		return NodeType_crosswalk
+	case "speedBump":
+		return NodeType_speedBump
+
+	default:
+		return 0
+	}
+}
+
+type NodeType_List = capnp.EnumList[NodeType]
+
+func NewNodeType_List(s *capnp.Segment, sz int32) (NodeType_List, error) {
+	return capnp.NewEnumList[NodeType](s, sz)
+}
+
+type Node capnp.Struct
+
+// Node_TypeID is the unique identifier for the type Node.
+const Node_TypeID = 0xc08b5b0529af185b
+
+func NewNode(s *capnp.Segment) (Node, error) {
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 24, PointerCount: 0})
+	return Node(st), err
+}
+
+func NewRootNode(s *capnp.Segment) (Node, error) {
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 24, PointerCount: 0})
+	return Node(st), err
+}
+
+func ReadRootNode(msg *capnp.Message) (Node, error) {
+	root, err := msg.Root()
+	return Node(root.Struct()), err
+}
+
+func (s Node) String() string {
+	str, _ := text.Marshal(0xc08b5b0529af185b, capnp.Struct(s))
+	return str
+}
+
+func (s Node) EncodeAsPtr(seg *capnp.Segment) capnp.Ptr {
+	return capnp.Struct(s).EncodeAsPtr(seg)
+}
+
+func (Node) DecodeFromPtr(p capnp.Ptr) Node {
+	return Node(capnp.Struct{}.DecodeFromPtr(p))
+}
+
+func (s Node) ToPtr() capnp.Ptr {
+	return capnp.Struct(s).ToPtr()
+}
+func (s Node) IsValid() bool {
+	return capnp.Struct(s).IsValid()
+}
+
+func (s Node) Message() *capnp.Message {
+	return capnp.Struct(s).Message()
+}
+
+func (s Node) Segment() *capnp.Segment {
+	return capnp.Struct(s).Segment()
+}
+func (s Node) Type() NodeType {
+	return NodeType(capnp.Struct(s).Uint16(0))
+}
+
+func (s Node) SetType(v NodeType) {
+	capnp.Struct(s).SetUint16(0, uint16(v))
+}
+
+func (s Node) Latitude() float64 {
+	return math.Float64frombits(capnp.Struct(s).Uint64(8))
+}
+
+func (s Node) SetLatitude(v float64) {
+	capnp.Struct(s).SetUint64(8, math.Float64bits(v))
+}
+
+func (s Node) Longitude() float64 {
+	return math.Float64frombits(capnp.Struct(s).Uint64(16))
+}
+
+func (s Node) SetLongitude(v float64) {
+	capnp.Struct(s).SetUint64(16, math.Float64bits(v))
+}
+
+// Node_List is a list of Node.
+type Node_List = capnp.StructList[Node]
+
+// NewNode creates a new list of Node.
+func NewNode_List(s *capnp.Segment, sz int32) (Node_List, error) {
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 24, PointerCount: 0}, sz)
+	return capnp.StructList[Node](l), err
+}
+
+// Node_Future is a wrapper for a Node promised by a client call.
+type Node_Future struct{ *capnp.Future }
+
+func (f Node_Future) Struct() (Node, error) {
+	p, err := f.Future.Ptr()
+	return Node(p.Struct()), err
+}
+
+const schema_da3a0d9284ca402f = "x\xda\xac\x94_h\x1cU\x14\xc6\xbf\xef\xde\xd9\xdd4" +
+	"\xd9t;\xce\x08E(A\xb1\xd0Fk\x9aF_\x82" +
+	"\xd0\x10\xb1\xd4\x10b&S\xc8C\x05\xb9\xec\xce\xa6\x9b" +
+	"lf\x96\xdd\xcd\x9f\x15$ \xfe\xa1\x8a/AD\xa1" +
+	"B\x85\x08\x0a\x85\xea\x83\x92B\x85\x08\xa9T\xad`\xc0" +
+	"'E\xa8\x0f\x85\x16\xfa\xa0b\xb0\x05q\xe4\xcc\x92\xdd" +
+	"\x8d\x08\x0a\xfa4s\x7f\xe7\xcc\xb9\xdf\xdcs\xbe{t" +
+	"R\x8dX\x83\xbd}\x1a\xca{0\x95\x8e\xb7N\xccf" +
+	"?\x9f~h\x15\xde\x01\xaax`\xe4\xcb\x17W{\x87" +
+	"\xbf\x83\x95\x01\x86\x168F\xe7,3\x80\xf3\x12\x97\xc0" +
+	"?\xde\xfc\xe4\xe5\xd5+\x97\xd6\xbc\x03\xecn\xa7\xa6R" +
+	"\x92{\x8b\xddt\xeeJ\xee\xd06_\xd1`|z\xff" +
+	"\xc5\xc3\xa9\xd3\xafmHe\xfd\x97\xca[\xa9{\xe8\xfc" +
+	"(\x1f:?\xa4.\x82\xf1\xf5\xe5E\xe3\xff\xf2\xecW" +
+	"\x92\x9c\xea\xa8\x9d\x14|>\xddO\xe7\xf5\xb4\xbc\x9eM" +
+	"O\x13\x8c\xcf\xfdV\xba\xf7`\xc6|\x0f\xfb@\x87h" +
+	"p\xe8F\xe6\x18\x9d\xed\x8c\x14\xfe9\xb3\x82#q>" +
+	"\xa8\x06\xa6<\x10Y\xc5b\xb9\x14\x06\x03Q\xf3\xf9H" +
+	"\xdeT\xc2\xca\xf0\x13QT-\x94BS\x0fj\xc0$" +
+	"\xe9ui\x0b\xb0\x08\xd8\x87\xc7\x00\xef\x90\xa6\xf7\xa8\xa2" +
+	"M\xba\x1488\x05xG5\xbd\xc7\x15\xe3\xb2\xa9\x97" +
+	"\xea\x0b\x85\x00\x00{\xa0\xd8\x03\xc6\xe5(\x9c\x11\x08\x06" +
+	"-\xb6#A\xff\xad\x84i\xd3hn=\xb2\xb3\xb5\xf3" +
+	"\x11\xfb\x01\xff\x025\xfdu\xb6ww>\xe6\x03\x80\xff" +
+	"\xa1\xf0\xcbT\xa4r\xa9\x00\xe7\x12\xc7\x00\x7f]\xf0\xa6" +
+	"\xa4k\xba\xd4\x80\xf3\x19\x87\x01\xff\xb2\xf0\xab\xc2-\xe5" +
+	"\xd2\x02\x9c+\x09\xdf\x10~MxJ\xbbL\x01\xce\x17" +
+	"\x09\xdf\x14\xfe\x8d\xf0\xb4\xe52\x0d8_'\xfc\xaa\xf0" +
+	"o\x85g\x94\x9b\xcc\xc4\x16\x8f\x01\xfe5\xe17\x85w" +
+	"\x1dr\xd9\x0587\x12~]\xf8m\xe1{\xd2.\xf7" +
+	"\x00\xce-V\x01\xff\xa6\xf0_\x85wk\x97\xdd\xd2\xa8" +
+	"\xa4\xfem\xe1w\xa88\xd8s\x92.{\x00g;\x09" +
+	"\xfc$\x81\xdf\xe5\x83l\xc6e\x16p\xee\xf2\x05\xc0\xbf" +
+	"#\xdcR\x8avo\x97\xcb^\xc0\xa1z\x15\xf0-\xa5" +
+	"\xe9\xef\x13\xbew\x8f\xcb\xbd\x80\xd3\xab\xee\x03\xfc.\xe1" +
+	"\xae\xf0\x9c\xe52\x078\xb6\x9a\x05\xfc}\xc2\x1fV\x8a" +
+	"\xb9\xd0\xcc\x07\xccB1\x0bf\xaaAq\xe7=\x9e7" +
+	"\xcb~%\x08\x0a\x1d\x9d>>_\x0a\xc7M}\xd72" +
+	"\x0a\xdbK\xb3\xbc+j\x96;\xa2}aT\x08j\xdc" +
+	"\x0bNjr_\xdb\x83\xa0\xc0\xbe\xb2\x09\x83\x1a\xd3P" +
+	"L\x83\xb1),\x96jQ\xb5\x81\xbeDC\xab\xe6\x19" +
+	"\xf3\x9c\xa9\x16v4\x1e\x8f\xc2`\xda4H(\xb2C" +
+	"2OD\xd5%S-\xb4G\xb4\x15\x195\xf9\xb9$" +
+	"\xd4\x8a\xe9R\x81)(\xa6\xc0\xb8V\x09\xf2%S\x9e" +
+	"@n\xb7\xd8\x96\xad\x9bb\xffa\xba'\xa2\x02\x03\x99" +
+	"\xeel\xcbXO\xf6\x03\xde\x88\xa67\xdea\xac\xa7\xc4" +
+	"m'5\xbdS\x8a\xb6j\x0e\xb6\xed\x89\xdb&5\xbd" +
+	"g\x14s\xf5F%`\xae\xed|\x909\xfc_&|" +
+	"\xbaX\xcc\xc9R\x94\xeeo)}{\x18\xf0\xde\xd0\xf4" +
+	"\xcew(}G\xe0[\x9a\xdeZ\x87\xd2w\x05\x9e\xd3" +
+	"\xf4\xde\x17\xff\xe9\xc4\x7f\xf6{\x02\xcfkz\x17\x14i" +
+	"%\xde\xb3?\x90\x9f_\xd3\xf46\xc4xVb<\xfb" +
+	"\xd3Q\xc0[\xd7\xf46\xd5\x7f\x9a\xab\xdc\x92i\xb4;" +
+	"\xb5s[7\xfb\xb4\x12-\x06\xd5\xb2\xa9\xfc\xcb\x03\x99" +
+	"\x88\x0a}\xc1\xa9F%9\x91\xe6?>6*gn" +
+	"\x1f\x99\x05\xa8\x92\xeb\x91\xda>8\x05\xd0\xb2\xef\x9f\x02" +
+	"V\x16\xc2\xb90Z\x0a\xe3z\xd5\x14\x8b\xa5\xfc8r" +
+	"\xa5\x993\xf5\xb8V\x8f*~i&\x04\x10\xe7\xabQ" +
+	"\xad\xb6d\xca\xe0\x9c\x0cXP\x18]\x98\x07+\x7f\x06" +
+	"\x00\x00\xff\xff\xf4\xf8lR"
 
 func RegisterSchema(reg *schemas.Registry) {
 	reg.Register(&schemas.Schema{
@@ -498,7 +683,9 @@ func RegisterSchema(reg *schemas.Registry) {
 		Nodes: []uint64{
 			0x922b57c60c6a46d1,
 			0xa4b9c59286b69600,
+			0xc08b5b0529af185b,
 			0xcb5ff253617678e0,
+			0xdb6107251569f79c,
 		},
 		Compressed: true,
 	})
