@@ -35,19 +35,20 @@ func main() {
 	defer pub.Pub.Msgq.Close()
 	state.Publisher = &pub
 
-	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader, false)
+	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader, false, false)
 	defer sub.Sub.Msgq.Close()
 
-	cli := cereal.NewSubscriber("mapdCli", cereal.MapdInReader, false)
+	cli := cereal.NewSubscriber("mapdCli", cereal.MapdInReader, false, false)
 	defer cli.Sub.Msgq.Close()
 
 	gps := cereal.GetGpsSub()
 	defer gps.Close()
 
-	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true)
+	// shadow carState as stock openpilot uses nearly every subscriber slot
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, true)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true)
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, false)
 	defer model.Sub.Msgq.Close()
 
 	for {
