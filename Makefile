@@ -4,6 +4,13 @@ build: capnp go-deps
 docker:
 	docker buildx build --platform linux/arm64 . -t pfeiferj/mapd:latest
 
+dockerx86:
+	docker buildx build --platform linux/amd64 . -t pfeiferj/mapd:latest
+
+release: docker
+	docker run --platform linux/arm64 -v ./build:/build -it pfeiferj/mapd:latest cp mapd /build/mapd
+
+
 format:
 	gofumpt -l -w .
 
