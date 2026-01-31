@@ -51,7 +51,7 @@ func main() {
 	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, false)
 	defer model.Sub.Msgq.Close()
 
-	deviceState := cereal.NewSubscriber("deviceState", cereal.DeviceStateReader, true)
+	deviceState := cereal.NewSubscriber("deviceState", cereal.DeviceStateReader, true, false)
 	defer deviceState.Sub.Msgq.Close()
 
 	for {
