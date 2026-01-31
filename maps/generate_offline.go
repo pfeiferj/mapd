@@ -253,6 +253,14 @@ func GenerateOffline(s OfflineSettings) {
 			panic("unexpected capnp error, exiting")
 		}
 
+		for _, way := range scannedWays {
+
+			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
+			if overlaps {
+				area.Ways = append(area.Ways, way)
+			}
+		}
+
 		slog.Info("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
 		if err != nil {
