@@ -31,7 +31,6 @@ const (
 	PADDING                      = 10 / R * TO_DEGREES // 10 meters in degrees
 	GROUP_AREA_BOX_DEGREES       = 2
 	AREA_BOX_DEGREES             = float64(1.0 / 4) // Must be 1.0 divided by an integer number
-	OVERLAP_BOX_DEGREES          = float64(0.01)
 	WAYS_PER_FILE                = 2000
 	MAX_OP_SPEED                 = 90 * MPH_TO_MS
 	ACCEPTABLE_BEARING_DELTA_SIN = 0.7071067811865475 // sin(45°) - max acceptable bearing mismatch
