@@ -57,7 +57,7 @@ func Handle() {
 						Category: "Bounds",
 						Name:     "overlap",
 						Usage:    "Sets the amount in degrees to overlap each offline tile",
-						Value:    0.01,
+						Value:    0.001,
 					},
 					&cli.StringFlag{
 						Category: "Inputs and Outputs",
