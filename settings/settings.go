@@ -64,6 +64,10 @@ type MapdSettings struct {
 	SlowDownForNextSpeedLimit           bool    `json:"slow_down_for_next_speed_limit"`
 	SpeedUpForNextSpeedLimit            bool    `json:"speed_up_for_next_speed_limit"`
 	HoldSpeedLimitWhileChangingSetSpeed bool    `json:"hold_speed_limit_while_changing_set_speed"`
+	ShadowCarState                      bool    `json:"shadow_car_state"`
+	ShadowModelV2                       bool    `json:"shadow_model_v2"`
+	ShadowGpsLocation                   bool    `json:"shadow_gps_location"`
+	ShadowGpsLocationExternal           bool    `json:"shadow_gps_location_external"`
 }
 
 func (s *MapdSettings) Default() {
@@ -266,6 +270,14 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.PressGasToAcceptSpeedLimit = input.Bool()
 	case custom.MapdInputType_setPressGasToOverrideSpeedLimit:
 		s.PressGasToOverrideSpeedLimit = input.Bool()
+	case custom.MapdInputType_setShadowCarState:
+		s.ShadowCarState = input.Bool()
+	case custom.MapdInputType_setShadowModelV2:
+		s.ShadowModelV2 = input.Bool()
+	case custom.MapdInputType_setShadowGpsLocation:
+		s.ShadowGpsLocation = input.Bool()
+	case custom.MapdInputType_setShadowGpsLocationExternal:
+		s.ShadowGpsLocationExternal = input.Bool()
 	case custom.MapdInputType_setAdjustSetSpeedToAcceptSpeedLimit:
 		s.AdjustSetSpeedToAcceptSpeedLimit = input.Bool()
 	case custom.MapdInputType_setAcceptSpeedLimitTimeout:

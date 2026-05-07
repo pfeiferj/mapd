@@ -130,6 +130,10 @@ enum MapdInputType {
   setAdjustSetSpeedToAcceptSpeedLimit @36;
   setAcceptSpeedLimitTimeout @37;
   setPressGasToOverrideSpeedLimit @38;
+  setShadowCarState @39;
+  setShadowModelV2 @40;
+  setShadowGpsLocation @41;
+  setShadowGpsLocationExternal @42;
 }
 
 enum WaySelectionType {

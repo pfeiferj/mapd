@@ -44,11 +44,10 @@ func main() {
 	gps := cereal.GetGpsSub()
 	defer gps.Close()
 
-	// shadow carState as stock openpilot uses nearly every subscriber slot
-	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, true)
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, ms.Settings.ShadowCarState)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, false)
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, ms.Settings.ShadowModelV2)
 	defer model.Sub.Msgq.Close()
 
 	for {

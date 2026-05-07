@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"pfeifer.dev/mapd/cereal/log"
+	ms "pfeifer.dev/mapd/settings"
 )
 
 type GpsSub struct {
@@ -33,8 +34,8 @@ func (s *GpsSub) Close() {
 
 func GetGpsSub() (gpsSub GpsSub) {
 	return GpsSub{
-		gpsLocation: NewSubscriber("gpsLocation", GpsLocationReader, true, false),
-		gpsLocationExternal: NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true, false),
-		useExt: false,
+		gpsLocation:         NewSubscriber("gpsLocation", GpsLocationReader, true, ms.Settings.ShadowGpsLocation),
+		gpsLocationExternal: NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true, ms.Settings.ShadowGpsLocationExternal),
+		useExt:              false,
 	}
 }

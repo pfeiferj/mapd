@@ -27,5 +27,9 @@
   "map_curve_target_lat_a": 2,
   "slow_down_for_next_speed_limit": true,
   "speed_up_for_next_speed_limit": false,
-  "hold_speed_limit_while_changing_set_speed": true
+  "hold_speed_limit_while_changing_set_speed": true,
+  "shadow_car_state": true,
+  "shadow_model_v2": false,
+  "shadow_gps_location": false,
+  "shadow_gps_location_external": false
 }
