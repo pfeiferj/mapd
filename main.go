@@ -44,10 +44,10 @@ func main() {
 	gps := cereal.GetGpsSub()
 	defer gps.Close()
 
-	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, ms.Settings.ShadowCarState)
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, ms.Settings.SubscriberSettings.ShadowCarState)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, ms.Settings.ShadowModelV2)
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, ms.Settings.SubscriberSettings.ShadowModelV2)
 	defer model.Sub.Msgq.Close()
 
 	for {

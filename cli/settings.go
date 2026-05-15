@@ -56,7 +56,7 @@ var settingsList = []list.Item{
 			settingsItem{title: "highest", value: func() string { return "" }},
 			settingsItem{title: "lowest", value: func() string { return "" }},
 		},
-		value: func() string { return fmt.Sprintf("%s", ms.Settings.SpeedLimitPriority) },
+		value: func() string { return fmt.Sprintf("%s", ms.Settings.SpeedLimitSettings.SpeedLimitPriority) },
 	},
 	settingsItem{
 		title:       "Speed Limit Offset",
@@ -65,7 +65,7 @@ var settingsList = []list.Item{
 		Type:        Speed,
 		state:       unitsInput,
 		value: func() string {
-			val := ms.Settings.SpeedLimitOffset
+			val := ms.Settings.SpeedLimitSettings.SpeedLimitOffset
 			mph := ms.MS_TO_MPH * val
 			kph := ms.MS_TO_KPH * val
 			return fmt.Sprintf("%f m/s, %f mph, %f kph", val, mph, kph)
@@ -93,7 +93,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setSpeedLimitChangeRequiresAccept,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitChangeRequiresAccept) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.SpeedLimitChangeRequiresAccept) },
 	},
 	settingsItem{
 		title:       "Press Gas To Accept Speed Limit",
@@ -101,7 +101,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setPressGasToAcceptSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.PressGasToAcceptSpeedLimit) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.PressGasToAcceptSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Press Gas To Override Speed Limit",
@@ -109,7 +109,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setPressGasToOverrideSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.PressGasToOverrideSpeedLimit) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.PressGasToOverrideSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Adjust Set Speed To Accept Speed Limit",
@@ -117,7 +117,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setAdjustSetSpeedToAcceptSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.AdjustSetSpeedToAcceptSpeedLimit) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.AdjustSetSpeedToAcceptSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Accept Speed Limit Timeout (s)",
@@ -125,7 +125,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setAcceptSpeedLimitTimeout,
 		Type:        Float,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%f", ms.Settings.AcceptSpeedLimitTimeout) },
+		value:       func() string { return fmt.Sprintf("%f", ms.Settings.SpeedLimitSettings.AcceptSpeedLimitTimeout) },
 	},
 	settingsItem{
 		title:       "Vision Target Lateral Acceleration (m/s^2)",
@@ -191,7 +191,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.HoldSpeedLimitWhileChangingSetSpeed) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.HoldSpeedLimitWhileChangingSetSpeed) },
 	},
 	settingsItem{
 		title:       "Hold Last Seen Speed Limit",
@@ -199,7 +199,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setHoldLastSeenSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.HoldLastSeenSpeedLimit) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.HoldLastSeenSpeedLimit) },
 	},
 	settingsItem{
 		title:       "Target Speed Jerk (m/s^3)",
@@ -253,7 +253,7 @@ var settingsList = []list.Item{
 			settingsItem{title: "info", value: func() string { return "" }},
 			settingsItem{title: "debug", value: func() string { return "" }},
 		},
-		value: func() string { return fmt.Sprintf("%s", ms.Settings.LogLevel) },
+		value: func() string { return fmt.Sprintf("%s", ms.Settings.LogSettings.LogLevel) },
 	},
 	settingsItem{
 		title:       "Use JSON Logger",
@@ -261,7 +261,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setLogJson,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.LogJson) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.LogSettings.LogJson) },
 	},
 	settingsItem{
 		title:       "Log Source Location",
@@ -269,7 +269,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setLogSource,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.LogSource) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.LogSettings.LogSource) },
 	},
 	settingsItem{
 		title:       "Shadow Car State",
@@ -277,7 +277,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setShadowCarState,
 		Type:        Enable,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.ShadowCarState) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SubscriberSettings.ShadowCarState) },
 	},
 	settingsItem{
 		title:       "Shadow Model V2",
@@ -285,7 +285,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setShadowModelV2,
 		Type:        Enable,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.ShadowModelV2) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SubscriberSettings.ShadowModelV2) },
 	},
 	settingsItem{
 		title:       "Shadow GPS Location",
@@ -293,7 +293,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setShadowGpsLocation,
 		Type:        Enable,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.ShadowGpsLocation) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SubscriberSettings.ShadowGpsLocation) },
 	},
 	settingsItem{
 		title:       "Shadow GPS Location External",
@@ -301,7 +301,7 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setShadowGpsLocationExternal,
 		Type:        Enable,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.ShadowGpsLocationExternal) },
+		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SubscriberSettings.ShadowGpsLocationExternal) },
 	},
 	settingsItem{
 		title: "Load Default Settings",

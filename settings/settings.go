@@ -34,36 +34,58 @@ type MapdSettings struct {
 	downloadActive                      bool
 	externalSpeedLimit                  float32
 	speedLimitAccepted                  bool
-	SettingsVersion                     float32 `json:"settings_version"`
-	PressGasToAcceptSpeedLimit          bool    `json:"press_gas_to_accept_speed_limit"`
-	PressGasToOverrideSpeedLimit        bool    `json:"press_gas_to_override_speed_limit"`
-	AdjustSetSpeedToAcceptSpeedLimit    bool    `json:"adjust_set_speed_to_accept_speed_limit"`
-	AcceptSpeedLimitTimeout             float32 `json:"accept_speed_limit_timeout"`
-	VisionCurveSpeedControlEnabled      bool    `json:"vision_curve_speed_control_enabled"`
-	MapCurveSpeedControlEnabled         bool    `json:"map_curve_speed_control_enabled"`
-	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
-	ExternalSpeedLimitControlEnabled    bool    `json:"external_speed_limit_control_enabled"`
-	SpeedLimitPriority                  string  `json:"speed_limit_priority"`
-	VisionCurveUseEnableSpeed           bool    `json:"vision_curve_use_enable_speed"`
-	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
-	SpeedLimitChangeRequiresAccept      bool    `json:"speed_limit_change_requires_accept"`
-	MapCurveUseEnableSpeed              bool    `json:"map_curve_use_enable_speed"`
-	LogLevel                            string  `json:"log_level"`
-	LogJson                             bool    `json:"log_json"`
-	LogSource                           bool    `json:"log_source"`
-	VisionCurveTargetLatA               float32 `json:"vision_curve_target_lat_a"`
-	VisionCurveMinTargetV               float32 `json:"vision_curve_min_target_v"`
-	SpeedLimitOffset                    float32 `json:"speed_limit_offset"`
-	EnableSpeed                         float32 `json:"enable_speed"`
-	HoldLastSeenSpeedLimit              bool    `json:"hold_last_seen_speed_limit"`
-	TargetSpeedJerk                     float32 `json:"target_speed_jerk"`
-	TargetSpeedAccel                    float32 `json:"target_speed_accel"`
-	TargetSpeedTimeOffset               float32 `json:"target_speed_time_offset"`
-	DefaultLaneWidth                    float32 `json:"default_lane_width"`
-	MapCurveTargetLatA                  float32 `json:"map_curve_target_lat_a"`
-	SlowDownForNextSpeedLimit           bool    `json:"slow_down_for_next_speed_limit"`
-	SpeedUpForNextSpeedLimit            bool    `json:"speed_up_for_next_speed_limit"`
-	HoldSpeedLimitWhileChangingSetSpeed bool    `json:"hold_speed_limit_while_changing_set_speed"`
+	SettingsVersion                     float32            `json:"settings_version"`
+	VisionCurveSpeedControlEnabled      bool               `json:"vision_curve_speed_control_enabled"`
+	MapCurveSpeedControlEnabled         bool               `json:"map_curve_speed_control_enabled"`
+	SpeedLimitControlEnabled            bool               `json:"speed_limit_control_enabled"`
+	ExternalSpeedLimitControlEnabled    bool               `json:"external_speed_limit_control_enabled"`
+	VisionCurveUseEnableSpeed           bool               `json:"vision_curve_use_enable_speed"`
+	SpeedLimitUseEnableSpeed            bool               `json:"speed_limit_use_enable_speed"`
+	MapCurveUseEnableSpeed              bool               `json:"map_curve_use_enable_speed"`
+	EnableSpeed                         float32            `json:"enable_speed"`
+	DefaultLaneWidth                    float32            `json:"default_lane_width"`
+	SubscriberSettings                  SubscriberSettings `json:"subscriber"`
+	SpeedLimitSettings                  SpeedLimitSettings `json:"speed_limit"`
+	LogSettings                  				LogSettings        `json:"logger"`
+	Personalities											  Personalities       `json:"personalities"`
+}
+
+type SpeedLimitSettings struct {
+	PressGasToAcceptSpeedLimit          bool               `json:"press_gas_to_accept_speed_limit"`
+	PressGasToOverrideSpeedLimit        bool               `json:"press_gas_to_override_speed_limit"`
+	AdjustSetSpeedToAcceptSpeedLimit    bool               `json:"adjust_set_speed_to_accept_speed_limit"`
+	AcceptSpeedLimitTimeout             float32            `json:"accept_speed_limit_timeout"`
+	SpeedLimitPriority                  string             `json:"speed_limit_priority"`
+	SpeedLimitChangeRequiresAccept      bool               `json:"speed_limit_change_requires_accept"`
+	HoldLastSeenSpeedLimit              bool               `json:"hold_last_seen_speed_limit"`
+	HoldSpeedLimitWhileChangingSetSpeed bool               `json:"hold_speed_limit_while_changing_set_speed"`
+	SpeedLimitOffset                    float32            `json:"speed_limit_offset"`
+}
+
+type LogSettings struct {
+	LogLevel                            string             `json:"log_level"`
+	LogJson                             bool               `json:"log_json"`
+	LogSource                           bool               `json:"log_source"`
+}
+
+type Personalities struct {
+	Relaxed														 PersonalitySettings `json:"relaxed"`
+	Standard													 PersonalitySettings `json:"standard"`
+	Aggressive												 PersonalitySettings `json:"aggressive"`
+}
+
+type PersonalitySettings struct {
+	TargetSpeedJerk                     float32            `json:"target_speed_jerk"`
+	TargetSpeedAccel                    float32            `json:"target_speed_accel"`
+	TargetSpeedTimeOffset               float32            `json:"target_speed_time_offset"`
+	MapCurveTargetLatA                  float32            `json:"map_curve_target_lat_a"`
+	VisionCurveTargetLatA               float32            `json:"vision_curve_target_lat_a"`
+	VisionCurveMinTargetV               float32            `json:"vision_curve_min_target_v"`
+	SlowDownForNextSpeedLimit           bool               `json:"slow_down_for_next_speed_limit"`
+	SpeedUpForNextSpeedLimit            bool               `json:"speed_up_for_next_speed_limit"`
+}
+
+type SubscriberSettings struct {
 	ShadowCarState                      bool    `json:"shadow_car_state"`
 	ShadowModelV2                       bool    `json:"shadow_model_v2"`
 	ShadowGpsLocation                   bool    `json:"shadow_gps_location"`
@@ -167,9 +189,9 @@ func (s *MapdSettings) Save() {
 
 func (s *MapdSettings) setupLogger() {
 	handlerOptions := slog.HandlerOptions{
-		AddSource: s.LogSource,
+		AddSource: s.LogSettings.LogSource,
 	}
-	if s.LogJson {
+	if s.LogSettings.LogJson {
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &handlerOptions)))
 	} else {
 		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &handlerOptions)))
@@ -178,7 +200,7 @@ func (s *MapdSettings) setupLogger() {
 }
 
 func (s *MapdSettings) setLogLevel() {
-	switch strings.ToLower(s.LogLevel) {
+	switch strings.ToLower(s.LogSettings.LogLevel) {
 	case "debug":
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	case "info":
@@ -224,7 +246,7 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_setMapCurveSpeedControl:
 		s.MapCurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitOffset:
-		s.SpeedLimitOffset = input.Float()
+		s.SpeedLimitSettings.SpeedLimitOffset = input.Float()
 	case custom.MapdInputType_setEnableSpeed:
 		s.EnableSpeed = input.Float()
 	case custom.MapdInputType_setVisionCurveUseEnableSpeed:
@@ -234,7 +256,7 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_setSpeedLimitUseEnableSpeed:
 		s.SpeedLimitUseEnableSpeed = input.Bool()
 	case custom.MapdInputType_setHoldLastSeenSpeedLimit:
-		s.HoldLastSeenSpeedLimit = input.Bool()
+		s.SpeedLimitSettings.HoldLastSeenSpeedLimit = input.Bool()
 	case custom.MapdInputType_setTargetSpeedJerk:
 		s.TargetSpeedJerk = input.Float()
 	case custom.MapdInputType_setTargetSpeedAccel:
@@ -253,11 +275,11 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 			slog.Warn("failed to read speed limit priority string", "error", err)
 			return
 		}
-		s.SpeedLimitPriority = priority
+		s.SpeedLimitSettings.SpeedLimitPriority = priority
 	case custom.MapdInputType_setExternalSpeedLimit:
 		s.externalSpeedLimit = input.Float()
 	case custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed:
-		s.HoldSpeedLimitWhileChangingSetSpeed = input.Bool()
+		s.SpeedLimitSettings.HoldSpeedLimitWhileChangingSetSpeed = input.Bool()
 	case custom.MapdInputType_setSpeedUpForNextSpeedLimit:
 		s.SpeedUpForNextSpeedLimit = input.Bool()
 	case custom.MapdInputType_setSlowDownForNextSpeedLimit:
@@ -265,28 +287,28 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_acceptSpeedLimit:
 		s.AcceptSpeedLimit()
 	case custom.MapdInputType_setSpeedLimitChangeRequiresAccept:
-		s.SpeedLimitChangeRequiresAccept = input.Bool()
+		s.SpeedLimitSettings.SpeedLimitChangeRequiresAccept = input.Bool()
 	case custom.MapdInputType_setPressGasToAcceptSpeedLimit:
-		s.PressGasToAcceptSpeedLimit = input.Bool()
+		s.SpeedLimitSettings.PressGasToAcceptSpeedLimit = input.Bool()
 	case custom.MapdInputType_setPressGasToOverrideSpeedLimit:
-		s.PressGasToOverrideSpeedLimit = input.Bool()
+		s.SpeedLimitSettings.PressGasToOverrideSpeedLimit = input.Bool()
 	case custom.MapdInputType_setShadowCarState:
-		s.ShadowCarState = input.Bool()
+		s.SubscriberSettings.ShadowCarState = input.Bool()
 	case custom.MapdInputType_setShadowModelV2:
-		s.ShadowModelV2 = input.Bool()
+		s.SubscriberSettings.ShadowModelV2 = input.Bool()
 	case custom.MapdInputType_setShadowGpsLocation:
-		s.ShadowGpsLocation = input.Bool()
+		s.SubscriberSettings.ShadowGpsLocation = input.Bool()
 	case custom.MapdInputType_setShadowGpsLocationExternal:
-		s.ShadowGpsLocationExternal = input.Bool()
+		s.SubscriberSettings.ShadowGpsLocationExternal = input.Bool()
 	case custom.MapdInputType_setAdjustSetSpeedToAcceptSpeedLimit:
-		s.AdjustSetSpeedToAcceptSpeedLimit = input.Bool()
+		s.SpeedLimitSettings.AdjustSetSpeedToAcceptSpeedLimit = input.Bool()
 	case custom.MapdInputType_setAcceptSpeedLimitTimeout:
-		s.AcceptSpeedLimitTimeout = input.Float()
+		s.SpeedLimitSettings.AcceptSpeedLimitTimeout = input.Float()
 	case custom.MapdInputType_setLogSource:
-		s.LogSource = input.Bool()
+		s.LogSettings.LogSource = input.Bool()
 		s.setupLogger()
 	case custom.MapdInputType_setLogJson:
-		s.LogJson = input.Bool()
+		s.LogSettings.LogJson = input.Bool()
 		s.setupLogger()
 	case custom.MapdInputType_loadPersistentSettings:
 		s.Load()
@@ -314,7 +336,7 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 			slog.Warn("failed to read log level string", "error", err)
 			return
 		}
-		s.LogLevel = logLevel
+		s.LogSettings.LogLevel = logLevel
 		s.setLogLevel()
 	}
 }
@@ -329,7 +351,7 @@ func (s *MapdSettings) PrioritySpeedLimit(mapLimit float32) float32 {
 	if !s.SpeedLimitControlEnabled && !s.ExternalSpeedLimitControlEnabled {
 		return 0
 	}
-	switch s.SpeedLimitPriority {
+	switch s.SpeedLimitSettings.SpeedLimitPriority {
 	case PRIORITY_MAP:
 		if mapLimit == 0 {
 			return s.externalSpeedLimit
@@ -363,7 +385,7 @@ func (s *MapdSettings) ResetSpeedLimitAccepted() {
 }
 
 func (s *MapdSettings) SpeedLimitAccepted() bool {
-	if !s.SpeedLimitChangeRequiresAccept {
+	if !s.SpeedLimitSettings.SpeedLimitChangeRequiresAccept {
 		return true
 	}
 	return s.speedLimitAccepted

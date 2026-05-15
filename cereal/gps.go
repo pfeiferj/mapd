@@ -34,8 +34,8 @@ func (s *GpsSub) Close() {
 
 func GetGpsSub() (gpsSub GpsSub) {
 	return GpsSub{
-		gpsLocation:         NewSubscriber("gpsLocation", GpsLocationReader, true, ms.Settings.ShadowGpsLocation),
-		gpsLocationExternal: NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true, ms.Settings.ShadowGpsLocationExternal),
+		gpsLocation:         NewSubscriber("gpsLocation", GpsLocationReader, true, ms.Settings.SubscriberSettings.ShadowGpsLocation),
+		gpsLocationExternal: NewSubscriber("gpsLocationExternal", GpsLocationExternalReader, true, ms.Settings.SubscriberSettings.ShadowGpsLocationExternal),
 		useExt:              false,
 	}
 }
