@@ -33,3 +33,7 @@ func GpsLocationReader(evt log.Event) (log.GpsLocationData, error) {
 func GpsLocationExternalReader(evt log.Event) (log.GpsLocationData, error) {
 	return evt.GpsLocationExternal()
 }
+
+func SelfdriveStateReader(evt log.Event) (log.SelfdriveState, error) {
+	return evt.SelfdriveState()
+}

@@ -13,7 +13,8 @@
     "shadow_car_state": true,
     "shadow_model_v2": false,
     "shadow_gps_location": false,
-    "shadow_gps_location_external": false
+    "shadow_gps_location_external": false,
+    "shadow_selfdrive_state": false
   },
   "speed_limit": {
     "press_gas_to_accept_speed_limit": false,
@@ -63,5 +64,4 @@
       "speed_up_for_next_speed_limit": true
     }
   }
-}
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"pfeifer.dev/mapd/cereal/custom"
+	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/params"
 
 	"github.com/Jeffail/gabs/v2"
@@ -36,6 +37,7 @@ type MapdSettings struct {
 	downloadActive                   bool
 	externalSpeedLimit               float32
 	speedLimitAccepted               bool
+	currentPersonality               log.LongitudinalPersonality
 	SettingsVersion                  float32            `json:"settings_version"`
 	VisionCurveSpeedControlEnabled   bool               `json:"vision_curve_speed_control_enabled"`
 	MapCurveSpeedControlEnabled      bool               `json:"map_curve_speed_control_enabled"`
@@ -92,6 +94,7 @@ type SubscriberSettings struct {
 	ShadowModelV2             bool `json:"shadow_model_v2"`
 	ShadowGpsLocation         bool `json:"shadow_gps_location"`
 	ShadowGpsLocationExternal bool `json:"shadow_gps_location_external"`
+	ShadowSelfdriveState      bool `json:"shadow_selfdrive_state"`
 }
 
 func (s *MapdSettings) Default() {
@@ -533,8 +536,17 @@ func (s *MapdSettings) AcceptSpeedLimit() {
 	s.speedLimitAccepted = true
 }
 
-// CurrentPersonality returns the active PersonalitySettings.
-// Defaults to Standard until openpilot personality selection is integrated.
+func (s *MapdSettings) SetPersonality(p log.LongitudinalPersonality) {
+	s.currentPersonality = p
+}
+
 func (s *MapdSettings) CurrentPersonality() PersonalitySettings {
-	return s.Personalities.Standard
+	switch s.currentPersonality {
+	case log.LongitudinalPersonality_aggressive:
+		return s.Personalities.Aggressive
+	case log.LongitudinalPersonality_relaxed:
+		return s.Personalities.Relaxed
+	default:
+		return s.Personalities.Standard
+	}
 }
