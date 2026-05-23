@@ -9,6 +9,8 @@ import (
 
 	"pfeifer.dev/mapd/cereal/custom"
 	"pfeifer.dev/mapd/params"
+
+	"github.com/Jeffail/gabs/v2"
 )
 
 const SETTINGS_VERSION = 1 // Used for migrations
@@ -150,6 +152,19 @@ func (s *MapdSettings) Load() (success bool) {
 	return true
 }
 
+func (s *MapdSettings) LoadChanges(data *gabs.Container) (success bool) {
+	jsonString := data.Bytes()
+	err := json.Unmarshal(jsonString, s)
+	if err != nil {
+		slog.Warn("failed to parse updated settings json", "error", err)
+		return false
+	}
+
+	s.setupLogger()
+
+	return true
+}
+
 func (s *MapdSettings) Unmarshal(b []byte) (success bool) {
 	s.Default() // set defaults so settings not already in param are defaulted
 	err := json.Unmarshal(b, s)
@@ -235,6 +250,37 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Load()
 	case custom.MapdInputType_saveSettings:
 		go s.Save()
+	case custom.MapdInputType_loadPersistentSettings:
+		s.Load()
+	case custom.MapdInputType_loadDefaultSettings:
+		s.Default()
+	case custom.MapdInputType_loadRecommendedSettings:
+		s.Recommended()
+	case custom.MapdInputType_cancelDownload:
+		select {
+		case s.cancelDownload <- true:
+		default:
+		}
+	case custom.MapdInputType_download:
+		path, err := input.Str()
+		if err != nil {
+			slog.Warn("failed to read download path string", "error", err)
+			return
+		}
+		if !s.downloadActive {
+			go Download(path, s.downloadProgress, s.cancelDownload)
+		}
+	case custom.MapdInputType_acceptSpeedLimit:
+		s.AcceptSpeedLimit()
+	case custom.MapdInputType_setJsonPathBool:
+		s.setSetting(input)
+	case custom.MapdInputType_setJsonPathFloat:
+		s.setSetting(input)
+	case custom.MapdInputType_setJsonPathText:
+		s.setSetting(input)
+
+
+	// DEPRECATED settings inputs
 	case custom.MapdInputType_setVisionCurveMinTargetV:
 		s.Personalities.Aggressive.VisionCurveMinTargetV = input.Float()
 		s.Personalities.Relaxed.VisionCurveMinTargetV = input.Float()
@@ -300,8 +346,6 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Personalities.Aggressive.SlowDownForNextSpeedLimit = input.Bool()
 		s.Personalities.Relaxed.SlowDownForNextSpeedLimit = input.Bool()
 		s.Personalities.Standard.SlowDownForNextSpeedLimit = input.Bool()
-	case custom.MapdInputType_acceptSpeedLimit:
-		s.AcceptSpeedLimit()
 	case custom.MapdInputType_setSpeedLimitChangeRequiresAccept:
 		s.SpeedLimitSettings.SpeedLimitChangeRequiresAccept = input.Bool()
 	case custom.MapdInputType_setPressGasToAcceptSpeedLimit:
@@ -320,32 +364,6 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.SpeedLimitSettings.AdjustSetSpeedToAcceptSpeedLimit = input.Bool()
 	case custom.MapdInputType_setAcceptSpeedLimitTimeout:
 		s.SpeedLimitSettings.AcceptSpeedLimitTimeout = input.Float()
-	case custom.MapdInputType_setLogSource:
-		s.LogSettings.LogSource = input.Bool()
-		s.setupLogger()
-	case custom.MapdInputType_setLogJson:
-		s.LogSettings.LogJson = input.Bool()
-		s.setupLogger()
-	case custom.MapdInputType_loadPersistentSettings:
-		s.Load()
-	case custom.MapdInputType_loadDefaultSettings:
-		s.Default()
-	case custom.MapdInputType_loadRecommendedSettings:
-		s.Recommended()
-	case custom.MapdInputType_cancelDownload:
-		select {
-		case s.cancelDownload <- true:
-		default:
-		}
-	case custom.MapdInputType_download:
-		path, err := input.Str()
-		if err != nil {
-			slog.Warn("failed to read download path string", "error", err)
-			return
-		}
-		if !s.downloadActive {
-			go Download(path, s.downloadProgress, s.cancelDownload)
-		}
 	case custom.MapdInputType_setLogLevel:
 		logLevel, err := input.Str()
 		if err != nil {
@@ -354,6 +372,12 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		}
 		s.LogSettings.LogLevel = logLevel
 		s.setLogLevel()
+	case custom.MapdInputType_setLogSource:
+		s.LogSettings.LogSource = input.Bool()
+		s.setupLogger()
+	case custom.MapdInputType_setLogJson:
+		s.LogSettings.LogJson = input.Bool()
+		s.setupLogger()
 	}
 }
 
@@ -394,6 +418,45 @@ func (s *MapdSettings) PrioritySpeedLimit(mapLimit float32) float32 {
 		}
 		return mapLimit
 	}
+}
+
+func (s *MapdSettings) setSetting(input custom.MapdIn) {
+		data, err := json.Marshal(s)
+		if err != nil {
+			slog.Error("failed to marshal settings to json", "error", err)
+			return
+		}
+		jsonParsed, err := gabs.ParseJSON(data)
+		if err != nil {
+			slog.Error("failed to parse settings json", "error", err)
+			return
+		}
+		path, err := input.JsonPath()
+		if err != nil {
+			slog.Error("failed to read json path string", "error", err)
+			return
+		}
+		var value any = nil
+		switch input.Type() {
+		case custom.MapdInputType_setJsonPathText:
+			textVal, err := input.Str()
+			if err != nil {
+				slog.Error("failed to read text value string", "error", err)
+				return
+			}
+			value = textVal
+		case custom.MapdInputType_setJsonPathBool:
+			value = input.Bool()
+		case custom.MapdInputType_setJsonPathFloat:
+			value = input.Float()
+		}
+		jsonParsed, err = jsonParsed.SetP(value, path)
+		if err != nil {
+			slog.Error("failed to set value at json path", "error", err)
+			return
+		}
+
+		s.LoadChanges(jsonParsed)
 }
 
 func (s *MapdSettings) ResetSpeedLimitAccepted() {

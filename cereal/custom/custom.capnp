@@ -92,16 +92,28 @@ struct MapdExtendedOut @0xa30662f84033036c {
 
 enum MapdInputType {
   download @0;
+  reloadSettings @9;
+  saveSettings @10;
+  loadDefaultSettings @21;
+  loadRecommendedSettings @22;
+  loadPersistentSettings @26;
+  cancelDownload @27;
+  setJsonPathFloat @43;
+  setJsonPathText @44;
+  setJsonPathBool @45;
+  acceptSpeedLimit @34;
+
+  # DEPRECATED settings inputs
+  setLogLevel @6;
+  setLogSource @29;
+  setLogJson @28;
   setTargetLateralAccel @1;
   setSpeedLimitOffset @2;
   setSpeedLimitControl @3;
   setMapCurveSpeedControl @4;
   setVisionCurveSpeedControl @5;
-  setLogLevel @6;
   setVisionCurveTargetLatA @7;
   setVisionCurveMinTargetV @8;
-  reloadSettings @9;
-  saveSettings @10;
   setEnableSpeed @11;
   setVisionCurveUseEnableSpeed @12;
   setMapCurveUseEnableSpeed @13;
@@ -112,20 +124,13 @@ enum MapdInputType {
   setTargetSpeedTimeOffset @18;
   setDefaultLaneWidth @19;
   setMapCurveTargetLatA @20;
-  loadDefaultSettings @21;
-  loadRecommendedSettings @22;
   setSlowDownForNextSpeedLimit @23;
   setSpeedUpForNextSpeedLimit @24;
   setHoldSpeedLimitWhileChangingSetSpeed @25;
-  loadPersistentSettings @26;
-  cancelDownload @27;
-  setLogJson @28;
-  setLogSource @29;
   setExternalSpeedLimitControl @30;
   setExternalSpeedLimit @31;
   setSpeedLimitPriority @32;
   setSpeedLimitChangeRequiresAccept @33;
-  acceptSpeedLimit @34;
   setPressGasToAcceptSpeedLimit @35;
   setAdjustSetSpeedToAcceptSpeedLimit @36;
   setAcceptSpeedLimitTimeout @37;
@@ -154,6 +159,7 @@ struct MapdIn @0xc86a3d38d13eb3ef {
   float @1 :Float32;
   str @2 :Text;
   bool @3 :Bool;
+  jsonPath @4 :Text;
 }
 
 enum RoadContext {
