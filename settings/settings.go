@@ -16,7 +16,7 @@ import (
 const SETTINGS_VERSION = 1 // Used for migrations
 
 var Settings = MapdSettings{
-	SettingsVersion: SETTINGS_VERSION,
+	SettingsVersion:  SETTINGS_VERSION,
 	downloadProgress: make(chan DownloadProgress, 1),
 	cancelDownload:   make(chan bool, 1),
 }
@@ -31,71 +31,71 @@ const (
 )
 
 type MapdSettings struct {
-	downloadProgress                    chan DownloadProgress
-	cancelDownload                      chan bool
-	downloadActive                      bool
-	externalSpeedLimit                  float32
-	speedLimitAccepted                  bool
-	SettingsVersion                     float32            `json:"settings_version"`
-	VisionCurveSpeedControlEnabled      bool               `json:"vision_curve_speed_control_enabled"`
-	MapCurveSpeedControlEnabled         bool               `json:"map_curve_speed_control_enabled"`
-	SpeedLimitControlEnabled            bool               `json:"speed_limit_control_enabled"`
-	ExternalSpeedLimitControlEnabled    bool               `json:"external_speed_limit_control_enabled"`
-	VisionCurveUseEnableSpeed           bool               `json:"vision_curve_use_enable_speed"`
-	SpeedLimitUseEnableSpeed            bool               `json:"speed_limit_use_enable_speed"`
-	MapCurveUseEnableSpeed              bool               `json:"map_curve_use_enable_speed"`
-	EnableSpeed                         float32            `json:"enable_speed"`
-	DefaultLaneWidth                    float32            `json:"default_lane_width"`
-	SubscriberSettings                  SubscriberSettings `json:"subscriber"`
-	SpeedLimitSettings                  SpeedLimitSettings `json:"speed_limit"`
-	LogSettings                  				LogSettings        `json:"logger"`
-	Personalities											  Personalities       `json:"personalities"`
+	downloadProgress                 chan DownloadProgress
+	cancelDownload                   chan bool
+	downloadActive                   bool
+	externalSpeedLimit               float32
+	speedLimitAccepted               bool
+	SettingsVersion                  float32            `json:"settings_version"`
+	VisionCurveSpeedControlEnabled   bool               `json:"vision_curve_speed_control_enabled"`
+	MapCurveSpeedControlEnabled      bool               `json:"map_curve_speed_control_enabled"`
+	SpeedLimitControlEnabled         bool               `json:"speed_limit_control_enabled"`
+	ExternalSpeedLimitControlEnabled bool               `json:"external_speed_limit_control_enabled"`
+	VisionCurveUseEnableSpeed        bool               `json:"vision_curve_use_enable_speed"`
+	SpeedLimitUseEnableSpeed         bool               `json:"speed_limit_use_enable_speed"`
+	MapCurveUseEnableSpeed           bool               `json:"map_curve_use_enable_speed"`
+	EnableSpeed                      float32            `json:"enable_speed"`
+	DefaultLaneWidth                 float32            `json:"default_lane_width"`
+	SubscriberSettings               SubscriberSettings `json:"subscriber"`
+	SpeedLimitSettings               SpeedLimitSettings `json:"speed_limit"`
+	LogSettings                      LogSettings        `json:"logger"`
+	Personalities                    Personalities      `json:"personalities"`
 }
 
 type SpeedLimitSettings struct {
-	PressGasToAcceptSpeedLimit          bool               `json:"press_gas_to_accept_speed_limit"`
-	PressGasToOverrideSpeedLimit        bool               `json:"press_gas_to_override_speed_limit"`
-	AdjustSetSpeedToAcceptSpeedLimit    bool               `json:"adjust_set_speed_to_accept_speed_limit"`
-	AcceptSpeedLimitTimeout             float32            `json:"accept_speed_limit_timeout"`
-	SpeedLimitPriority                  string             `json:"speed_limit_priority"`
-	SpeedLimitChangeRequiresAccept      bool               `json:"speed_limit_change_requires_accept"`
-	HoldLastSeenSpeedLimit              bool               `json:"hold_last_seen_speed_limit"`
-	HoldSpeedLimitWhileChangingSetSpeed bool               `json:"hold_speed_limit_while_changing_set_speed"`
-	SpeedLimitOffset                    float32            `json:"speed_limit_offset"`
+	PressGasToAcceptSpeedLimit          bool    `json:"press_gas_to_accept_speed_limit"`
+	PressGasToOverrideSpeedLimit        bool    `json:"press_gas_to_override_speed_limit"`
+	AdjustSetSpeedToAcceptSpeedLimit    bool    `json:"adjust_set_speed_to_accept_speed_limit"`
+	AcceptSpeedLimitTimeout             float32 `json:"accept_speed_limit_timeout"`
+	SpeedLimitPriority                  string  `json:"speed_limit_priority"`
+	SpeedLimitChangeRequiresAccept      bool    `json:"speed_limit_change_requires_accept"`
+	HoldLastSeenSpeedLimit              bool    `json:"hold_last_seen_speed_limit"`
+	HoldSpeedLimitWhileChangingSetSpeed bool    `json:"hold_speed_limit_while_changing_set_speed"`
+	SpeedLimitOffset                    float32 `json:"speed_limit_offset"`
 }
 
 type LogSettings struct {
-	LogLevel                            string             `json:"log_level"`
-	LogJson                             bool               `json:"log_json"`
-	LogSource                           bool               `json:"log_source"`
+	LogLevel  string `json:"log_level"`
+	LogJson   bool   `json:"log_json"`
+	LogSource bool   `json:"log_source"`
 }
 
 type Personalities struct {
-	Relaxed														 PersonalitySettings `json:"relaxed"`
-	Standard													 PersonalitySettings `json:"standard"`
-	Aggressive												 PersonalitySettings `json:"aggressive"`
+	Relaxed    PersonalitySettings `json:"relaxed"`
+	Standard   PersonalitySettings `json:"standard"`
+	Aggressive PersonalitySettings `json:"aggressive"`
 }
 
 type PersonalitySettings struct {
-	TargetSpeedJerk                     float32            `json:"target_speed_jerk"`
-	TargetSpeedAccel                    float32            `json:"target_speed_accel"`
-	TargetSpeedTimeOffset               float32            `json:"target_speed_time_offset"`
-	MapCurveTargetLatA                  float32            `json:"map_curve_target_lat_a"`
-	VisionCurveTargetLatA               float32            `json:"vision_curve_target_lat_a"`
-	VisionCurveMinTargetV               float32            `json:"vision_curve_min_target_v"`
-	SlowDownForNextSpeedLimit           bool               `json:"slow_down_for_next_speed_limit"`
-	SpeedUpForNextSpeedLimit            bool               `json:"speed_up_for_next_speed_limit"`
+	TargetSpeedJerk           float32 `json:"target_speed_jerk"`
+	TargetSpeedAccel          float32 `json:"target_speed_accel"`
+	TargetSpeedTimeOffset     float32 `json:"target_speed_time_offset"`
+	MapCurveTargetLatA        float32 `json:"map_curve_target_lat_a"`
+	VisionCurveTargetLatA     float32 `json:"vision_curve_target_lat_a"`
+	VisionCurveMinTargetV     float32 `json:"vision_curve_min_target_v"`
+	SlowDownForNextSpeedLimit bool    `json:"slow_down_for_next_speed_limit"`
+	SpeedUpForNextSpeedLimit  bool    `json:"speed_up_for_next_speed_limit"`
 }
 
 type SubscriberSettings struct {
-	ShadowCarState                      bool    `json:"shadow_car_state"`
-	ShadowModelV2                       bool    `json:"shadow_model_v2"`
-	ShadowGpsLocation                   bool    `json:"shadow_gps_location"`
-	ShadowGpsLocationExternal           bool    `json:"shadow_gps_location_external"`
+	ShadowCarState            bool `json:"shadow_car_state"`
+	ShadowModelV2             bool `json:"shadow_model_v2"`
+	ShadowGpsLocation         bool `json:"shadow_gps_location"`
+	ShadowGpsLocationExternal bool `json:"shadow_gps_location_external"`
 }
 
 func (s *MapdSettings) Default() {
-	err := json.Unmarshal(defaultsJson, s) //load included default settings first to ensure all values have a default
+	err := json.Unmarshal(defaultsJson, s) // load included default settings first to ensure all values have a default
 	if err != nil {
 		slog.Warn("failed to load default settings", "error", err)
 		return
@@ -107,6 +107,27 @@ func (s *MapdSettings) Default() {
 		if err != nil {
 			slog.Warn("failed to read custom default settings", "error", err)
 		}
+
+		parsed, err := gabs.ParseJSON(defaults)
+		if err != nil {
+			slog.Warn("failed to parse custom default settings", "error", err)
+		}
+
+		settingsVersion := parsed.S("settings_version").Data()
+		if settingsVersion == nil {
+			settingsVersion = uint64(0)
+		}
+
+		if settingsVersion != SETTINGS_VERSION {
+			slog.Info("default file settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
+			migratedSettings := Migrate(uint64(settingsVersion.(uint64)), defaults)
+			defaults, err = json.Marshal(migratedSettings)
+			if err != nil {
+				slog.Warn("failed to marshal migrated default settings", "error", err)
+				return
+			}
+		}
+
 		err = json.Unmarshal(defaults, s)
 		if err != nil {
 			slog.Warn("failed to load custom default settings", "error", err)
@@ -121,6 +142,27 @@ func (s *MapdSettings) Recommended() {
 		if err != nil {
 			slog.Warn("failed to read custom recommended settings", "error", err)
 		}
+
+		parsed, err := gabs.ParseJSON(recommended)
+		if err != nil {
+			slog.Warn("failed to parse custom recommended settings", "error", err)
+		}
+
+		settingsVersion := parsed.S("settings_version").Data()
+		if settingsVersion == nil {
+			settingsVersion = uint64(0)
+		}
+
+		if settingsVersion != SETTINGS_VERSION {
+			slog.Info("default file settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
+			migratedSettings := Migrate(uint64(settingsVersion.(uint64)), recommended)
+			recommended, err = json.Marshal(migratedSettings)
+			if err != nil {
+				slog.Warn("failed to marshal migrated recommended settings", "error", err)
+				return
+			}
+		}
+
 		err = json.Unmarshal(recommended, s)
 		if err != nil {
 			slog.Warn("failed to load custom recommended settings", "error", err)
@@ -141,10 +183,28 @@ func (s *MapdSettings) Load() (success bool) {
 		return false
 	}
 
-	err = json.Unmarshal(data, s)
+	parsed, err := gabs.ParseJSON(data)
 	if err != nil {
-		slog.Warn("failed to parse MAPD_SETTINGS param", "error", err)
+		slog.Warn("failed to parse MAPD_SETTINGS json", "error", err)
 		return false
+	}
+
+	settingsVersion := parsed.S("settings_version").Data()
+	if settingsVersion == nil {
+		settingsVersion = uint64(0)
+	}
+
+	if settingsVersion != SETTINGS_VERSION {
+		slog.Info("settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
+		migratedSettings := Migrate(uint64(settingsVersion.(uint64)), data)
+		s = &migratedSettings
+
+	} else {
+		err = json.Unmarshal(data, s)
+		if err != nil {
+			slog.Warn("failed to parse MAPD_SETTINGS param", "error", err)
+			return false
+		}
 	}
 
 	s.setupLogger()
@@ -278,7 +338,6 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.setSetting(input)
 	case custom.MapdInputType_setJsonPathText:
 		s.setSetting(input)
-
 
 	// DEPRECATED settings inputs
 	case custom.MapdInputType_setVisionCurveMinTargetV:
@@ -421,42 +480,42 @@ func (s *MapdSettings) PrioritySpeedLimit(mapLimit float32) float32 {
 }
 
 func (s *MapdSettings) setSetting(input custom.MapdIn) {
-		data, err := json.Marshal(s)
+	data, err := json.Marshal(s)
+	if err != nil {
+		slog.Error("failed to marshal settings to json", "error", err)
+		return
+	}
+	jsonParsed, err := gabs.ParseJSON(data)
+	if err != nil {
+		slog.Error("failed to parse settings json", "error", err)
+		return
+	}
+	path, err := input.JsonPath()
+	if err != nil {
+		slog.Error("failed to read json path string", "error", err)
+		return
+	}
+	var value any = nil
+	switch input.Type() {
+	case custom.MapdInputType_setJsonPathText:
+		textVal, err := input.Str()
 		if err != nil {
-			slog.Error("failed to marshal settings to json", "error", err)
+			slog.Error("failed to read text value string", "error", err)
 			return
 		}
-		jsonParsed, err := gabs.ParseJSON(data)
-		if err != nil {
-			slog.Error("failed to parse settings json", "error", err)
-			return
-		}
-		path, err := input.JsonPath()
-		if err != nil {
-			slog.Error("failed to read json path string", "error", err)
-			return
-		}
-		var value any = nil
-		switch input.Type() {
-		case custom.MapdInputType_setJsonPathText:
-			textVal, err := input.Str()
-			if err != nil {
-				slog.Error("failed to read text value string", "error", err)
-				return
-			}
-			value = textVal
-		case custom.MapdInputType_setJsonPathBool:
-			value = input.Bool()
-		case custom.MapdInputType_setJsonPathFloat:
-			value = input.Float()
-		}
-		jsonParsed, err = jsonParsed.SetP(value, path)
-		if err != nil {
-			slog.Error("failed to set value at json path", "error", err)
-			return
-		}
+		value = textVal
+	case custom.MapdInputType_setJsonPathBool:
+		value = input.Bool()
+	case custom.MapdInputType_setJsonPathFloat:
+		value = input.Float()
+	}
+	jsonParsed, err = jsonParsed.SetP(value, path)
+	if err != nil {
+		slog.Error("failed to set value at json path", "error", err)
+		return
+	}
 
-		s.LoadChanges(jsonParsed)
+	s.LoadChanges(jsonParsed)
 }
 
 func (s *MapdSettings) ResetSpeedLimitAccepted() {
