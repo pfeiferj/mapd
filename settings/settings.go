@@ -532,3 +532,9 @@ func (s *MapdSettings) SpeedLimitAccepted() bool {
 func (s *MapdSettings) AcceptSpeedLimit() {
 	s.speedLimitAccepted = true
 }
+
+// CurrentPersonality returns the active PersonalitySettings.
+// Defaults to Standard until openpilot personality selection is integrated.
+func (s *MapdSettings) CurrentPersonality() PersonalitySettings {
+	return s.Personalities.Standard
+}
