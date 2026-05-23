@@ -236,9 +236,13 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_saveSettings:
 		go s.Save()
 	case custom.MapdInputType_setVisionCurveMinTargetV:
-		s.VisionCurveMinTargetV = input.Float()
+		s.Personalities.Aggressive.VisionCurveMinTargetV = input.Float()
+		s.Personalities.Relaxed.VisionCurveMinTargetV = input.Float()
+		s.Personalities.Standard.VisionCurveMinTargetV = input.Float()
 	case custom.MapdInputType_setVisionCurveTargetLatA:
-		s.VisionCurveTargetLatA = input.Float()
+		s.Personalities.Aggressive.VisionCurveTargetLatA = input.Float()
+		s.Personalities.Relaxed.VisionCurveTargetLatA = input.Float()
+		s.Personalities.Standard.VisionCurveTargetLatA = input.Float()
 	case custom.MapdInputType_setVisionCurveSpeedControl:
 		s.VisionCurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitControl:
@@ -258,15 +262,23 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_setHoldLastSeenSpeedLimit:
 		s.SpeedLimitSettings.HoldLastSeenSpeedLimit = input.Bool()
 	case custom.MapdInputType_setTargetSpeedJerk:
-		s.TargetSpeedJerk = input.Float()
+		s.Personalities.Aggressive.TargetSpeedJerk = input.Float()
+		s.Personalities.Relaxed.TargetSpeedJerk = input.Float()
+		s.Personalities.Standard.TargetSpeedJerk = input.Float()
 	case custom.MapdInputType_setTargetSpeedAccel:
-		s.TargetSpeedAccel = input.Float()
+		s.Personalities.Aggressive.TargetSpeedAccel = input.Float()
+		s.Personalities.Relaxed.TargetSpeedAccel = input.Float()
+		s.Personalities.Standard.TargetSpeedAccel = input.Float()
 	case custom.MapdInputType_setTargetSpeedTimeOffset:
-		s.TargetSpeedTimeOffset = input.Float()
+		s.Personalities.Aggressive.TargetSpeedTimeOffset = input.Float()
+		s.Personalities.Relaxed.TargetSpeedTimeOffset = input.Float()
+		s.Personalities.Standard.TargetSpeedTimeOffset = input.Float()
 	case custom.MapdInputType_setDefaultLaneWidth:
 		s.DefaultLaneWidth = input.Float()
 	case custom.MapdInputType_setMapCurveTargetLatA:
-		s.MapCurveTargetLatA = input.Float()
+		s.Personalities.Aggressive.MapCurveTargetLatA = input.Float()
+		s.Personalities.Relaxed.MapCurveTargetLatA = input.Float()
+		s.Personalities.Standard.MapCurveTargetLatA = input.Float()
 	case custom.MapdInputType_setExternalSpeedLimitControl:
 		s.ExternalSpeedLimitControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitPriority:
@@ -281,9 +293,13 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed:
 		s.SpeedLimitSettings.HoldSpeedLimitWhileChangingSetSpeed = input.Bool()
 	case custom.MapdInputType_setSpeedUpForNextSpeedLimit:
-		s.SpeedUpForNextSpeedLimit = input.Bool()
+		s.Personalities.Aggressive.SpeedUpForNextSpeedLimit = input.Bool()
+		s.Personalities.Relaxed.SpeedUpForNextSpeedLimit = input.Bool()
+		s.Personalities.Standard.SpeedUpForNextSpeedLimit = input.Bool()
 	case custom.MapdInputType_setSlowDownForNextSpeedLimit:
-		s.SlowDownForNextSpeedLimit = input.Bool()
+		s.Personalities.Aggressive.SlowDownForNextSpeedLimit = input.Bool()
+		s.Personalities.Relaxed.SlowDownForNextSpeedLimit = input.Bool()
+		s.Personalities.Standard.SlowDownForNextSpeedLimit = input.Bool()
 	case custom.MapdInputType_acceptSpeedLimit:
 		s.AcceptSpeedLimit()
 	case custom.MapdInputType_setSpeedLimitChangeRequiresAccept:
