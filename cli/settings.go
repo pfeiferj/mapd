@@ -117,7 +117,9 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setAdjustSetSpeedToAcceptSpeedLimit,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.AdjustSetSpeedToAcceptSpeedLimit) },
+		value: func() string {
+			return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.AdjustSetSpeedToAcceptSpeedLimit)
+		},
 	},
 	settingsItem{
 		title:       "Accept Speed Limit Timeout (s)",
@@ -191,7 +193,9 @@ var settingsList = []list.Item{
 		MessageType: custom.MapdInputType_setHoldSpeedLimitWhileChangingSetSpeed,
 		Type:        Bool,
 		state:       settingsInput,
-		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.HoldSpeedLimitWhileChangingSetSpeed) },
+		value: func() string {
+			return fmt.Sprintf("%t", ms.Settings.SpeedLimitSettings.HoldSpeedLimitWhileChangingSetSpeed)
+		},
 	},
 	settingsItem{
 		title:       "Hold Last Seen Speed Limit",

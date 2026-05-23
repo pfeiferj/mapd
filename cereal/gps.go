@@ -8,9 +8,9 @@ import (
 )
 
 type GpsSub struct {
-	gpsLocation Subscriber[log.GpsLocationData]
+	gpsLocation         Subscriber[log.GpsLocationData]
 	gpsLocationExternal Subscriber[log.GpsLocationData]
-	useExt bool
+	useExt              bool
 }
 
 func (s *GpsSub) Read() (locationData log.GpsLocationData, success bool) {
