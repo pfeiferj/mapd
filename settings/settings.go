@@ -194,12 +194,12 @@ func (s *MapdSettings) Load() (success bool) {
 
 	settingsVersion := parsed.S("settings_version").Data()
 	if settingsVersion == nil {
-		settingsVersion = uint64(0)
+		settingsVersion = float64(0)
 	}
 
 	if settingsVersion != SETTINGS_VERSION {
 		slog.Info("settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
-		migratedSettings := Migrate(uint64(settingsVersion.(uint64)), data)
+		migratedSettings := Migrate(uint64(settingsVersion.(float64)), data)
 		s = &migratedSettings
 
 	} else {

@@ -1598,13 +1598,13 @@ const (
 	MapdInputType_loadRecommendedSettings                MapdInputType = 22
 	MapdInputType_loadPersistentSettings                 MapdInputType = 26
 	MapdInputType_cancelDownload                         MapdInputType = 27
-	MapdInputType_setLogLevel                            MapdInputType = 6
-	MapdInputType_setLogSource                           MapdInputType = 29
-	MapdInputType_setLogJson                             MapdInputType = 28
 	MapdInputType_setJsonPathFloat                       MapdInputType = 43
 	MapdInputType_setJsonPathText                        MapdInputType = 44
 	MapdInputType_setJsonPathBool                        MapdInputType = 45
 	MapdInputType_acceptSpeedLimit                       MapdInputType = 34
+	MapdInputType_setLogLevel                            MapdInputType = 6
+	MapdInputType_setLogSource                           MapdInputType = 29
+	MapdInputType_setLogJson                             MapdInputType = 28
 	MapdInputType_setTargetLateralAccel                  MapdInputType = 1
 	MapdInputType_setSpeedLimitOffset                    MapdInputType = 2
 	MapdInputType_setSpeedLimitControl                   MapdInputType = 3
@@ -1656,12 +1656,6 @@ func (c MapdInputType) String() string {
 		return "loadPersistentSettings"
 	case MapdInputType_cancelDownload:
 		return "cancelDownload"
-	case MapdInputType_setLogLevel:
-		return "setLogLevel"
-	case MapdInputType_setLogSource:
-		return "setLogSource"
-	case MapdInputType_setLogJson:
-		return "setLogJson"
 	case MapdInputType_setJsonPathFloat:
 		return "setJsonPathFloat"
 	case MapdInputType_setJsonPathText:
@@ -1670,6 +1664,12 @@ func (c MapdInputType) String() string {
 		return "setJsonPathBool"
 	case MapdInputType_acceptSpeedLimit:
 		return "acceptSpeedLimit"
+	case MapdInputType_setLogLevel:
+		return "setLogLevel"
+	case MapdInputType_setLogSource:
+		return "setLogSource"
+	case MapdInputType_setLogJson:
+		return "setLogJson"
 	case MapdInputType_setTargetLateralAccel:
 		return "setTargetLateralAccel"
 	case MapdInputType_setSpeedLimitOffset:
@@ -1758,12 +1758,6 @@ func MapdInputTypeFromString(c string) MapdInputType {
 		return MapdInputType_loadPersistentSettings
 	case "cancelDownload":
 		return MapdInputType_cancelDownload
-	case "setLogLevel":
-		return MapdInputType_setLogLevel
-	case "setLogSource":
-		return MapdInputType_setLogSource
-	case "setLogJson":
-		return MapdInputType_setLogJson
 	case "setJsonPathFloat":
 		return MapdInputType_setJsonPathFloat
 	case "setJsonPathText":
@@ -1772,6 +1766,12 @@ func MapdInputTypeFromString(c string) MapdInputType {
 		return MapdInputType_setJsonPathBool
 	case "acceptSpeedLimit":
 		return MapdInputType_acceptSpeedLimit
+	case "setLogLevel":
+		return MapdInputType_setLogLevel
+	case "setLogSource":
+		return MapdInputType_setLogSource
+	case "setLogJson":
+		return MapdInputType_setLogJson
 	case "setTargetLateralAccel":
 		return MapdInputType_setTargetLateralAccel
 	case "setSpeedLimitOffset":
@@ -2479,20 +2479,20 @@ const schema_b526ba661d550a59 = "x\xda\x94X\x7fl\x1c\xd5s\x9fy\xef\xceg;?" +
 	"!\xfcuW\xe2\x0fX9\xfbN/\x97W;fs" +
 	"\x12`\x10\xd18\x8d\x8c\xce\x97\xf5\x01\xe0R\xd1\xcc\xde" +
 	"\x00\xc0\xa4hf/\x01`J4\xb3?\x01\xc0\xb4h" +
-	"fg\x00\xb0I4\xb3\x8f\x000!Z\xd9\x18\x00\x0a" +
-	"\xd1\xcc\xce\x01`F\xb4\xea_\x14\xab\xd9>\x00d\xa2" +
-	"\x95\xed\x01\xc0e\xa2Y?/\x17+\xd8\x17\x00x\x95" +
-	"hf\xff\x00\x80W\x8bV\xf6)\x00\xae\x10\xab\xf5\xf3" +
-	"/\xc4\x1a\xf6G\x00\xb8R\xac\xd1v\xaf\x11k\xb4\xbe" +
-	"f\xd1\xa6\x9f\x7fM\xb4i\xbfx\xf19&\xda\xb4?" +
-	"-\xa2M\xeb\xfd\xa5h\xd7\xfaZ;:\xd9&\x04\xc0" +
-	"\xb8\xd8\xcc\xde\x02\xc0:\xb1Y;\xd0 6\xb2Q\x00" +
-	"\xac\x17\x9d\xda\xb1kE\xbb~\xf1:\xd1\xa9\x15\xaf*" +
-	"\xfe\xae\xee\xe8dM\xa4`\x89\xd8\xcc\x0e\x03\xe0\xf5b" +
-	"3\xfb/\x00\xfc\xf5\x8env-\x09~C\xdc\xa9S" +
-	"\xb0\xa6c\x801\x02\xd6\x0a\x83\xfd\x01\x00\xfe\xa60\xf4" +
-	"\x1b7\x08C\xe7\xacM\x18\xdaD\xa3\x18\xd6\xf8\"1" +
-	"\xcc\x0e\x02\xe0ba\xd0o\xc1\xf6g<\xd7\xb7l\x00" +
+	"fg\x00\xb0I4\xb3\x8f\x00p\x91hec\x00(" +
+	"D3;\x07\x80\x19\xd1\xaa\x7fQ\xacf\xfb\x00\x90\x89" +
+	"V\xb6\x07\x00\x97\x89f\xfd\xbc\\\xac`_\x00\xe0U" +
+	"\xa2\x99\xfd\x03\x00^-Z\xd9\xa7\x00\xb8B\xac\xd6\xcf" +
+	"\xbf\x10k\xd8\x1f\x01\xe0J\xb1F\xdb\xbdF\xac\xd1\xfa" +
+	"\x9aE\x9b~\xfe5\xd1\xa6\xfd\xe2\xc5\xe7\x98h\xd3\xfe" +
+	"\xb4\x886\xad\xf7\x97\xa2]\xebk\xed\xe8d\x9b\x10\x00" +
+	"\xe3b3{\x0b\x00\xeb\xc4f\xed\xc0\x12\xb1\x91\x8d\x02" +
+	"\xe0b\xd1\xa9\x1d\xbbV\xb4\xeb\x17\xaf\x13\x9dZ\xf1\xaa" +
+	"\xe2\xef\xea\x8eN\xd6D\x0a\x1a\xc5fv\x18\x00\xaf\x17" +
+	"\x9b\xd9\x7f\x01\xe0\xafwt\xb3kI\xf0\x1b\xe2N\x9d" +
+	"\x825\x1d\x03\x8c\x11\xb0V\x18\xec\x0f\x00\xf07\x85\xa1" +
+	"\xdf\xb8A\x18:gm\xc2\xd0&\x12bX\xe3\xf5b" +
+	"\x98\x1d\x04\xc0\x06a\xd0o\xc1\xf6g<\xd7\xb7l\x00" +
 	"(\x84R\xed\xb0\x82\x09\x89\xaa\xdfR2\xb0\xdc\x96\xee" +
 	"lV\xba\x84\x9b9)m\xecw\xa6\x1c\xb5}|<" +
 	"\x11J5\x0f\xed\xf1\xbd\xa4\x0a|M\x1e\xb0r=\xf9" +
@@ -2531,7 +2531,7 @@ const schema_b526ba661d550a59 = "x\xda\x94X\x7fl\x1c\xd5s\x9fy\xef\xceg;?" +
 	"\x1bGc\x07\xc34b\x06\x094\xfa\x00\x8cA\x8e\xc6" +
 	"\xdd\x0c\xd3\x8ceh&\xa5w\xaf\x050vp4r" +
 	"\x0c\xcb\xed\x12\x07\x03\x7f\x82\x0e\x83\xc6Se\x9c\x03b" +
-	"\x0a\x90\xf2\x12}G\xd4h\x81\xe1b\xc0d\xceR\x93" +
+	"\x0a\x90\xf2\x12}G\xd4\xeb\x81\xe1b\xc0d\xceR\x93" +
 	"\xb8\x14p\x90#\xa6*\xfb\x0e \x81\xe5@\xf8\xff\x13" +
 	"H)\x80{K\x01\x88'\xd9\x16\x00\xf3Q\xc6\xd1<" +
 	"\xc2*1\x88\xa7\xd9&\x00\xf3\x09\xc2\x9fc\x950\xc4" +
@@ -2564,7 +2564,7 @@ const schema_b526ba661d550a59 = "x\xda\x94X\x7fl\x1c\xd5s\x9fy\xef\xceg;?" +
 	"#\x17.\x93\xb1\x92\xac\xa87\x8b\x15\xc7|O\x8eX" +
 	"\xb3\x88\xc0\x10\x01[\\\xcb\x93!\xd6\x01\xc3:\xc0\x82" +
 	"r\\\xd9O[\x12\x97v\x89R\xce\x0cs\x94\x99\x9f" +
-	"\x98\x90\xa1\x92\xb6VN\xebV\xd1rX\x14@\x97=" +
+	"\x98\x90\xa1\x92\xb6VN\x8b[\xd1rX\x14@\x97=" +
 	"\xd7]\x19*g\xcaR\x12\xed!\xdf\xb2G\x1c\x9b\xab" +
 	"\xc9\xb2\x90\xce\x81v#H\xc8\xbd\x0a\x93\x95\x0b( " +
 	"&\x01\x0b\xb6S\xcc\xea\xd6\xc0\x9f\x1a\xb1f{Z\xa4" +
@@ -2609,7 +2609,7 @@ const schema_b526ba661d550a59 = "x\xda\x94X\x7fl\x1c\xd5s\x9fy\xef\xceg;?" +
 	"%\xbft)\xea\xed\x8a|\x98w\xa3\xa0\x8f\xb5\x97\xa3" +
 	"1\xc8\xb0t\x04\x03\x94\xed~\x8e\xc6\xae\xaa#\x18>" +
 	"X\xbcP\xdc\xcb\xaaB\xae\xeaH\x0b\xcb\xda\xff\x05\x00" +
-	"\x00\xff\xff\xb4r\xc2\xa6"
+	"\x00\xff\xff\xbcD\xc2\xa6"
 
 func RegisterSchema(reg *schemas.Registry) {
 	reg.Register(&schemas.Schema{
