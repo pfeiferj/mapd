@@ -14,7 +14,7 @@ import (
 	"github.com/Jeffail/gabs/v2"
 )
 
-const SETTINGS_VERSION = 1 // Used for migrations
+const SETTINGS_VERSION = 2 // Used for migrations
 
 var Settings = MapdSettings{
 	SettingsVersion:  SETTINGS_VERSION,
