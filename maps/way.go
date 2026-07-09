@@ -38,6 +38,30 @@ var HIGHWAY_RANK = map[string]int{
 	"living_street":  61,
 }
 
+// OSM highway tag value -> class stored in the offline data
+var HIGHWAY_TAG_TO_CLASS = map[string]offline.HighwayClass{
+	"motorway":       offline.HighwayClass_motorway,
+	"motorway_link":  offline.HighwayClass_motorwayLink,
+	"trunk":          offline.HighwayClass_trunk,
+	"trunk_link":     offline.HighwayClass_trunkLink,
+	"primary":        offline.HighwayClass_primary,
+	"primary_link":   offline.HighwayClass_primaryLink,
+	"secondary":      offline.HighwayClass_secondary,
+	"secondary_link": offline.HighwayClass_secondaryLink,
+	"tertiary":       offline.HighwayClass_tertiary,
+	"tertiary_link":  offline.HighwayClass_tertiaryLink,
+	"unclassified":   offline.HighwayClass_unclassified,
+	"residential":    offline.HighwayClass_residential,
+	"living_street":  offline.HighwayClass_livingStreet,
+}
+
+func HighwayClassFromTag(tag string) offline.HighwayClass {
+	if class, ok := HIGHWAY_TAG_TO_CLASS[tag]; ok {
+		return class
+	}
+	return offline.HighwayClass_unknown
+}
+
 // Road type detection and priorities
 var LANE_COUNT_PRIORITY = map[uint8]int{
 	8: 110, // Major freeway
@@ -85,6 +109,7 @@ type Way struct {
 
 	// values from offline file
 	oneWay           u.Curry[bool]
+	highwayClass     u.Curry[offline.HighwayClass]
 	wayName          u.Curry[string]
 	wayRef           u.Curry[string]
 	maxSpeed         u.Curry[float64]
@@ -140,6 +165,14 @@ func (w *Way) _oneWay() bool {
 
 func (w *Way) OneWay() bool {
 	return w.oneWay.Value(w._oneWay)
+}
+
+func (w *Way) _highwayClass() offline.HighwayClass {
+	return w.Way.HighwayClass()
+}
+
+func (w *Way) HighwayClass() offline.HighwayClass {
+	return w.highwayClass.Value(w._highwayClass)
 }
 
 func (w *Way) _wayName() string {
