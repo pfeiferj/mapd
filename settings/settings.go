@@ -197,7 +197,7 @@ func (s *MapdSettings) Load() (success bool) {
 		settingsVersion = float64(0)
 	}
 
-	if settingsVersion != SETTINGS_VERSION {
+	if settingsVersion.(float64) != float64(SETTINGS_VERSION) {
 		slog.Info("settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
 		migratedSettings := Migrate(uint64(settingsVersion.(float64)), data)
 		data, err = json.Marshal(migratedSettings)
