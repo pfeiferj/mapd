@@ -158,6 +158,28 @@ enum RoadContext {
   unknown @2;
 }
 
+# WARNING: must be kept in perfect sync (names and values) with the
+# HighwayClass enum in cereal/offline/offline.capnp — state.go casts directly
+# between the two generated enum types.
+# unknown either means the way's highway tag was not one of the listed values
+# or the loaded map tiles predate this field.
+enum HighwayClass {
+  unknown @0;
+  motorway @1;
+  motorwayLink @2;
+  trunk @3;
+  trunkLink @4;
+  primary @5;
+  primaryLink @6;
+  secondary @7;
+  secondaryLink @8;
+  tertiary @9;
+  tertiaryLink @10;
+  unclassified @11;
+  residential @12;
+  livingStreet @13;
+}
+
 struct MapdOut @0xa4f1eb3323f5f582 {
   wayName @0 :Text;
   wayRef @1 :Text;
@@ -183,4 +205,5 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   mapCurveSpeed @21 :Float32;
   waySelectionType @22 :WaySelectionType;
   speedLimitAccepted @23 :Bool;
+  highwayClass @24 :HighwayClass;
 }
