@@ -28,7 +28,10 @@ func (b *Box) AreaPos() Position {
 }
 
 func (a *Box) Overlapping(b Box) bool {
-	intersect := !(a.MinPos.Lat() > b.MaxPos.Lat() || a.MaxPos.Lat() < b.MinPos.Lat() || a.MinPos.Lon() > b.MaxPos.Lon() || a.MaxPos.Lon() < b.MinPos.Lat())
+	intersect := !(a.MinPos.Lat() > b.MaxPos.Lat() ||
+		a.MaxPos.Lat() < b.MinPos.Lat() ||
+		a.MinPos.Lon() > b.MaxPos.Lon() ||
+		a.MaxPos.Lon() < b.MinPos.Lon())
 	aMinInside := b.PosInside(a.MinPos)
 	bMinInside := a.PosInside(b.MinPos)
 	aMaxInside := b.PosInside(a.MaxPos)

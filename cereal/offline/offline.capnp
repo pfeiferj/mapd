@@ -18,6 +18,7 @@ struct Way {
   oneWay @11 :Bool;
   maxSpeedForward @12 :Float64;
   maxSpeedBackward @13 :Float64;
+  id @14 :Int64;
 }
 
 struct Coordinates {
