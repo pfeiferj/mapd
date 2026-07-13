@@ -35,6 +35,7 @@ type TmpWay struct {
 	Lanes            uint8
 	Box              m.Box
 	OneWay           bool
+	HighwayClass     offline.HighwayClass
 	Nodes            []TmpNode
 	Id               int64
 }
@@ -148,6 +149,7 @@ func GenerateOffline(s OfflineSettings) {
 				Lanes:            uint8(lanes),
 				OneWay:           tags["oneway"] == "yes",
 				Id:               int64(way.ID),
+				HighwayClass:     HighwayClassFromTag(tags["highway"]),
 			}
 			index++
 
@@ -260,6 +262,7 @@ func GenerateOffline(s OfflineSettings) {
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
+			w.SetHighwayClass(way.HighwayClass)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
 			if err != nil {
 				slog.Error("could not create way nodes", "error", err)

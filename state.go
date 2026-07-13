@@ -106,6 +106,7 @@ func (s *State) Send() error {
 	output.SetTileLoaded(s.Data.Loaded)
 
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context()))
+	output.SetHighwayClass(custom.HighwayClass(s.CurrentWay.Way.HighwayClass()))
 	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width())
 	output.SetVisionCurveSpeed(s.VisionCurveSpeed)
 	output.SetMapCurveSpeed(s.MapCurveSpeed)
