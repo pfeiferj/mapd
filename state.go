@@ -68,6 +68,8 @@ func (s *State) UpdateCarState(carData car.CarState) {
 
 func (s *State) Send() error {
 	msg, output := s.Publisher.NewMessage(true)
+	id := s.CurrentWay.Way.Id()
+	output.SetWayId(id)
 
 	name := s.CurrentWay.Way.WayName()
 	output.SetWayName(name)
