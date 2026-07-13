@@ -120,6 +120,7 @@ type Way struct {
 	hazard           u.Curry[string]
 	maxSpeedForward  u.Curry[float64]
 	maxSpeedBackward u.Curry[float64]
+	id     					 u.Curry[int64]
 }
 
 func (w *Way) IsForwardFrom(matchNode m.Position) bool {
@@ -173,6 +174,14 @@ func (w *Way) _highwayClass() offline.HighwayClass {
 
 func (w *Way) HighwayClass() offline.HighwayClass {
 	return w.highwayClass.Value(w._highwayClass)
+}
+
+func (w *Way) _id() int64 {
+	return w.Way.Id()
+}
+
+func (w *Way) Id() int64 {
+	return w.id.Value(w._id)
 }
 
 func (w *Way) _wayName() string {

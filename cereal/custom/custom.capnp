@@ -206,4 +206,5 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   waySelectionType @22 :WaySelectionType;
   speedLimitAccepted @23 :Bool;
   highwayClass @24 :HighwayClass;
+  wayId @25 :Int64;
 }
