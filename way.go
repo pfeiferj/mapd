@@ -52,6 +52,24 @@ func (w *CurrentWay) MaxSpeed() float64 {
 	return w.maxSpeed.Value(w._maxSpeed)
 }
 
+// the raw maxspeed:conditional tag for the direction of travel
+func (w *CurrentWay) ConditionalMaxSpeedRaw() string {
+	return w.Way.ConditionalMaxSpeedRaw(w.OnWay.IsForward)
+}
+
+// MaxSpeed with an applying conditional speed limit folded in when
+// conditional speed limit control is enabled. Not memoized because the
+// applying rule changes with the time of day.
+func (w *CurrentWay) EffectiveMaxSpeed() float64 {
+	if ms.Settings.ConditionalSpeedLimitControlEnabled {
+		rules := w.Way.ConditionalSpeedRules(w.OnWay.IsForward)
+		if conditional := maps.ConditionalSpeedAt(rules, time.Now()); conditional > 0 {
+			return conditional
+		}
+	}
+	return w.MaxSpeed()
+}
+
 func selectBestWayAdvanced(possibleWays []maps.Way, location log.GpsLocationData, currentWay maps.Way) maps.Way {
 	if len(possibleWays) == 0 {
 		return maps.Way{}

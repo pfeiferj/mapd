@@ -32,6 +32,22 @@ When enabled mapd will use vision model based curvature calculations to determin
 | MapdIn Field | bool |
 | Param Key    | vision\_curve\_speed\_control\_enabled |
 
+### Conditional Speed Limit Control Enabled
+When enabled mapd applies conditional speed limits (the osm maxspeed:conditional
+tag) to the speed limit when their condition currently applies. Only simple
+day/time conditions are evaluated (e.g. `25 mph @ (Mo-Fr 07:00-17:00)` school
+zones or `100 @ (22:00-06:00)` night limits); conditions mapd can't fully
+evaluate (weather, public holidays, months, vehicle class) are ignored and the
+regular speed limit is used. Conditions are checked against the device's local
+time, so the device timezone must be correct. The raw tag is always output in
+mapdOut regardless of this setting so forks can do their own handling.
+
+| Item         | Description |
+| ------------ | ----------- |
+| MapdIn Type  | setConditionalSpeedLimitControl |
+| MapdIn Field | bool |
+| Param Key    | conditional\_speed\_limit\_control\_enabled |
+
 ### External Speed Limit Control Enabled
 When enabled mapd will use fork provided speed limits to determine a suggested speed
 

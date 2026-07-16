@@ -79,8 +79,10 @@ func (s *State) Send() error {
 
 	output.SetRoadName(s.CurrentWay.Way.Name())
 
-	maxSpeed := s.CurrentWay.MaxSpeed()
+	maxSpeed := s.CurrentWay.EffectiveMaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
+
+	output.SetConditionalSpeedLimit(s.CurrentWay.ConditionalMaxSpeedRaw())
 
 	output.SetSpeedLimitSuggestedSpeed(s.SpeedLimit.Suggestion.Value)
 
