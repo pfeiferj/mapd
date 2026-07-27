@@ -43,6 +43,7 @@ type MapdSettings struct {
 	MapCurveSpeedControlEnabled         bool    `json:"map_curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
 	ExternalSpeedLimitControlEnabled    bool    `json:"external_speed_limit_control_enabled"`
+	ConditionalSpeedLimitControlEnabled bool    `json:"conditional_speed_limit_control_enabled"`
 	SpeedLimitPriority                  string  `json:"speed_limit_priority"`
 	VisionCurveUseEnableSpeed           bool    `json:"vision_curve_use_enable_speed"`
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
@@ -217,6 +218,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.VisionCurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitControl:
 		s.SpeedLimitControlEnabled = input.Bool()
+	case custom.MapdInputType_setConditionalSpeedLimitControl:
+		s.ConditionalSpeedLimitControlEnabled = input.Bool()
 	case custom.MapdInputType_setMapCurveSpeedControl:
 		s.MapCurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitOffset:

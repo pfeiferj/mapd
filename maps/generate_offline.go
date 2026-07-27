@@ -38,6 +38,10 @@ type TmpWay struct {
 	HighwayClass     offline.HighwayClass
 	Nodes            []TmpNode
 	Id               int64
+
+	MaxSpeedConditional         string
+	MaxSpeedForwardConditional  string
+	MaxSpeedBackwardConditional string
 }
 
 type Area struct {
@@ -150,6 +154,10 @@ func GenerateOffline(s OfflineSettings) {
 				OneWay:           tags["oneway"] == "yes",
 				Id:               int64(way.ID),
 				HighwayClass:     HighwayClassFromTag(tags["highway"]),
+
+				MaxSpeedConditional:         tags["maxspeed:conditional"],
+				MaxSpeedForwardConditional:  tags["maxspeed:forward:conditional"],
+				MaxSpeedBackwardConditional: tags["maxspeed:backward:conditional"],
 			}
 			index++
 
@@ -259,6 +267,21 @@ func GenerateOffline(s OfflineSettings) {
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetMaxSpeedForward(way.MaxSpeedForward)
 			w.SetMaxSpeedBackward(way.MaxSpeedBackward)
+			err = w.SetMaxSpeedConditional(way.MaxSpeedConditional)
+			if err != nil {
+				slog.Error("could not set way conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
+			err = w.SetMaxSpeedForwardConditional(way.MaxSpeedForwardConditional)
+			if err != nil {
+				slog.Error("could not set way forward conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
+			err = w.SetMaxSpeedBackwardConditional(way.MaxSpeedBackwardConditional)
+			if err != nil {
+				slog.Error("could not set way backward conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
