@@ -30,14 +30,16 @@ func Migrate(version uint64, jsonString []byte) MapdSettings {
 
 func v2(v1Settings V1Settings) MapdSettings {
 	personalitySettings := PersonalitySettings{
-		TargetSpeedJerk:           v1Settings.TargetSpeedJerk,
-		TargetSpeedAccel:          v1Settings.TargetSpeedAccel,
-		TargetSpeedTimeOffset:     v1Settings.TargetSpeedTimeOffset,
-		VisionCurveTargetLatA:     v1Settings.VisionCurveTargetLatA,
-		VisionCurveMinTargetV:     v1Settings.VisionCurveMinTargetV,
-		MapCurveTargetLatA:        v1Settings.MapCurveTargetLatA,
-		SlowDownForNextSpeedLimit: v1Settings.SlowDownForNextSpeedLimit,
-		SpeedUpForNextSpeedLimit:  v1Settings.SpeedUpForNextSpeedLimit,
+		TargetSpeedJerk:                         v1Settings.TargetSpeedJerk,
+		TargetSpeedAccel:                        v1Settings.TargetSpeedAccel,
+		CurveTargetSpeedTimeOffset:              v1Settings.TargetSpeedTimeOffset,
+		SpeedLimitIncreaseTargetSpeedTimeOffset: v1Settings.TargetSpeedTimeOffset,
+		SpeedLimitDecreaseTargetSpeedTimeOffset: v1Settings.TargetSpeedTimeOffset,
+		VisionCurveTargetLatA:                   v1Settings.VisionCurveTargetLatA,
+		VisionCurveMinTargetV:                   v1Settings.VisionCurveMinTargetV,
+		MapCurveTargetLatA:                      v1Settings.MapCurveTargetLatA,
+		SlowDownForNextSpeedLimit:               v1Settings.SlowDownForNextSpeedLimit,
+		SpeedUpForNextSpeedLimit:                v1Settings.SpeedUpForNextSpeedLimit,
 	}
 
 	v2Settings := MapdSettings{

@@ -236,15 +236,44 @@ The target amount of acceleration to use when determining speed change activatio
 | Units        | meters/second^2 |
 | Param Key    | target\_speed\_accel |
 
-### Target Speed Time Offset
-An offset for the time before a target position to reach the target speed (map curve and speed limit)
+### Curve Target Speed Time Offset
+An offset for the time before a target position to reach the target speed (map curve)
+
+| Item         | Description |
+| ------------ | ----------- |
+| MapdIn Type  | setJsonPathFloat |
+| MapdIn Field | float |
+| Units        | seconds |
+| Param Key    | curve\_target\_speed\_time\_offset |
+
+### Speed Limit Increase Target Speed Time Offset
+An offset for the time before a target position to reach the target speed (speed limit, when the upcoming limit is higher than the current one)
+
+| Item         | Description |
+| ------------ | ----------- |
+| MapdIn Type  | setJsonPathFloat |
+| MapdIn Field | float |
+| Units        | seconds |
+| Param Key    | speed\_limit\_increase\_target\_speed\_time\_offset |
+
+### Speed Limit Decrease Target Speed Time Offset
+An offset for the time before a target position to reach the target speed (speed limit, when the upcoming limit is lower than the current one)
+
+| Item         | Description |
+| ------------ | ----------- |
+| MapdIn Type  | setJsonPathFloat |
+| MapdIn Field | float |
+| Units        | seconds |
+| Param Key    | speed\_limit\_decrease\_target\_speed\_time\_offset |
+
+### Target Speed Time Offset (Deprecated)
+Sets Curve Target Speed Time Offset, Speed Limit Increase Target Speed Time Offset, and Speed Limit Decrease Target Speed Time Offset to the same value. Kept for backwards compatibility; new integrations should set the settings above independently.
 
 | Item         | Description |
 | ------------ | ----------- |
 | MapdIn Type  | setTargetSpeedTimeOffset |
 | MapdIn Field | float |
 | Units        | seconds |
-| Param Key    | target\_speed\_time\_offset |
 
 ### Map Curve Target Lateral Acceleration
 An offset for the time before a target position to reach the target speed (map curve and speed limit)

@@ -127,7 +127,7 @@ type Way struct {
 	conditionalSpeedRulesForward  u.Curry[[]ConditionalSpeedRule]
 	conditionalSpeedRulesBackward u.Curry[[]ConditionalSpeedRule]
 
-	id     					 u.Curry[int64]
+	id u.Curry[int64]
 }
 
 func (w *Way) IsForwardFrom(matchNode m.Position) bool {

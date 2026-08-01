@@ -60,7 +60,7 @@ func UpdateCurveSpeed(s *State) {
 		if max_d == 0 {
 			personality := ms.Settings.CurrentPersonality()
 			max_d = m.CalculateJerkLimitedDistanceSimple(s.Car.VEgo, s.Car.AEgo, float32(tv.Velocity), personality.TargetSpeedAccel, personality.TargetSpeedJerk)
-			max_d += personality.TargetSpeedTimeOffset * float32(tv.Velocity)
+			max_d += personality.CurveTargetSpeedTimeOffset * float32(tv.Velocity)
 		}
 
 		if float32(d) < max_d {

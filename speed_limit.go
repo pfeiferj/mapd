@@ -101,7 +101,11 @@ func (s *SpeedLimitState) SuggestNewSpeedLimit(currentWay CurrentWay, car CarSta
 		nextIsLower := s.Limit.Value > s.NextLimit.Value
 		personality := ms.Settings.CurrentPersonality()
 		distanceToReachSpeed := m.CalculateJerkLimitedDistanceSimple(car.VEgo, car.AEgo, offsetNextSpeedLimit, personality.TargetSpeedAccel, personality.TargetSpeedJerk)
-		distanceToReachSpeed += personality.TargetSpeedTimeOffset * (s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset)
+		if nextIsLower {
+			distanceToReachSpeed += personality.SpeedLimitDecreaseTargetSpeedTimeOffset * (s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset)
+		} else {
+			distanceToReachSpeed += personality.SpeedLimitIncreaseTargetSpeedTimeOffset * (s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset)
+		}
 		if s.NextLimit.TriggerDistance > distanceToReachSpeed {
 			distanceToReachSpeed = s.NextLimit.TriggerDistance
 		}

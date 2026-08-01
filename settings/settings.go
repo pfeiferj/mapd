@@ -80,14 +80,16 @@ type Personalities struct {
 }
 
 type PersonalitySettings struct {
-	TargetSpeedJerk           float32 `json:"target_speed_jerk"`
-	TargetSpeedAccel          float32 `json:"target_speed_accel"`
-	TargetSpeedTimeOffset     float32 `json:"target_speed_time_offset"`
-	MapCurveTargetLatA        float32 `json:"map_curve_target_lat_a"`
-	VisionCurveTargetLatA     float32 `json:"vision_curve_target_lat_a"`
-	VisionCurveMinTargetV     float32 `json:"vision_curve_min_target_v"`
-	SlowDownForNextSpeedLimit bool    `json:"slow_down_for_next_speed_limit"`
-	SpeedUpForNextSpeedLimit  bool    `json:"speed_up_for_next_speed_limit"`
+	TargetSpeedJerk                         float32 `json:"target_speed_jerk"`
+	TargetSpeedAccel                        float32 `json:"target_speed_accel"`
+	CurveTargetSpeedTimeOffset              float32 `json:"curve_target_speed_time_offset"`
+	SpeedLimitIncreaseTargetSpeedTimeOffset float32 `json:"speed_limit_increase_target_speed_time_offset"`
+	SpeedLimitDecreaseTargetSpeedTimeOffset float32 `json:"speed_limit_decrease_target_speed_time_offset"`
+	MapCurveTargetLatA                      float32 `json:"map_curve_target_lat_a"`
+	VisionCurveTargetLatA                   float32 `json:"vision_curve_target_lat_a"`
+	VisionCurveMinTargetV                   float32 `json:"vision_curve_min_target_v"`
+	SlowDownForNextSpeedLimit               bool    `json:"slow_down_for_next_speed_limit"`
+	SpeedUpForNextSpeedLimit                bool    `json:"speed_up_for_next_speed_limit"`
 }
 
 type SubscriberSettings struct {
@@ -383,9 +385,15 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Personalities.Relaxed.TargetSpeedAccel = input.Float()
 		s.Personalities.Standard.TargetSpeedAccel = input.Float()
 	case custom.MapdInputType_setTargetSpeedTimeOffset:
-		s.Personalities.Aggressive.TargetSpeedTimeOffset = input.Float()
-		s.Personalities.Relaxed.TargetSpeedTimeOffset = input.Float()
-		s.Personalities.Standard.TargetSpeedTimeOffset = input.Float()
+		s.Personalities.Aggressive.CurveTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Relaxed.CurveTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Standard.CurveTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Aggressive.SpeedLimitIncreaseTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Relaxed.SpeedLimitIncreaseTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Standard.SpeedLimitIncreaseTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Aggressive.SpeedLimitDecreaseTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Relaxed.SpeedLimitDecreaseTargetSpeedTimeOffset = input.Float()
+		s.Personalities.Standard.SpeedLimitDecreaseTargetSpeedTimeOffset = input.Float()
 	case custom.MapdInputType_setDefaultLaneWidth:
 		s.DefaultLaneWidth = input.Float()
 	case custom.MapdInputType_setMapCurveTargetLatA:
