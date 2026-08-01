@@ -8,7 +8,7 @@ dockerx86:
 	docker buildx build --platform linux/amd64 . -t pfeiferj/mapd:latest
 
 release: docker
-	docker run --platform linux/arm64 -v ./build:/build -it pfeiferj/mapd:latest cp mapd /build/mapd
+	docker run --platform linux/arm64 -v ./build:/build pfeiferj/mapd:latest cp mapd /build/mapd
 
 
 format:
