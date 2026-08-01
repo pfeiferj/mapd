@@ -32,26 +32,27 @@ const (
 )
 
 type MapdSettings struct {
-	downloadProgress                 chan DownloadProgress
-	cancelDownload                   chan bool
-	downloadActive                   bool
-	externalSpeedLimit               float32
-	speedLimitAccepted               bool
-	currentPersonality               log.LongitudinalPersonality
-	SettingsVersion                  float32            `json:"settings_version"`
-	VisionCurveSpeedControlEnabled   bool               `json:"vision_curve_speed_control_enabled"`
-	MapCurveSpeedControlEnabled      bool               `json:"map_curve_speed_control_enabled"`
-	SpeedLimitControlEnabled         bool               `json:"speed_limit_control_enabled"`
-	ExternalSpeedLimitControlEnabled bool               `json:"external_speed_limit_control_enabled"`
-	VisionCurveUseEnableSpeed        bool               `json:"vision_curve_use_enable_speed"`
-	SpeedLimitUseEnableSpeed         bool               `json:"speed_limit_use_enable_speed"`
-	MapCurveUseEnableSpeed           bool               `json:"map_curve_use_enable_speed"`
-	EnableSpeed                      float32            `json:"enable_speed"`
-	DefaultLaneWidth                 float32            `json:"default_lane_width"`
-	SubscriberSettings               SubscriberSettings `json:"subscriber"`
-	SpeedLimitSettings               SpeedLimitSettings `json:"speed_limit"`
-	LogSettings                      LogSettings        `json:"logger"`
-	Personalities                    Personalities      `json:"personalities"`
+	downloadProgress                    chan DownloadProgress
+	cancelDownload                      chan bool
+	downloadActive                      bool
+	externalSpeedLimit                  float32
+	speedLimitAccepted                  bool
+	currentPersonality                  log.LongitudinalPersonality
+	SettingsVersion                     float32            `json:"settings_version"`
+	VisionCurveSpeedControlEnabled      bool               `json:"vision_curve_speed_control_enabled"`
+	MapCurveSpeedControlEnabled         bool               `json:"map_curve_speed_control_enabled"`
+	SpeedLimitControlEnabled            bool               `json:"speed_limit_control_enabled"`
+	ExternalSpeedLimitControlEnabled    bool               `json:"external_speed_limit_control_enabled"`
+	ConditionalSpeedLimitControlEnabled bool               `json:"conditional_speed_limit_control_enabled"`
+	VisionCurveUseEnableSpeed           bool               `json:"vision_curve_use_enable_speed"`
+	SpeedLimitUseEnableSpeed            bool               `json:"speed_limit_use_enable_speed"`
+	MapCurveUseEnableSpeed              bool               `json:"map_curve_use_enable_speed"`
+	EnableSpeed                         float32            `json:"enable_speed"`
+	DefaultLaneWidth                    float32            `json:"default_lane_width"`
+	SubscriberSettings                  SubscriberSettings `json:"subscriber"`
+	SpeedLimitSettings                  SpeedLimitSettings `json:"speed_limit"`
+	LogSettings                         LogSettings        `json:"logger"`
+	Personalities                       Personalities      `json:"personalities"`
 }
 
 type SpeedLimitSettings struct {
@@ -357,6 +358,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.VisionCurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitControl:
 		s.SpeedLimitControlEnabled = input.Bool()
+	case custom.MapdInputType_setConditionalSpeedLimitControl:
+		s.ConditionalSpeedLimitControlEnabled = input.Bool()
 	case custom.MapdInputType_setMapCurveSpeedControl:
 		s.MapCurveSpeedControlEnabled = input.Bool()
 	case custom.MapdInputType_setSpeedLimitOffset:

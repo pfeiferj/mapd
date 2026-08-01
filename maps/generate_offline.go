@@ -35,7 +35,13 @@ type TmpWay struct {
 	Lanes            uint8
 	Box              m.Box
 	OneWay           bool
+	HighwayClass     offline.HighwayClass
 	Nodes            []TmpNode
+	Id               int64
+
+	MaxSpeedConditional         string
+	MaxSpeedForwardConditional  string
+	MaxSpeedBackwardConditional string
 }
 
 type Area struct {
@@ -146,6 +152,12 @@ func GenerateOffline(s OfflineSettings) {
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
 				OneWay:           tags["oneway"] == "yes",
+				Id:               int64(way.ID),
+				HighwayClass:     HighwayClassFromTag(tags["highway"]),
+
+				MaxSpeedConditional:         tags["maxspeed:conditional"],
+				MaxSpeedForwardConditional:  tags["maxspeed:forward:conditional"],
+				MaxSpeedBackwardConditional: tags["maxspeed:backward:conditional"],
 			}
 			index++
 
@@ -199,7 +211,7 @@ func GenerateOffline(s OfflineSettings) {
 			continue
 		}
 
-		arena := capnp.MultiSegment([][]byte{})
+		arena := capnp.MultiSegment(nil)
 		msg, seg, err := capnp.NewMessage(arena)
 		if err != nil {
 			slog.Error("could not create capnp arena for offline data", "error", err)
@@ -232,6 +244,7 @@ func GenerateOffline(s OfflineSettings) {
 		rootOffline.SetOverlap(s.Overlap)
 		for i, way := range area.Ways {
 			w := ways.At(i)
+			w.SetId(way.Id)
 			w.SetMinLat(way.Box.MinPos.Lat())
 			w.SetMinLon(way.Box.MinPos.Lon())
 			w.SetMaxLat(way.Box.MaxPos.Lat())
@@ -254,9 +267,25 @@ func GenerateOffline(s OfflineSettings) {
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetMaxSpeedForward(way.MaxSpeedForward)
 			w.SetMaxSpeedBackward(way.MaxSpeedBackward)
+			err = w.SetMaxSpeedConditional(way.MaxSpeedConditional)
+			if err != nil {
+				slog.Error("could not set way conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
+			err = w.SetMaxSpeedForwardConditional(way.MaxSpeedForwardConditional)
+			if err != nil {
+				slog.Error("could not set way forward conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
+			err = w.SetMaxSpeedBackwardConditional(way.MaxSpeedBackwardConditional)
+			if err != nil {
+				slog.Error("could not set way backward conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
+			w.SetHighwayClass(way.HighwayClass)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
 			if err != nil {
 				slog.Error("could not create way nodes", "error", err)

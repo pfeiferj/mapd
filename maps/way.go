@@ -38,6 +38,30 @@ var HIGHWAY_RANK = map[string]int{
 	"living_street":  61,
 }
 
+// OSM highway tag value -> class stored in the offline data
+var HIGHWAY_TAG_TO_CLASS = map[string]offline.HighwayClass{
+	"motorway":       offline.HighwayClass_motorway,
+	"motorway_link":  offline.HighwayClass_motorwayLink,
+	"trunk":          offline.HighwayClass_trunk,
+	"trunk_link":     offline.HighwayClass_trunkLink,
+	"primary":        offline.HighwayClass_primary,
+	"primary_link":   offline.HighwayClass_primaryLink,
+	"secondary":      offline.HighwayClass_secondary,
+	"secondary_link": offline.HighwayClass_secondaryLink,
+	"tertiary":       offline.HighwayClass_tertiary,
+	"tertiary_link":  offline.HighwayClass_tertiaryLink,
+	"unclassified":   offline.HighwayClass_unclassified,
+	"residential":    offline.HighwayClass_residential,
+	"living_street":  offline.HighwayClass_livingStreet,
+}
+
+func HighwayClassFromTag(tag string) offline.HighwayClass {
+	if class, ok := HIGHWAY_TAG_TO_CLASS[tag]; ok {
+		return class
+	}
+	return offline.HighwayClass_unknown
+}
+
 // Road type detection and priorities
 var LANE_COUNT_PRIORITY = map[uint8]int{
 	8: 110, // Major freeway
@@ -85,6 +109,7 @@ type Way struct {
 
 	// values from offline file
 	oneWay           u.Curry[bool]
+	highwayClass     u.Curry[offline.HighwayClass]
 	wayName          u.Curry[string]
 	wayRef           u.Curry[string]
 	maxSpeed         u.Curry[float64]
@@ -95,6 +120,14 @@ type Way struct {
 	hazard           u.Curry[string]
 	maxSpeedForward  u.Curry[float64]
 	maxSpeedBackward u.Curry[float64]
+
+	maxSpeedConditional           u.Curry[string]
+	maxSpeedForwardConditional    u.Curry[string]
+	maxSpeedBackwardConditional   u.Curry[string]
+	conditionalSpeedRulesForward  u.Curry[[]ConditionalSpeedRule]
+	conditionalSpeedRulesBackward u.Curry[[]ConditionalSpeedRule]
+
+	id     					 u.Curry[int64]
 }
 
 func (w *Way) IsForwardFrom(matchNode m.Position) bool {
@@ -140,6 +173,22 @@ func (w *Way) _oneWay() bool {
 
 func (w *Way) OneWay() bool {
 	return w.oneWay.Value(w._oneWay)
+}
+
+func (w *Way) _highwayClass() offline.HighwayClass {
+	return w.Way.HighwayClass()
+}
+
+func (w *Way) HighwayClass() offline.HighwayClass {
+	return w.highwayClass.Value(w._highwayClass)
+}
+
+func (w *Way) _id() int64 {
+	return w.Way.Id()
+}
+
+func (w *Way) Id() int64 {
+	return w.id.Value(w._id)
 }
 
 func (w *Way) _wayName() string {
@@ -188,6 +237,69 @@ func (w *Way) _maxSpeedBackward() float64 {
 
 func (w *Way) MaxSpeedBackward() float64 {
 	return w.maxSpeedBackward.Value(w._maxSpeedBackward)
+}
+
+func (w *Way) _maxSpeedConditional() string {
+	msc, err := w.Way.MaxSpeedConditional()
+	if err != nil {
+		msc = ""
+	}
+	return msc
+}
+
+func (w *Way) MaxSpeedConditional() string {
+	return w.maxSpeedConditional.Value(w._maxSpeedConditional)
+}
+
+func (w *Way) _maxSpeedForwardConditional() string {
+	msc, err := w.Way.MaxSpeedForwardConditional()
+	if err != nil {
+		msc = ""
+	}
+	return msc
+}
+
+func (w *Way) MaxSpeedForwardConditional() string {
+	return w.maxSpeedForwardConditional.Value(w._maxSpeedForwardConditional)
+}
+
+func (w *Way) _maxSpeedBackwardConditional() string {
+	msc, err := w.Way.MaxSpeedBackwardConditional()
+	if err != nil {
+		msc = ""
+	}
+	return msc
+}
+
+func (w *Way) MaxSpeedBackwardConditional() string {
+	return w.maxSpeedBackwardConditional.Value(w._maxSpeedBackwardConditional)
+}
+
+// the raw conditional tag for the direction of travel, falling back to the
+// undirected tag like the directional max speeds do
+func (w *Way) ConditionalMaxSpeedRaw(isForward bool) string {
+	if isForward && w.MaxSpeedForwardConditional() != "" {
+		return w.MaxSpeedForwardConditional()
+	}
+	if !isForward && w.MaxSpeedBackwardConditional() != "" {
+		return w.MaxSpeedBackwardConditional()
+	}
+	return w.MaxSpeedConditional()
+}
+
+func (w *Way) _conditionalSpeedRulesForward() []ConditionalSpeedRule {
+	return ParseConditionalSpeeds(w.ConditionalMaxSpeedRaw(true))
+}
+
+func (w *Way) _conditionalSpeedRulesBackward() []ConditionalSpeedRule {
+	return ParseConditionalSpeeds(w.ConditionalMaxSpeedRaw(false))
+}
+
+func (w *Way) ConditionalSpeedRules(isForward bool) []ConditionalSpeedRule {
+	if isForward {
+		return w.conditionalSpeedRulesForward.Value(w._conditionalSpeedRulesForward)
+	}
+	return w.conditionalSpeedRulesBackward.Value(w._conditionalSpeedRulesBackward)
 }
 
 func (w *Way) _box() m.Box {

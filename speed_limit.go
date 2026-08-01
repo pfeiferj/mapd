@@ -88,7 +88,7 @@ func (s *SpeedLimitState) SpeedLimitFinalSuggestion(enableSpeedActive bool, setS
 }
 
 func (s *SpeedLimitState) SuggestNewSpeedLimit(currentWay CurrentWay, car CarState) float32 {
-	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(currentWay.MaxSpeed()))
+	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed()))
 	if slSuggestedSpeed == 0 && ms.Settings.SpeedLimitSettings.HoldLastSeenSpeedLimit {
 		slSuggestedSpeed = float32(s.Limit.LastValue)
 	}
@@ -97,7 +97,7 @@ func (s *SpeedLimitState) SuggestNewSpeedLimit(currentWay CurrentWay, car CarSta
 	}
 	if s.NextLimit.Value > 0 {
 		offsetNextSpeedLimit := s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset
-		s.Limit.Update(ms.Settings.PrioritySpeedLimit(float32(currentWay.MaxSpeed())))
+		s.Limit.Update(ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed())))
 		nextIsLower := s.Limit.Value > s.NextLimit.Value
 		personality := ms.Settings.CurrentPersonality()
 		distanceToReachSpeed := m.CalculateJerkLimitedDistanceSimple(car.VEgo, car.AEgo, offsetNextSpeedLimit, personality.TargetSpeedAccel, personality.TargetSpeedJerk)
@@ -150,8 +150,14 @@ func checkWayForSpeedLimitChange(state *State, parent *Upcoming[float32], way ma
 	} else if !way.IsForward && way.Way.MaxSpeedBackward() > 0 {
 		nextMaxSpeed = way.Way.MaxSpeedBackward()
 	}
+	if ms.Settings.ConditionalSpeedLimitControlEnabled {
+		rules := way.Way.ConditionalSpeedRules(way.IsForward)
+		if conditional := maps.ConditionalSpeedAt(rules, time.Now()); conditional > 0 {
+			nextMaxSpeed = conditional
+		}
+	}
 
-	if nextMaxSpeed != state.CurrentWay.MaxSpeed() && nextMaxSpeed > 0 {
+	if nextMaxSpeed != state.CurrentWay.EffectiveMaxSpeed() && nextMaxSpeed > 0 {
 		return true, float32(nextMaxSpeed)
 	}
 

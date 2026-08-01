@@ -67,6 +67,8 @@ func (s *State) UpdateCarState(carData car.CarState) {
 
 func (s *State) Send() error {
 	msg, output := s.Publisher.NewMessage(true)
+	id := s.CurrentWay.Way.Id()
+	output.SetWayId(id)
 
 	name := s.CurrentWay.Way.WayName()
 	output.SetWayName(name)
@@ -76,8 +78,10 @@ func (s *State) Send() error {
 
 	output.SetRoadName(s.CurrentWay.Way.Name())
 
-	maxSpeed := s.CurrentWay.MaxSpeed()
+	maxSpeed := s.CurrentWay.EffectiveMaxSpeed()
 	output.SetSpeedLimit(float32(maxSpeed))
+
+	output.SetConditionalSpeedLimit(s.CurrentWay.ConditionalMaxSpeedRaw())
 
 	output.SetSpeedLimitSuggestedSpeed(s.SpeedLimit.Suggestion.Value)
 
@@ -105,6 +109,7 @@ func (s *State) Send() error {
 	output.SetTileLoaded(s.Data.Loaded)
 
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context()))
+	output.SetHighwayClass(custom.HighwayClass(s.CurrentWay.Way.HighwayClass()))
 	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width())
 	output.SetVisionCurveSpeed(s.VisionCurveSpeed)
 	output.SetMapCurveSpeed(s.MapCurveSpeed)

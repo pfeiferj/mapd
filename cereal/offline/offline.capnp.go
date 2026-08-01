@@ -9,18 +9,122 @@ import (
 	math "math"
 )
 
+type HighwayClass uint16
+
+// HighwayClass_TypeID is the unique identifier for the type HighwayClass.
+const HighwayClass_TypeID = 0x8f5a4ce47bf80ffa
+
+// Values of HighwayClass.
+const (
+	HighwayClass_unknown       HighwayClass = 0
+	HighwayClass_motorway      HighwayClass = 1
+	HighwayClass_motorwayLink  HighwayClass = 2
+	HighwayClass_trunk         HighwayClass = 3
+	HighwayClass_trunkLink     HighwayClass = 4
+	HighwayClass_primary       HighwayClass = 5
+	HighwayClass_primaryLink   HighwayClass = 6
+	HighwayClass_secondary     HighwayClass = 7
+	HighwayClass_secondaryLink HighwayClass = 8
+	HighwayClass_tertiary      HighwayClass = 9
+	HighwayClass_tertiaryLink  HighwayClass = 10
+	HighwayClass_unclassified  HighwayClass = 11
+	HighwayClass_residential   HighwayClass = 12
+	HighwayClass_livingStreet  HighwayClass = 13
+)
+
+// String returns the enum's constant name.
+func (c HighwayClass) String() string {
+	switch c {
+	case HighwayClass_unknown:
+		return "unknown"
+	case HighwayClass_motorway:
+		return "motorway"
+	case HighwayClass_motorwayLink:
+		return "motorwayLink"
+	case HighwayClass_trunk:
+		return "trunk"
+	case HighwayClass_trunkLink:
+		return "trunkLink"
+	case HighwayClass_primary:
+		return "primary"
+	case HighwayClass_primaryLink:
+		return "primaryLink"
+	case HighwayClass_secondary:
+		return "secondary"
+	case HighwayClass_secondaryLink:
+		return "secondaryLink"
+	case HighwayClass_tertiary:
+		return "tertiary"
+	case HighwayClass_tertiaryLink:
+		return "tertiaryLink"
+	case HighwayClass_unclassified:
+		return "unclassified"
+	case HighwayClass_residential:
+		return "residential"
+	case HighwayClass_livingStreet:
+		return "livingStreet"
+
+	default:
+		return ""
+	}
+}
+
+// HighwayClassFromString returns the enum value with a name,
+// or the zero value if there's no such value.
+func HighwayClassFromString(c string) HighwayClass {
+	switch c {
+	case "unknown":
+		return HighwayClass_unknown
+	case "motorway":
+		return HighwayClass_motorway
+	case "motorwayLink":
+		return HighwayClass_motorwayLink
+	case "trunk":
+		return HighwayClass_trunk
+	case "trunkLink":
+		return HighwayClass_trunkLink
+	case "primary":
+		return HighwayClass_primary
+	case "primaryLink":
+		return HighwayClass_primaryLink
+	case "secondary":
+		return HighwayClass_secondary
+	case "secondaryLink":
+		return HighwayClass_secondaryLink
+	case "tertiary":
+		return HighwayClass_tertiary
+	case "tertiaryLink":
+		return HighwayClass_tertiaryLink
+	case "unclassified":
+		return HighwayClass_unclassified
+	case "residential":
+		return HighwayClass_residential
+	case "livingStreet":
+		return HighwayClass_livingStreet
+
+	default:
+		return 0
+	}
+}
+
+type HighwayClass_List = capnp.EnumList[HighwayClass]
+
+func NewHighwayClass_List(s *capnp.Segment, sz int32) (HighwayClass_List, error) {
+	return capnp.NewEnumList[HighwayClass](s, sz)
+}
+
 type Way capnp.Struct
 
 // Way_TypeID is the unique identifier for the type Way.
 const Way_TypeID = 0xa4b9c59286b69600
 
 func NewWay(s *capnp.Segment) (Way, error) {
-	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 72, PointerCount: 4})
+	st, err := capnp.NewStruct(s, capnp.ObjectSize{DataSize: 80, PointerCount: 7})
 	return Way(st), err
 }
 
 func NewRootWay(s *capnp.Segment) (Way, error) {
-	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 72, PointerCount: 4})
+	st, err := capnp.NewRootStruct(s, capnp.ObjectSize{DataSize: 80, PointerCount: 7})
 	return Way(st), err
 }
 
@@ -213,12 +317,82 @@ func (s Way) SetMaxSpeedBackward(v float64) {
 	capnp.Struct(s).SetUint64(64, math.Float64bits(v))
 }
 
+func (s Way) Id() int64 {
+	return int64(capnp.Struct(s).Uint64(72))
+}
+
+func (s Way) SetId(v int64) {
+	capnp.Struct(s).SetUint64(72, uint64(v))
+}
+
+func (s Way) HighwayClass() HighwayClass {
+	return HighwayClass(capnp.Struct(s).Uint16(42))
+}
+
+func (s Way) SetHighwayClass(v HighwayClass) {
+	capnp.Struct(s).SetUint16(42, uint16(v))
+}
+
+func (s Way) MaxSpeedConditional() (string, error) {
+	p, err := capnp.Struct(s).Ptr(4)
+	return p.Text(), err
+}
+
+func (s Way) HasMaxSpeedConditional() bool {
+	return capnp.Struct(s).HasPtr(4)
+}
+
+func (s Way) MaxSpeedConditionalBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(4)
+	return p.TextBytes(), err
+}
+
+func (s Way) SetMaxSpeedConditional(v string) error {
+	return capnp.Struct(s).SetText(4, v)
+}
+
+func (s Way) MaxSpeedForwardConditional() (string, error) {
+	p, err := capnp.Struct(s).Ptr(5)
+	return p.Text(), err
+}
+
+func (s Way) HasMaxSpeedForwardConditional() bool {
+	return capnp.Struct(s).HasPtr(5)
+}
+
+func (s Way) MaxSpeedForwardConditionalBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(5)
+	return p.TextBytes(), err
+}
+
+func (s Way) SetMaxSpeedForwardConditional(v string) error {
+	return capnp.Struct(s).SetText(5, v)
+}
+
+func (s Way) MaxSpeedBackwardConditional() (string, error) {
+	p, err := capnp.Struct(s).Ptr(6)
+	return p.Text(), err
+}
+
+func (s Way) HasMaxSpeedBackwardConditional() bool {
+	return capnp.Struct(s).HasPtr(6)
+}
+
+func (s Way) MaxSpeedBackwardConditionalBytes() ([]byte, error) {
+	p, err := capnp.Struct(s).Ptr(6)
+	return p.TextBytes(), err
+}
+
+func (s Way) SetMaxSpeedBackwardConditional(v string) error {
+	return capnp.Struct(s).SetText(6, v)
+}
+
 // Way_List is a list of Way.
 type Way_List = capnp.StructList[Way]
 
 // NewWay creates a new list of Way.
 func NewWay_List(s *capnp.Segment, sz int32) (Way_List, error) {
-	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 72, PointerCount: 4}, sz)
+	l, err := capnp.NewCompositeList(s, capnp.ObjectSize{DataSize: 80, PointerCount: 7}, sz)
 	return capnp.StructList[Way](l), err
 }
 
@@ -437,55 +611,78 @@ func (f Offline_Future) Struct() (Offline, error) {
 	return Offline(p.Struct()), err
 }
 
-const schema_da3a0d9284ca402f = "x\xda\xa4\xd4\xcdk\\U\x18\x06\xf0\xe79\xe7\xceG" +
-	"23\xc6\xe1\\\xd0\x85!\xe0\xaaFj:\xd6\x85\x0c" +
-	"BK\x85\"A\xb0\xc7\xbb\x98\xa5\x1c2wttr" +
-	"\xefpgLf\x04\xb1J\x10\x95\x0am\x88\xd2B\x0b" +
-	"-D\xa8\xa0P\xa1H\x02\x06\xa2DA\xcd\xc6\x9d\xb8" +
-	"\xf2\x1fp\xe3\xce\x85^y\xef0\x1f\x01\x17BW3" +
-	"\xe7\xf7\xbe\xf7\x9c\x97s\x1f\xee\x99\xefx\xde\xabUb" +
-	"\x05e\x1f\xcb\xe5\xd3_.\xbe^\xfe\xa1\xf1\xe46\xec" +
-	"\"U\xbar\xfe\xa7\xad\xedJ\xfd7x\x05\xe0\xec\"" +
-	"Wij,\x00\xe647\xc1\x7f>\xfd\xfa\xfd\xed\xef" +
-	"\xf7w\xed\"\xe7\xa6\xad\xb9\xac\xf7\x1a\xe7i\xeeH\xef" +
-	"\xd9[|D\x83\xe9\xef\x83\x0d\x17\xfc\xf9\xca\xcf\xb2s" +
-	"n\xa6=\xeb\xf9\xc3[\xa6\xf9;{\xf2/\xafA\x9c" +
-	"N\xd7\xc2$t\x9d\x95\xd8k\xb5:\xed(\\\x89G" +
-	"\xbfO\xad\xb9n\xd4\xad?\x1f\xc7I\xb3\x1d\xb9~\xd8" +
-	"\x03.\x91\xb6\xa8=\xc0#P}b\x15\xb0\xa74\xed" +
-	"3\x8aU\xd2\xa7`\xede\xc0\x9e\xd1\xb4\xcf)\xa6\x1d" +
-	"\xd7o\xf7\xdfl\x86\x00X\x82b\x09L;q\xf4\xaa" +
-	" \x18Nl<\x82\xfe\xcf\x11\x1an8:\xfa\xd9\xf1" +
-	"\xd1f\xc8e \xe8S3\xb8\xcc\xe9\xe9\xe6m>\x0e" +
-	"\x04\x03\xf1-*R\xf9T\x80y\x97\xab@pY\xf8" +
-	"\x8a\xb4k\xfa\xd4\x80\xf9\x90u \xd8\x12\xbf*\xee)" +
-	"\x9f\x1e`>\xce\xfc\x03\xf1\x1d\xf1\x9c\xf6\x99\x03\xcc\xb5" +
-	"\xcc\xaf\x88_\x17\xcf{>\xf3\x80\xf9$\xf3\xab\xe27" +
-	"\xc5\x0b\xca\xcf^\xde\x0d>\x0d\x04;\xe2\xf7\xc4\x8b\xa7" +
-	"|\x16\x01\xf3e\xe6w\xc5\xef\x8b\xcf\xe5}\xce\x01\xe6" +
-	"+&@pO\xfc\x1b\xf1y\xeds\x1e0\xfb\xd9\xfe" +
-	"\xf7\xc5\x0f\xa9X+\xbd@\x9f%\xc0\x1cd\x85=)" +
-	"\x1c\xc9\x03\xe5\x82\xcf2`\xbe\xe5{@p(~," +
-	"^)\xfa\xac\x00\xe6G~\x04\x04\xc7\xe2\xbfRq!" +
-	"r\xeb!\xcbP,\x83\x85$l\x8d\xff\xa7\xebn\x10" +
-	"t\xc3\xb09\xf3\xe6\xce\xad\xb7\xa3\x17]\xff\xc42\x8e" +
-	"\xa6K78Qu\x83\x99\xeaR\x147\xc3\x1e\x1f\x02" +
-	"/i\xf2\xe1i\xf8A\xc1\xa5\x8e\x8b\xc2\x1e\xf3P\xcc" +
-	"\x83\xa9kn\xb4{q2\xc4R6\xc3d\xcf\xd7\xdc" +
-	"[.i\x8eg<\x17Ga\xc3\x0dI(rfd" +
-	"^\x8c\x93M\x974\xa7\x91\x9bT.\xb8\xb57\xb2\x12" +
-	"\xfeg\xf4^j\xb5\x16d)\xe9{t\x12\xfc\x1bu" +
-	"\xc0\xeeh\xda\xdb3\xc1\xbf%x]\xd3\xee*V\xd5" +
-	"(x\xd5;\x8275\xed]I\x9d\xceRW\xfdL" +
-	"\xf0\xb6\xa6\xfdB\x91^\x96\xb8\xea\xe7\xcb\x80\xdd\xd5\xb4" +
-	"\x87\x127/\x8b[\xf5\xe0\x02`\xf74\xed\x91z\xa0" +
-	"\xdb_\xd8t\xc3\xe9\xe5\x8f?&\xa3\xab\x7f'\xde\x08" +
-	"\x93\x8e\xeb\x8e{\xff\x0d\x00\x00\xff\xff\xb7\xa9\xf0K"
+const schema_da3a0d9284ca402f = "x\xda\xa4\x95\xcd\x8b\x1cE\x18\xc6\x9f\xb7\xbagz?" +
+	"f\xd3[\xa9\x0eD\xc9\xb2Q\x14bD7_\x07]" +
+	"\"Y\x12\x0d\xc92bz\x1b\xd9D\x0cRn\xf7d" +
+	"{\xa7\xa7z\xec\xe9\xd9\xdd\xf1\x83\x88\xa8\x10\x11\xd4\xa0" +
+	"b B\"\x11\x14<\x8b\x1e\x02\x1e\xfc@\xc5\x83\xd7" +
+	"\x9cD\xfc\x0b<\x89\x07[\xdeN\xe6#\xb8\xe8\xc1\xcb" +
+	"T\xd5\xef}\xea\xad\x97\x9a\xf7\xa9\xde\x97\x88\x05{\xff" +
+	"\xd4w\x02\xc2\xdf]\xa9\x16\x7f\xba\x7f\xbc\xf0[\xfd\xa9" +
+	"\xb7 gD1\xb7\xf0\xc3\xab\x17\xa7\xe6o\x00t\xf0" +
+	"$-\x91:K\x0ep\xf0\x0c-\x13\xa8\xf8\xf9\xf8Z" +
+	"\xed\xdb\xe5\xfb/\xc2\x9f\xa1\x11\xad\xcd\x92\x93b\x91\xd4" +
+	"Y\xe1\x00\xea\x8c\xd8\x00\xfd\xf5\xfe\xe7\xaf_\xfc\xe6\xcb" +
+	"k\xfe\x0cM\x0c\xa5\x15\x87\xb5\xd7\xc5\x04\xa9\x9fX{" +
+	"\xf0{1g\x83\x8a_6\xd7u\xf0\xfb3?r\xe6" +
+	"\xca\x88\xbc<=v\xf6\x92\xea\x95;\xbb\xce2\xe1\x81" +
+	"b%\xca\"\x9d\xcc\xa5v\xa3\x91\xc4&\x9aKo\x8e" +
+	"\x0f\xae\xe8\xb6i\xcf\x9f\x88\xcf\xadn\xe8\xde\xb1Dw" +
+	"\xa8s\x8a\xc8\x7f\x88\x04 \xaf\x1e\x05\x88\xe4\xa5E\x80" +
+	"\x84|o\x0d K\xbes\x00 [^X\x02\xa8\"" +
+	"_cIU\xbe\xf4,@\x8e\xec1\x1c\x93\xdd\x0c\xa0" +
+	"q\xf9\x1c\xef\x9b\x90-\xde7)c\x1ej2b\xe5" +
+	"\x94\xd4k\xc0\xf9\xaei\x9at\xc3\x14\xad4O\xb3\x0d" +
+	"\xdd\x030\x9c\xbb\xf5\xd84g\xf3\xack\x9aE\xf9[" +
+	"\x8f\x0d\xa8y\xbe\x9d\xc5-\x9d\xf5\x8a[c\x1dNl" +
+	"\x9aE'ZIM\xa83Po8\x9f\xedq\x8e\"" +
+	"\x8f\xb2<\xd6Y\x99~0/\xd3\x17]\xb3\x92\xe8N" +
+	"'\x86\xdb\x88\xa3\xb0\xc8\xa2N\x1cF&\x87\x13\xeb\xa4" +
+	"H\xe2\xf5\xd8\x9c\x0br\xb8Y\x14\xe5\xffq\x85\xc7\xd2" +
+	"4\x0bc\xa3\xf3\xa8\x03\xf0\x15\x8eY6`\x13 \xef" +
+	"[\x04\xfc=\x16\xf9\x87\x04I\"\x8f\x18\xee_\x02\xfc" +
+	"}\x16\xf9\x87\x05\x15\x89\xce\xe3\xbc\x1bF\xe0\x9b\x82\xa0" +
+	"IP\x91\xa4\xe6\x1cCP4`\xfd\x12\xac-KX" +
+	"\xe6\x1b\xe4\xa3\xeb\xfd\xa3UE\xec\x05\x96\x84EAM" +
+	"\x0c\x0fW\xe3\xe2n \xb0\x99O\x0bA$<\xfe\xbf" +
+	"\xd5\x94X\x04\x82\x1a\xe3\x9d,\xb7\xc8#\x0bP;\xc4" +
+	"<\x10L3\xdf\xc5\xdc\x16\x1e\xd9\x80\xba\xa3\xe4\x1e\xf3" +
+	"\xdd\xcc+\x96G\x15@\xcd\x94|'\xf3{\x98Wm" +
+	"\x8f\xaa\x80\xba\xab\xe4\xbb\x98\xefa\xee\x08\x8f\xdbU\xdd" +
+	"+\x0e\x00\xc1n\xe6\x87\x99\x8f\xed\xf1h\x0cP\x0f\x97" +
+	"\xfc\x10\xf3\x05\xe6\xe3U\x8f\xc6\x01\xf5\x88\xc8\x80\xe00" +
+	"\xf3\x13\xcc',\x8f&\x00\xf5X\x99\x7f\x81y]\x08" +
+	"\xda?y\x82<\x9a\x04\xd4\xc92\xf0(\x07N\xf1\x86" +
+	"\x9a\xe3Q\x0dP\x8f\x8bW\x80\xa0\xce\xfc4\xf3\xa91" +
+	"\x8f\xa6\x00\xf5\xa4x\x03\x08N3\x0f\x99o\x1b\xf7h" +
+	"\x1b\xa0\xb4\xb8\x13\x08\x9ef\xbe\xca\xdc\xdd\xe1\x91\x0b\xa8" +
+	"H\xac\x01A\xc8\xbc\xcd|\xda\xf6h\x1aP-\xf1\x11" +
+	"\x10\xb4\x99\xbf\xc8\\V<\x92\x80\xea\x89\x1b@\xf02" +
+	"\xf37\x99o\xafz\xb4\x1dP\x17\xc4\xaf@\xf06\xf3" +
+	"\xcbB\x90kt+\xa2\x1a\x04\xd5@N\x165\xfa\xf3" +
+	"\xa2\xa57\x83v\x14\x85#\x0ds\xa4\x15\x9b\xba\xceo" +
+	"[\xa6f\xb8\xd4\x9b\xb7E\xf5\xe6Ht\xd6\xa4a\xd4" +
+	"\xa1m\xa0S\x16\xd1\xf4\xf0\xd9\x021\x9cM\xb4\x89:" +
+	"T\x85\xa0*\xa8\xd0\xe1z\xdcI\xb3\x1ef\xcb\x1a\x06" +
+	"9W\xf5\xf3:\x0b\xfb5\x1eIM\xb4\xac{D\x10" +
+	"D#%\xd3q\xf6w\x16\x0e;}\x109\xaaW\x9a" +
+	"eh\x10\xb3\xe2\x90*\x10T\x01\x15\xab\xb7\x1e)\xb8" +
+	"lYr\x87\xef0\x88\xdc\xd1<\xc7R\x13\xc6y\x9c" +
+	":F'\xff\xb82q\xeb\xfc\xbe\xc8X[\x89\xfa\xa5" +
+	"l\x99\xea\xdfm\xf8D\xa3\xe1\xf2\x92\x9d\xb8s\xf0\x08" +
+	"\\\x9a\x07\xfcw-\xf2\xaf\x8c<\x02\x1f2\xfc\xc0\"" +
+	"\xff\x9a )n\xbaP^ex\xd9\"\xff\x13\xb6\xa0" +
+	"UZP~\xcc\xf0\x8aE\xfeg\x82\xc8.\xed'?" +
+	"\xdd\x0b\xf8\xd7,\xf2\xbfb\xef\xd9\xa5\xf7\xe4\xf5\xa3\x80" +
+	"\xff\x85E\xfe\xd7\xe2\x7f\xb5\x84\xbb\xa1{\xc3\x8e\xe8\x7f" +
+	"\x9bn\xf6\xc3\xf9t=\xca\x12\xdd\xeek\xff\x0e\x00\x00" +
+	"\xff\xff(\xca\x8aM"
 
 func RegisterSchema(reg *schemas.Registry) {
 	reg.Register(&schemas.Schema{
 		String: schema_da3a0d9284ca402f,
 		Nodes: []uint64{
+			0x8f5a4ce47bf80ffa,
 			0x922b57c60c6a46d1,
 			0xa4b9c59286b69600,
 			0xcb5ff253617678e0,

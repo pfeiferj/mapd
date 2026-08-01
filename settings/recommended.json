@@ -4,6 +4,7 @@
   "map_curve_speed_control_enabled": true,
   "speed_limit_control_enabled": true,
   "external_speed_limit_control_enabled": true,
+  "conditional_speed_limit_control_enabled": false,
   "vision_curve_use_enable_speed": false,
   "speed_limit_use_enable_speed": true,
   "map_curve_use_enable_speed": false,

@@ -26,7 +26,14 @@ with a fallback to wayRef when wayName is blank.
 * **speedLimit**: The speed limit from the openstreetmap way that we are
 currently on. It takes into account direction of travel, so if there is forward
 or backwards max speed tag on osm this value will automatically use it based on
-the direction of travel.
+the direction of travel. When conditional speed limit control is enabled and a
+parseable day/time condition from the way's maxspeed:conditional tag currently
+applies, this value reflects the conditional limit instead.
+* **conditionalSpeedLimit**: The raw maxspeed:conditional tag text for the way
+we are currently on (direction of travel taken into account, like speedLimit).
+Always output when the tag is present so forks can evaluate conditions mapd
+does not handle itself (weather, vehicle class, ...). Empty when the way has no
+conditional tag or the loaded map tiles predate this field.
 * **nextSpeedLimit**: The next speed limit change that we see on the predicted path. This value also takes direction of travel into consideration.
 * **nextSpeedLimitDistance**: The approximate distance to the next speed limit
 change that we see on the predicted path.
@@ -55,6 +62,13 @@ whether we were on the current road. Based off of the lanes value multiplied by
 the lane width setting.
 * **roadContext**: freeway, city, unknown. The type of road we decided to use
 for the current road when determining which road we are on.
+* **highwayClass**: The OSM highway tag value of the way we are currently on
+(motorway, motorwayLink, trunk, ..., residential, livingStreet). Unlike
+roadContext this is not inferred, it is the actual classification from
+openstreetmap, so it can for example distinguish a freeway (motorway) from an
+on/off-ramp (motorwayLink). A value of unknown means either the way's highway
+tag was not one of the listed values or the loaded map tiles were generated
+before this field existed and need to be re-downloaded.
 * **distanceFromWayCenter**: Our distance from the center of the road based on
 gps position data and the openstreetmap road path.
 * **visionCurveSpeed**: The suggested speed based off of vision curve
