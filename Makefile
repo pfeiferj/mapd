@@ -5,7 +5,7 @@ docker:
 	docker buildx build --platform linux/arm64 --load . -t pfeiferj/mapd:latest
 
 dockerx86:
-	docker buildx build --platform linux/amd64 . -t pfeiferj/mapd:latest
+	docker buildx build --platform linux/amd64 --load . -t pfeiferj/mapd:latest
 
 release: docker
 	docker run --pull=never --platform linux/arm64 -v ./build:/build pfeiferj/mapd:latest cp mapd /build/mapd
