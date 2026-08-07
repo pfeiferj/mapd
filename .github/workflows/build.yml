@@ -13,6 +13,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Set up Go
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Install test dependencies
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends zlib1g-dev
+
+      - name: Test
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: go test ./...
+
+      - name: Vet
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: go vet ./...
+
       - name: Set up QEMU (arm64 emulation)
         uses: docker/setup-qemu-action@v3
 
