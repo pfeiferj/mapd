@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -89,18 +90,26 @@ func CreateBoundsDir(a Area, s OfflineSettings) error {
 	return errors.Wrap(err, "could not create bounds directory")
 }
 
+const (
+	latitudeAreas  = int(180 / ms.AREA_BOX_DEGREES)
+	longitudeAreas = int(360 / ms.AREA_BOX_DEGREES)
+)
+
+func areaBox(latitudeIndex int, longitudeIndex int) m.Box {
+	minLatitude := -90 + float64(latitudeIndex)*ms.AREA_BOX_DEGREES
+	minLongitude := -180 + float64(longitudeIndex)*ms.AREA_BOX_DEGREES
+	return m.Box{
+		MinPos: m.NewPosition(minLatitude, minLongitude),
+		MaxPos: m.NewPosition(minLatitude+ms.AREA_BOX_DEGREES, minLongitude+ms.AREA_BOX_DEGREES),
+	}
+}
+
 // Generates bounding boxes for storing ways
 func generateAreas() []Area {
-	areas := make([]Area, int((361/ms.AREA_BOX_DEGREES)*(181/ms.AREA_BOX_DEGREES)))
-	index := 0
-	for i := float64(-90); i < 90; i += ms.AREA_BOX_DEGREES {
-		for j := float64(-180); j < 180; j += ms.AREA_BOX_DEGREES {
-			a := &areas[index]
-			a.Box = m.Box{
-				MinPos: m.NewPosition(i, j),
-				MaxPos: m.NewPosition(i+ms.AREA_BOX_DEGREES, j+ms.AREA_BOX_DEGREES),
-			}
-			index += 1
+	areas := make([]Area, latitudeAreas*longitudeAreas)
+	for i := range latitudeAreas {
+		for j := range longitudeAreas {
+			areas[i*longitudeAreas+j].Box = areaBox(i, j)
 		}
 	}
 	return areas
@@ -333,42 +342,42 @@ func GenerateOffline(s OfflineSettings) {
 	slog.Info("Done Generating Offline Map")
 }
 
-var AREAS = generateAreas()
+func areaForPosition(pos m.Position) (Area, bool) {
+	latitude := pos.Lat()
+	longitude := pos.Lon()
+	if math.IsNaN(latitude) || math.IsNaN(longitude) ||
+		latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 {
+		return Area{}, false
+	}
+
+	latitudeIndex := int(math.Ceil(latitude/ms.AREA_BOX_DEGREES)) + latitudeAreas/2 - 1
+	longitudeIndex := int(math.Ceil(longitude/ms.AREA_BOX_DEGREES)) + longitudeAreas/2 - 1
+	if latitudeIndex < 0 {
+		latitudeIndex = 0
+	}
+	if longitudeIndex < 0 {
+		longitudeIndex = 0
+	}
+
+	return Area{Box: areaBox(latitudeIndex, longitudeIndex)}, true
+}
 
 func FindWaysAroundPosition(pos m.Position) (Offline, error) {
-	for _, area := range AREAS {
-		inBox := area.Box.PosInside(pos)
-		if inBox {
-			boundsName := GenerateBoundsFileName(area, DEFAULT_SETTINGS)
-			slog.Info("Loading bounds file", "filename", boundsName)
-			data, err := os.ReadFile(boundsName)
-			o := ReadOffline(data)
-			if !o.Loaded {
-				area := Area{}
-				areas := generateAreas()
-				for _, a := range areas {
-					if a.Box.PosInside(pos) {
-						area = a
-					}
-				}
-				o.box.Set(area.Box)
-			}
-			return o, errors.Wrap(err, "could not read current offline data file")
-		}
+	area, found := areaForPosition(pos)
+	if !found {
+		cBox := utils.Curry[m.Box]{}
+		cBox.Set(area.Box)
+		return Offline{Loaded: false, box: cBox}, nil
 	}
-	area := Area{}
-	areas := generateAreas()
-	for _, a := range areas {
-		if a.Box.PosInside(pos) {
-			area = a
-		}
+
+	boundsName := GenerateBoundsFileName(area, DEFAULT_SETTINGS)
+	slog.Info("Loading bounds file", "filename", boundsName)
+	data, err := os.ReadFile(boundsName)
+	o := ReadOffline(data)
+	if !o.Loaded {
+		o.box.Set(area.Box)
 	}
-	cBox := utils.Curry[m.Box]{}
-	cBox.Set(area.Box)
-	return Offline{
-		Loaded: false,
-		box:    cBox,
-	}, nil
+	return o, errors.Wrap(err, "could not read current offline data file")
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {
