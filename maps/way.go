@@ -140,6 +140,9 @@ func (w *Way) IsForwardFrom(matchNode m.Position) bool {
 	}
 
 	lastNode := nodes[len(nodes)-1]
+	if nodes[0].Equals(lastNode) && lastNode.Equals(matchNode) && w.OneWay() {
+		return true
+	}
 	return !lastNode.Equals(matchNode)
 }
 
