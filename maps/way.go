@@ -779,6 +779,16 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 		return NextWayResult{StartPosition: matchNode}, errors.Wrap(err, "could not check for next ways")
 	}
 
+	legalWays := []Way{}
+	for _, mWay := range matchingWays {
+		isForward := mWay.IsForwardFrom(matchNode)
+		if !isForward && mWay.OneWay() {
+			continue
+		}
+		legalWays = append(legalWays, mWay)
+	}
+	matchingWays = legalWays
+
 	if len(matchingWays) == 0 {
 		return NextWayResult{StartPosition: matchNode}, nil
 	}
@@ -812,11 +822,6 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 		for _, mWay := range matchingWays {
 			mName := mWay.WayName()
 			if mName == name {
-				isForward := mWay.IsForwardFrom(matchNode)
-				if !isForward && mWay.OneWay() {
-					continue
-				}
-
 				if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 					candidates = append(candidates, mWay)
 				}
@@ -842,11 +847,6 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 		for _, mWay := range matchingWays {
 			mRef := mWay.WayRef()
 			if mRef == ref {
-				isForward := mWay.IsForwardFrom(matchNode)
-				if !isForward && mWay.OneWay() {
-					continue
-				}
-
 				if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 					candidates = append(candidates, mWay)
 				}
@@ -879,11 +879,6 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 				}
 			}
 			if hasMatch {
-				isForward := mWay.IsForwardFrom(matchNode)
-				if !isForward && mWay.OneWay() {
-					continue
-				}
-
 				if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 					candidates = append(candidates, mWay)
 				}
@@ -905,10 +900,6 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 
 	validWays := []Way{}
 	for _, mWay := range matchingWays {
-		isForward := mWay.IsForwardFrom(matchNode)
-		if !isForward && mWay.OneWay() {
-			continue
-		}
 		if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 			validWays = append(validWays, mWay)
 		}
