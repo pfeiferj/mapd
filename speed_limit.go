@@ -18,6 +18,7 @@ type SpeedLimitState struct {
 	OverrideSpeed        float32
 	AcceptedLimit        float32
 	NextLimit            Upcoming[float32]
+	NextLimitTarget      float32
 }
 
 func (s *SpeedLimitState) Init() {
