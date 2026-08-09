@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	stdmath "math"
 	"os"
 	"runtime"
 	"strconv"
@@ -106,6 +107,66 @@ func generateAreas() []Area {
 	return areas
 }
 
+func canBucketWay(way TmpWay) bool {
+	return !stdmath.IsNaN(way.Box.MinPos.Lat()) && !stdmath.IsNaN(way.Box.MinPos.Lon()) &&
+		!stdmath.IsNaN(way.Box.MaxPos.Lat()) && !stdmath.IsNaN(way.Box.MaxPos.Lon()) &&
+		!stdmath.IsInf(way.Box.MinPos.Lat(), 0) && !stdmath.IsInf(way.Box.MinPos.Lon(), 0) &&
+		!stdmath.IsInf(way.Box.MaxPos.Lat(), 0) && !stdmath.IsInf(way.Box.MaxPos.Lon(), 0) &&
+		way.Box.MinPos.Lat() <= way.Box.MaxPos.Lat() && way.Box.MinPos.Lon() <= way.Box.MaxPos.Lon()
+}
+
+func bucketWaysByAreaGroup(scannedWays []TmpWay, areas []Area, s OfflineSettings) (map[m.Position][]int, []int, bool) {
+	if s.Overlap < 0 || stdmath.IsNaN(s.Overlap) || stdmath.IsInf(s.Overlap, 0) {
+		return nil, nil, false
+	}
+	for _, way := range scannedWays {
+		if !canBucketWay(way) {
+			return nil, nil, false
+		}
+	}
+
+	selectedBounds := s.Box.Overlap(s.Overlap)
+	groupBoxes := map[m.Position]m.Box{}
+	for _, area := range areas {
+		if !selectedBounds.Contains(area.Box) {
+			continue
+		}
+		groupPos := area.Box.GroupPos()
+		groupBox := m.Box{
+			MinPos: groupPos,
+			MaxPos: m.NewPosition(
+				groupPos.Lat()+float64(ms.GROUP_AREA_BOX_DEGREES),
+				groupPos.Lon()+float64(ms.GROUP_AREA_BOX_DEGREES),
+			),
+		}
+		groupBoxes[groupPos] = groupBox.Overlap(s.Overlap)
+	}
+
+	groupWays := make(map[m.Position][]int, len(groupBoxes))
+	sharedWays := []int{}
+	for wayIndex, way := range scannedWays {
+		var matchedGroup m.Position
+		matched := false
+		shared := false
+		for groupPos, groupBox := range groupBoxes {
+			if way.Box.Overlapping(groupBox) {
+				if matched {
+					shared = true
+					break
+				}
+				matchedGroup = groupPos
+				matched = true
+			}
+		}
+		if shared {
+			sharedWays = append(sharedWays, wayIndex)
+		} else if matched {
+			groupWays[matchedGroup] = append(groupWays[matchedGroup], wayIndex)
+		}
+	}
+	return groupWays, sharedWays, true
+}
+
 func GenerateOffline(s OfflineSettings) {
 	slog.Info("Generating Offline Map")
 	EnsureOfflineMapsDirectories(s)
@@ -199,9 +260,10 @@ func GenerateOffline(s OfflineSettings) {
 		}
 	}
 
+	overlapBox := s.Box.Overlap(s.Overlap)
+	groupWays, sharedWays, bucketed := bucketWaysByAreaGroup(scannedWays, areas, s)
 	slog.Info("Finding Bounds")
 	for _, area := range areas {
-		overlapBox := s.Box.Overlap(s.Overlap)
 		if !overlapBox.Contains(area.Box) {
 			continue
 		}
@@ -223,11 +285,32 @@ func GenerateOffline(s OfflineSettings) {
 			panic("unexpected capnp error, exiting")
 		}
 
-		for _, way := range scannedWays {
-
-			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
-			if overlaps {
-				area.Ways = append(area.Ways, way)
+		areaOverlapBox := area.OverlapBox(s.Overlap)
+		if bucketed {
+			groupCandidates := groupWays[area.Box.GroupPos()]
+			groupIndex := 0
+			sharedIndex := 0
+			for groupIndex < len(groupCandidates) || sharedIndex < len(sharedWays) {
+				wayIndex := 0
+				if sharedIndex >= len(sharedWays) || (groupIndex < len(groupCandidates) && groupCandidates[groupIndex] < sharedWays[sharedIndex]) {
+					wayIndex = groupCandidates[groupIndex]
+					groupIndex++
+				} else {
+					wayIndex = sharedWays[sharedIndex]
+					sharedIndex++
+				}
+				way := scannedWays[wayIndex]
+				overlaps := way.Box.Overlapping(areaOverlapBox)
+				if overlaps {
+					area.Ways = append(area.Ways, way)
+				}
+			}
+		} else {
+			for _, way := range scannedWays {
+				overlaps := way.Box.Overlapping(areaOverlapBox)
+				if overlaps {
+					area.Ways = append(area.Ways, way)
+				}
 			}
 		}
 
