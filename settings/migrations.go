@@ -58,6 +58,7 @@ func v2(v1Settings V1Settings) MapdSettings {
 			ShadowModelV2:             false,
 			ShadowGpsLocation:         false,
 			ShadowGpsLocationExternal: false,
+			ShadowSelfdriveState:      false,
 		},
 		LogSettings: LogSettings{
 			LogLevel:  v1Settings.LogLevel,
