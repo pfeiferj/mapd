@@ -75,7 +75,7 @@ The offset that gets applied to a speed limit to determine a target speed
 | MapdIn Type  | setSpeedLimitOffset |
 | MapdIn Field | float |
 | Units        | meters/second |
-| Param Key    | speed\_limit\_priority |
+| Param Key    | speed\_limit\_offset |
 
 ### Slow Down For Next Speed Limit
 Determines if mapd will try to meet the upcoming speed limit before reaching it when the upcoming speed limit is lower than the current limit
@@ -139,7 +139,7 @@ The amount of time after a speed limit change is detected that accept inputs wil
 | MapdIn Type  | setAcceptSpeedLimitTimeout |
 | MapdIn Field | float |
 | Units        | seconds |
-| Param Key    | adjust\_set\_speed\_to\_accept\_speed\_limit |
+| Param Key    | accept\_speed\_limit\_timeout |
 
 ### Vision Target Lateral Acceleration
 The maximum lateral acceleration used in the Vision Curve Control speed calculations
