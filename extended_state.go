@@ -129,6 +129,7 @@ func (s *ExtendedState) setDownloadProgress(out custom.MapdExtendedOut) {
 		panic(err)
 	}
 	p.SetActive(s.DownloadProgress.Active)
+	p.SetCancelled(s.DownloadProgress.Canceled)
 	p.SetTotalFiles(uint32(s.DownloadProgress.TotalFiles))
 	p.SetDownloadedFiles(uint32(s.DownloadProgress.DownloadedFiles))
 	l, err := p.NewLocations(int32(len(s.DownloadProgress.LocationsToDownload)))
