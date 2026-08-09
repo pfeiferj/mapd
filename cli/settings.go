@@ -235,6 +235,39 @@ var settingsList = []list.Item{
 		value:       func() string { return fmt.Sprintf("%t", ms.Settings.LogSettings.LogSource) },
 	},
 	settingsItem{
+		title: "Subscriber Settings",
+		desc:  "Configure shadow-mode settings for openpilot message subscribers",
+		state: showSubscribersMenu,
+		value: func() string { return "" },
+	},
+	settingsItem{
+		title: "Load Default Settings",
+		desc:  "Loads the default settings",
+		state: defaultSettings,
+		value: func() string { return "" },
+	},
+	settingsItem{
+		title: "Load Recommended Settings",
+		desc:  "Loads the recommended settings",
+		state: recommendedSettings,
+		value: func() string { return "" },
+	},
+	settingsItem{
+		title: "Save Settings",
+		desc:  "Persists any updates to the settings across reboots",
+		state: saveSettings,
+		value: func() string { return "" },
+	},
+	settingsItem{
+		title: "Return to Main Menu",
+		desc:  "Exit settings configuration and return to the initial actions menu",
+		state: settingsExit,
+		value: func() string { return "" },
+	},
+}
+
+var subscribersList = []list.Item{
+	settingsItem{
 		title:       "Shadow Car State",
 		desc:        "Shadow the carState subscriber. Requires restart to take effect. Only enable if all subscriber slots are used and mapd is causing resets of the message queue",
 		MessageType: custom.MapdInputType_setJsonPathBool,
@@ -280,27 +313,9 @@ var settingsList = []list.Item{
 		value:       func() string { return fmt.Sprintf("%t", ms.Settings.SubscriberSettings.ShadowSelfdriveState) },
 	},
 	settingsItem{
-		title: "Load Default Settings",
-		desc:  "Loads the default settings",
-		state: defaultSettings,
-		value: func() string { return "" },
-	},
-	settingsItem{
-		title: "Load Recommended Settings",
-		desc:  "Loads the recommended settings",
-		state: recommendedSettings,
-		value: func() string { return "" },
-	},
-	settingsItem{
-		title: "Save Settings",
-		desc:  "Persists any updates to the settings across reboots",
-		state: saveSettings,
-		value: func() string { return "" },
-	},
-	settingsItem{
-		title: "Return to Main Menu",
-		desc:  "Exit settings configuration and return to the initial actions menu",
-		state: settingsExit,
+		title: "Back to Settings",
+		desc:  "Return to the main settings menu",
+		state: showSettingsMenu,
 		value: func() string { return "" },
 	},
 }
@@ -518,6 +533,7 @@ const (
 	recommendedSettings
 	showPersonalitiesMenu
 	showPersonalitySettings
+	showSubscribersMenu
 )
 
 type settingsItem struct {
@@ -558,6 +574,11 @@ func (m *settingsModel) restoreAfterInput() {
 		m.list.SetItems(getPersonalitySettingsList(m.selectedPersonality))
 		m.list.Title = strings.ToUpper(m.selectedPersonality[:1]) + m.selectedPersonality[1:] + " Personality Settings"
 		m.list.ResetSelected()
+	case showSubscribersMenu:
+		m.state = showSubscribersMenu
+		m.list.SetItems(subscribersList)
+		m.list.Title = "Subscribers"
+		m.list.ResetSelected()
 	default:
 		m.state = showSettingsMenu
 		m.list.SetItems(settingsList)
@@ -569,7 +590,7 @@ func (m *settingsModel) restoreAfterInput() {
 func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		isMenuState := m.state == showSettingsMenu || m.state == showPersonalitiesMenu || m.state == showPersonalitySettings
+		isMenuState := m.state == showSettingsMenu || m.state == showPersonalitiesMenu || m.state == showPersonalitySettings || m.state == showSubscribersMenu
 		if msg.Type == tea.KeyEnter && isMenuState && m.list.FilterState() != list.Filtering {
 			it := m.list.SelectedItem().(settingsItem)
 			m.selectedItem = it
@@ -637,6 +658,10 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				m.selectedPersonality = personality
 				m.list.Title = it.title + " Personality Settings"
 				m.list.SetItems(getPersonalitySettingsList(personality))
+				m.list.ResetSelected()
+			case showSubscribersMenu:
+				m.list.Title = "Subscribers"
+				m.list.SetItems(subscribersList)
 				m.list.ResetSelected()
 			case showSettingsMenu:
 				m.list.Title = "Mapd Settings"
