@@ -206,8 +206,14 @@ func GenerateOffline(s OfflineSettings) {
 			continue
 		}
 
-		haveWays := overlapBox.Overlapping(area.Box)
-		if !haveWays && !s.GenerateEmptyFiles {
+		for _, way := range scannedWays {
+
+			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
+			if overlaps {
+				area.Ways = append(area.Ways, way)
+			}
+		}
+		if len(area.Ways) == 0 && !s.GenerateEmptyFiles {
 			continue
 		}
 
@@ -221,14 +227,6 @@ func GenerateOffline(s OfflineSettings) {
 		if err != nil {
 			slog.Error("could not create capnp root for offline data", "error", err)
 			panic("unexpected capnp error, exiting")
-		}
-
-		for _, way := range scannedWays {
-
-			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
-			if overlaps {
-				area.Ways = append(area.Ways, way)
-			}
 		}
 
 		slog.Info("Writing Area")
