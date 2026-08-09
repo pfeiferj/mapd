@@ -317,7 +317,9 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 		s.Default()
 		s.Load()
 	case custom.MapdInputType_saveSettings:
-		go s.Save()
+		s.SettingsVersion = SETTINGS_VERSION
+		settingsSnapshot := *s
+		go settingsSnapshot.Save()
 	case custom.MapdInputType_loadPersistentSettings:
 		s.Load()
 	case custom.MapdInputType_loadDefaultSettings:
