@@ -281,7 +281,8 @@ func countFilesForBounds(bounds Bounds) int {
 func getDataForPath(path string) LocationData {
 	parts := strings.Split(path, ".")
 	if len(parts) < 2 {
-		panic("invalid download path")
+		slog.Warn("ignoring invalid download path", "path", path)
+		return LocationData{}
 	}
 	menu := GetDownloadMenu()
 	box := menu[parts[0]][parts[1]]
