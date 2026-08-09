@@ -97,6 +97,23 @@ func (m outputModel) View() string {
 			}
 			grid[idx] = '#'
 		}
+		position, err := m.extendedOutput.Position()
+		if err == nil {
+			y := (position.Latitude() - minLat) / latRange
+			x := (lonRange - (position.Longitude() - minLon)) / lonRange
+			if latRange > lonRange {
+				x /= aspect
+			} else {
+				y /= aspect
+			}
+			idx := int(math.Floor(x*float64(gWidth)) + (math.Floor(y*float64(gHeight-1)) * (float64(gWidth) + 1)))
+			if idx%(gWidth+1) == 0 {
+				idx += 1
+			}
+			if idx < len(grid) {
+				grid[idx] = 'X'
+			}
+		}
 	}
 
 	roadname, _ := m.output.RoadName()

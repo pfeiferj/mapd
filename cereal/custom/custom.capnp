@@ -84,10 +84,16 @@ struct MapdPathPoint @0xd6f78acca1bc3939 {
   targetVelocity @3 :Float32;
 }
 
+struct MapdPosition @0xde9705979aca8339 {
+  latitude @0 :Float64;
+  longitude @1 :Float64;
+}
+
 struct MapdExtendedOut @0xa30662f84033036c {
   downloadProgress @0 :MapdDownloadProgress;
   settings @1 :Text;
   path @2 :List(MapdPathPoint);
+  position @3 :MapdPosition;
 }
 
 enum MapdInputType {

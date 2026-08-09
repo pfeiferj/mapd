@@ -124,3 +124,8 @@ velocities and calculated curvatures.
 * targetVelocity: The velocity mapd has calculated will reach the target lateral
   acceleration at the point on the path.
 
+### position
+The current position mapd is using.
+* latitude: latitude of the position.
+* longitude: longitude of the position.
+
