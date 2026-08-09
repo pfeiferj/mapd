@@ -11,6 +11,7 @@ import (
 const (
 	gpsLocationExternalTimeout = time.Second
 	gpsLocationTimeout         = 10 * time.Second
+	gpsExternalPromotionDelay  = 2 * time.Second
 )
 
 type gpsSource uint8
@@ -47,6 +48,7 @@ type GpsSub struct {
 	gpsLocationExternalSample gpsSample
 	now                       func() time.Time
 	source                    gpsSource
+	externalHealthySince      time.Time
 }
 
 func (s *GpsSub) Read() (locationData log.GpsLocationData, success bool) {
@@ -61,15 +63,9 @@ func (s *GpsSub) Read() (locationData log.GpsLocationData, success bool) {
 	}
 
 	now := s.nowTime()
-	source := gpsSourceNone
-	if s.gpsLocationExternalSample.Healthy(now, gpsLocationExternalTimeout) {
-		source = gpsSourceExternal
-	} else if s.gpsLocationSample.Healthy(now, gpsLocationTimeout) {
-		source = gpsSourceInternal
-	}
+	source := s.selectSource(now)
 
-	sourceChanged := source != s.source
-	if sourceChanged {
+	if source != s.source {
 		s.source = source
 		if source == gpsSourceExternal {
 			slog.Info("Switching to external GPS provider")
@@ -80,15 +76,34 @@ func (s *GpsSub) Read() (locationData log.GpsLocationData, success bool) {
 
 	switch source {
 	case gpsSourceExternal:
-		if externalUpdated && s.gpsLocationExternalSample.usable || sourceChanged {
+		if externalUpdated && s.gpsLocationExternalSample.usable {
 			return s.gpsLocationExternalSample.data, true
 		}
 	case gpsSourceInternal:
-		if internalUpdated && s.gpsLocationSample.usable || sourceChanged {
+		if internalUpdated && s.gpsLocationSample.usable {
 			return s.gpsLocationSample.data, true
 		}
 	}
 	return locationData, false
+}
+
+func (s *GpsSub) selectSource(now time.Time) gpsSource {
+	externalHealthy := s.gpsLocationExternalSample.Healthy(now, gpsLocationExternalTimeout)
+	internalHealthy := s.gpsLocationSample.Healthy(now, gpsLocationTimeout)
+	if externalHealthy {
+		if s.externalHealthySince.IsZero() {
+			s.externalHealthySince = now
+		}
+	} else {
+		s.externalHealthySince = time.Time{}
+	}
+	if externalHealthy && (s.source == gpsSourceExternal || !internalHealthy || now.Sub(s.externalHealthySince) >= gpsExternalPromotionDelay) {
+		return gpsSourceExternal
+	}
+	if internalHealthy {
+		return gpsSourceInternal
+	}
+	return gpsSourceNone
 }
 
 func (s *GpsSub) Fresh(now time.Time) bool {

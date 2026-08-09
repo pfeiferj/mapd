@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	mapLoadRetryDelay = time.Second
-	carStateTimeout   = 100 * time.Millisecond
-	modelV2Timeout    = 500 * time.Millisecond
+	mapLoadRetryDelay    = time.Second
+	carStateTimeout      = 100 * time.Millisecond
+	carStateStaleTimeout = 500 * time.Millisecond
+	modelV2Timeout       = 500 * time.Millisecond
 )
 
 func main() {
@@ -64,15 +65,14 @@ func main() {
 		now := time.Now()
 		carStatus := car.Status()
 		modelStatus := model.Status()
-		carHealthy := carStatus.Healthy(now, carStateTimeout)
+		state.CarValid = carStatus.Healthy(now, carStateStaleTimeout)
 		state.GpsValid = gps.Fresh(now)
 		state.ModelValid = modelStatus.Healthy(now, modelV2Timeout)
-		outputValid := carHealthy && state.GpsValid && state.MapValid && state.RouteValid
-		if ms.Settings.VisionCurveSpeedControlEnabled {
-			outputValid = outputValid && state.ModelValid
+		if !state.GpsValid && state.RouteValid {
+			state.ClearRoute()
 		}
 
-		err := state.Send(outputValid) // send beginning of each loop to ensure it happens at the correct rate
+		err := state.Send(state.CarValid) // send beginning of each loop to ensure it happens at the correct rate
 		if err != nil {
 			slog.Error("Failed to send update", "error", err)
 		}
@@ -121,29 +121,31 @@ func main() {
 
 		location, gpsSuccess := gps.Read()
 		if gpsSuccess {
-			state.RouteValid = false
 			state.DistanceSinceLastPosition = 0
 			state.Position = m.PosFromLocation(location)
 			pos := m.PosFromLocation(location)
 			box := state.Data.Box()
 			mapLoadTime := time.Now()
 			if !box.PosInside(pos) || (!state.Data.Loaded && mapLoadTime.Sub(lastMapLoadAttempt) >= mapLoadRetryDelay) {
-				state.MapValid = false
 				state.Data, err = maps.FindWaysAroundPosition(pos)
 				lastMapLoadAttempt = mapLoadTime
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
+					state.MapValid = false
+					state.ClearRoute()
 					continue
 				}
-				if !state.Data.Loaded {
-					continue
-				}
-				state.MapValid = true
+			}
+			state.MapValid = state.Data.Loaded
+			if !state.MapValid {
+				state.ClearRoute()
+				continue
 			}
 
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, &state.Data, location)
 			if err != nil {
 				slog.Debug("could not get current way", "error", err)
+				state.ClearRoute()
 				continue
 			}
 			state.RouteValid = true

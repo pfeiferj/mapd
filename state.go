@@ -17,6 +17,7 @@ type State struct {
 	SpeedLimit                SpeedLimitState
 	NextWays                  []maps.NextWayResult
 	Position                  m.Position
+	CarValid                  bool
 	GpsValid                  bool
 	MapValid                  bool
 	ModelValid                bool
@@ -58,6 +59,22 @@ func (s *State) SuggestedSpeed() float32 {
 		suggestedSpeed = 0
 	}
 	return suggestedSpeed
+}
+
+func (s *State) RouteUsable() bool {
+	return s.GpsValid && s.MapValid && s.RouteValid
+}
+
+func (s *State) ClearRoute() {
+	s.RouteValid = false
+	s.CurrentWay = CurrentWay{}
+	s.NextWays = nil
+	s.Curvatures = nil
+	s.TargetVelocities = nil
+	s.MapCurveSpeed = 0
+	s.SpeedLimit.NextLimit.Reset()
+	s.NextAdvisorySpeed.Reset()
+	s.NextHazard.Reset()
 }
 
 func (s *State) UpdateCarState(carData car.CarState) {

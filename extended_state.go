@@ -41,7 +41,7 @@ func (s *ExtendedState) setPosition(out custom.MapdExtendedOut) {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
-	if !s.state.GpsValid || !s.state.MapValid || !s.state.RouteValid {
+	if !s.state.RouteUsable() {
 		_, err := out.NewPath(0)
 		if err != nil {
 			slog.Warn("failed to create path in extended state")
