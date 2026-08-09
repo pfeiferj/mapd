@@ -34,7 +34,7 @@ func calcVisionCurveSpeed(model log.ModelDataV2, state *State) float32 {
 	}
 
 	for i := range zOrientRate.Len() {
-		predictedLatAccels[i] = zOrientRate.At(i) * xVelocity.At(i)
+		predictedLatAccels[i] = float32(math.Abs(float64(zOrientRate.At(i) * xVelocity.At(i))))
 		if predictedLatAccels[i] > maxLatA {
 			maxLatA = predictedLatAccels[i]
 		}
