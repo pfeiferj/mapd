@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	stdmath "math"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -108,15 +108,15 @@ func generateAreas() []Area {
 }
 
 func canBucketWay(way TmpWay) bool {
-	return !stdmath.IsNaN(way.Box.MinPos.Lat()) && !stdmath.IsNaN(way.Box.MinPos.Lon()) &&
-		!stdmath.IsNaN(way.Box.MaxPos.Lat()) && !stdmath.IsNaN(way.Box.MaxPos.Lon()) &&
-		!stdmath.IsInf(way.Box.MinPos.Lat(), 0) && !stdmath.IsInf(way.Box.MinPos.Lon(), 0) &&
-		!stdmath.IsInf(way.Box.MaxPos.Lat(), 0) && !stdmath.IsInf(way.Box.MaxPos.Lon(), 0) &&
+	return !math.IsNaN(way.Box.MinPos.Lat()) && !math.IsNaN(way.Box.MinPos.Lon()) &&
+		!math.IsNaN(way.Box.MaxPos.Lat()) && !math.IsNaN(way.Box.MaxPos.Lon()) &&
+		!math.IsInf(way.Box.MinPos.Lat(), 0) && !math.IsInf(way.Box.MinPos.Lon(), 0) &&
+		!math.IsInf(way.Box.MaxPos.Lat(), 0) && !math.IsInf(way.Box.MaxPos.Lon(), 0) &&
 		way.Box.MinPos.Lat() <= way.Box.MaxPos.Lat() && way.Box.MinPos.Lon() <= way.Box.MaxPos.Lon()
 }
 
 func bucketWaysByAreaGroup(scannedWays []TmpWay, areas []Area, s OfflineSettings) (map[m.Position][]int, []int, bool) {
-	if s.Overlap < 0 || stdmath.IsNaN(s.Overlap) || stdmath.IsInf(s.Overlap, 0) {
+	if s.Overlap < 0 || math.IsNaN(s.Overlap) || math.IsInf(s.Overlap, 0) {
 		return nil, nil, false
 	}
 	for _, way := range scannedWays {
