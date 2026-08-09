@@ -12,6 +12,23 @@ import (
 	ms "pfeifer.dev/mapd/settings"
 )
 
+const mapLoadRetryDelay = time.Second
+
+type mapLoadRetryState struct {
+	lastAttempt time.Time
+}
+
+func (s *mapLoadRetryState) shouldAttempt(loaded bool, box m.Box, position m.Position, now time.Time) bool {
+	if !box.PosInside(position) {
+		return true
+	}
+	return !loaded && now.Sub(s.lastAttempt) >= mapLoadRetryDelay
+}
+
+func (s *mapLoadRetryState) recordAttempt(now time.Time) {
+	s.lastAttempt = now
+}
+
 func main() {
 	ms.Settings.Default() // set defaults so settings not already in param are defaulted
 	settingsLoaded := ms.Settings.Load() // try loading settings before cli
@@ -24,6 +41,7 @@ func main() {
 
 	state := State{}
 	state.Init()
+	mapLoadRetry := mapLoadRetryState{}
 
 	extendedState := ExtendedState{
 		Pub:   cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
@@ -92,14 +110,18 @@ func main() {
 		if gpsSuccess {
 			state.DistanceSinceLastPosition = 0
 			state.Position = m.PosFromLocation(location)
-			box := state.Data.Box()
 			pos := m.PosFromLocation(location)
-			if len(state.Data.Ways()) == 0 || !box.PosInside(pos) {
+			mapLoadTime := time.Now()
+			if mapLoadRetry.shouldAttempt(state.Data.Loaded, state.Data.Box(), pos, mapLoadTime) {
 				state.Data, err = maps.FindWaysAroundPosition(pos)
+				mapLoadRetry.recordAttempt(mapLoadTime)
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 					continue
 				}
+			}
+			if !state.Data.Loaded {
+				continue
 			}
 
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, &state.Data, location)
