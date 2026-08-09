@@ -41,9 +41,10 @@ func calcVisionCurveSpeed(model log.ModelDataV2, state *State) float32 {
 	}
 
 	maxCurve := maxLatA / (vEgo * vEgo)
-	vTarget := float32(math.Sqrt(float64(ms.Settings.VisionCurveTargetLatA / maxCurve)))
-	if vTarget < ms.Settings.VisionCurveMinTargetV {
-		vTarget = ms.Settings.VisionCurveMinTargetV
+	personality := ms.Settings.CurrentPersonality()
+	vTarget := float32(math.Sqrt(float64(personality.VisionCurveTargetLatA / maxCurve)))
+	if vTarget < personality.VisionCurveMinTargetV {
+		vTarget = personality.VisionCurveMinTargetV
 	}
 
 	if vTarget < 0 {

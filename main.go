@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	ms.Settings.Default() // set defaults so settings not already in param are defaulted
+	ms.Settings.Default()                // set defaults so settings not already in param are defaulted
 	settingsLoaded := ms.Settings.Load() // try loading settings before cli
 
 	cli.Handle()
@@ -44,12 +44,14 @@ func main() {
 	gps := cereal.GetGpsSub()
 	defer gps.Close()
 
-	// shadow carState as stock openpilot uses nearly every subscriber slot
-	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, true)
+	car := cereal.NewSubscriber("carState", cereal.CarStateReader, true, ms.Settings.SubscriberSettings.ShadowCarState)
 	defer car.Sub.Msgq.Close()
 
-	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, false)
+	model := cereal.NewSubscriber("modelV2", cereal.ModelV2Reader, true, ms.Settings.SubscriberSettings.ShadowModelV2)
 	defer model.Sub.Msgq.Close()
+
+	selfdriveState := cereal.NewSubscriber("selfdriveState", cereal.SelfdriveStateReader, true, ms.Settings.SubscriberSettings.ShadowSelfdriveState)
+	defer selfdriveState.Sub.Msgq.Close()
 
 	for {
 		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
@@ -86,6 +88,11 @@ func main() {
 		modelData, modelSuccess := model.Read()
 		if modelSuccess {
 			state.VisionCurveSpeed = calcVisionCurveSpeed(modelData, &state)
+		}
+
+		selfdriveData, selfdriveSuccess := selfdriveState.Read()
+		if selfdriveSuccess {
+			ms.Settings.SetPersonality(selfdriveData.Personality())
 		}
 
 		location, gpsSuccess := gps.Read()
