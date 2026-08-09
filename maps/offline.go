@@ -20,9 +20,14 @@ func ReadOffline(data []uint8) Offline {
 		offlineMaps, err := offline.ReadRootOffline(msg)
 		if err != nil {
 			slog.Warn("could not read offline message", "error", err)
+			return Offline{Loaded: false}
+		}
+		if !offlineMaps.IsValid() {
+			slog.Warn("could not read offline message", "reason", "root is not a struct")
+			return Offline{Loaded: false}
 		}
 		// allow us to read as much as we want
-		offlineMaps.Message().ResetReadLimit(math.MaxUint64)
+		msg.ResetReadLimit(math.MaxUint64)
 		return Offline{offline: offlineMaps, Loaded: true}
 	}
 	return Offline{Loaded: false}
