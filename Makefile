@@ -1,5 +1,5 @@
 build: capnp go-deps
-	go build -ldflags="-extldflags=-static -s -w" -o build/mapd
+	go build -tags "netgo osusergo" -ldflags="-extldflags=-static -s -w" -o build/mapd
 
 docker:
 	docker buildx build --platform linux/arm64 . -t pfeiferj/mapd:latest
