@@ -41,6 +41,14 @@ func (s *ExtendedState) setPosition(out custom.MapdExtendedOut) {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
+	if !s.state.GpsValid || !s.state.MapValid || !s.state.RouteValid {
+		_, err := out.NewPath(0)
+		if err != nil {
+			slog.Warn("failed to create path in extended state")
+		}
+		return
+	}
+
 	nodes := s.state.CurrentWay.Way.Nodes()
 	num_points := len(nodes)
 	all_nodes := [][]m.Position{nodes}

@@ -12,7 +12,11 @@ import (
 	ms "pfeifer.dev/mapd/settings"
 )
 
-const mapLoadRetryDelay = time.Second
+const (
+	mapLoadRetryDelay = time.Second
+	carStateTimeout   = 100 * time.Millisecond
+	modelV2Timeout    = 500 * time.Millisecond
+)
 
 func main() {
 	ms.Settings.Default()                // set defaults so settings not already in param are defaulted
@@ -57,7 +61,18 @@ func main() {
 	defer selfdriveState.Sub.Msgq.Close()
 
 	for {
-		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
+		now := time.Now()
+		carStatus := car.Status()
+		modelStatus := model.Status()
+		carHealthy := carStatus.Healthy(now, carStateTimeout)
+		state.GpsValid = gps.Fresh(now)
+		state.ModelValid = modelStatus.Healthy(now, modelV2Timeout)
+		outputValid := carHealthy && state.GpsValid && state.MapValid && state.RouteValid
+		if ms.Settings.VisionCurveSpeedControlEnabled {
+			outputValid = outputValid && state.ModelValid
+		}
+
+		err := state.Send(outputValid) // send beginning of each loop to ensure it happens at the correct rate
 		if err != nil {
 			slog.Error("Failed to send update", "error", err)
 		}
@@ -83,13 +98,19 @@ func main() {
 		}
 
 		carData, carStateSuccess := car.Read()
-		if carStateSuccess {
+		if carStateSuccess && car.Status().EventValid {
+			if !carStatus.Healthy(car.Status().ReceivedAt, carStateTimeout) {
+				state.Car.UpdateTime.Rebase()
+			}
 			state.UpdateCarState(carData)
 			UpdateCurveSpeed(&state)
 		}
 
 		modelData, modelSuccess := model.Read()
-		if modelSuccess {
+		if modelSuccess && model.Status().EventValid {
+			if !modelStatus.Healthy(model.Status().ReceivedAt, modelV2Timeout) {
+				state.VisionCurveMA.Reset()
+			}
 			state.VisionCurveSpeed = calcVisionCurveSpeed(modelData, &state)
 		}
 
@@ -100,35 +121,51 @@ func main() {
 
 		location, gpsSuccess := gps.Read()
 		if gpsSuccess {
+			state.RouteValid = false
 			state.DistanceSinceLastPosition = 0
 			state.Position = m.PosFromLocation(location)
 			pos := m.PosFromLocation(location)
 			box := state.Data.Box()
 			mapLoadTime := time.Now()
 			if !box.PosInside(pos) || (!state.Data.Loaded && mapLoadTime.Sub(lastMapLoadAttempt) >= mapLoadRetryDelay) {
+				state.MapValid = false
 				state.Data, err = maps.FindWaysAroundPosition(pos)
 				lastMapLoadAttempt = mapLoadTime
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 					continue
 				}
+				if !state.Data.Loaded {
+					continue
+				}
+				state.MapValid = true
 			}
 
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, &state.Data, location)
 			if err != nil {
 				slog.Debug("could not get current way", "error", err)
+				continue
 			}
+			state.RouteValid = true
 
 			state.NextWays, err = NextWays(location, state.CurrentWay, &state.Data, state.CurrentWay.OnWay.IsForward)
 			if err != nil {
 				slog.Debug("could not get next way", "error", err)
+				state.NextWays = nil
+				state.SpeedLimit.NextLimit.Reset()
+				state.NextAdvisorySpeed.Reset()
+				state.NextHazard.Reset()
 			}
 
 			state.Curvatures, err = GetStateCurvatures(&state)
 			if err != nil {
 				slog.Debug("could not get curvatures from current state", "error", err)
+				state.Curvatures = nil
+				state.TargetVelocities = nil
+				state.MapCurveSpeed = 0
+			} else {
+				state.TargetVelocities = GetTargetVelocities(state.Curvatures, state.TargetVelocities)
 			}
-			state.TargetVelocities = GetTargetVelocities(state.Curvatures, state.TargetVelocities)
 		}
 
 		// send at beginning of next loop

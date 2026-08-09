@@ -17,6 +17,10 @@ type State struct {
 	SpeedLimit                SpeedLimitState
 	NextWays                  []maps.NextWayResult
 	Position                  m.Position
+	GpsValid                  bool
+	MapValid                  bool
+	ModelValid                bool
+	RouteValid                bool
 	Curvatures                []m.Curvature
 	TargetVelocities          []Velocity
 	DistanceSinceLastPosition float32
@@ -44,7 +48,7 @@ func (s *State) SuggestedSpeed() float32 {
 			suggestedSpeed = slSuggestedSpeed
 		}
 	}
-	if ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.Car.EnableSpeedActive) {
+	if s.ModelValid && ms.Settings.VisionCurveSpeedControlEnabled && s.VisionCurveSpeed > 0 && (s.VisionCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.VisionCurveUseEnableSpeed || s.Car.EnableSpeedActive) {
 		suggestedSpeed = s.VisionCurveSpeed
 	}
 	if ms.Settings.MapCurveSpeedControlEnabled && s.MapCurveSpeed > 0 && (s.MapCurveSpeed < suggestedSpeed || suggestedSpeed == 0) && (!ms.Settings.MapCurveUseEnableSpeed || s.Car.EnableSpeedActive) {
@@ -65,8 +69,12 @@ func (s *State) UpdateCarState(carData car.CarState) {
 	s.SpeedLimit.Update(s.CurrentWay, s.Car)
 }
 
-func (s *State) Send() error {
-	msg, output := s.Publisher.NewMessage(true)
+func (s *State) Send(valid bool) error {
+	msg, output := s.Publisher.NewMessage(valid)
+	if !valid {
+		return s.Publisher.Send(msg)
+	}
+
 	id := s.CurrentWay.Way.Id()
 	output.SetWayId(id)
 
@@ -111,7 +119,9 @@ func (s *State) Send() error {
 	output.SetRoadContext(custom.RoadContext(s.CurrentWay.Way.Context()))
 	output.SetHighwayClass(custom.HighwayClass(s.CurrentWay.Way.HighwayClass()))
 	output.SetEstimatedRoadWidth(s.CurrentWay.Way.Width())
-	output.SetVisionCurveSpeed(s.VisionCurveSpeed)
+	if s.ModelValid {
+		output.SetVisionCurveSpeed(s.VisionCurveSpeed)
+	}
 	output.SetMapCurveSpeed(s.MapCurveSpeed)
 
 	output.SetSuggestedSpeed(s.SuggestedSpeed())
