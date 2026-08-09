@@ -147,41 +147,15 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 	}
 }
 
-type archiveFile interface {
-	io.Writer
-	Sync() error
-	Close() error
-}
-
-type archiveInstallOps struct {
-	mkdirTemp func(string, string) (string, error)
-	mkdirAll  func(string, os.FileMode) error
-	openFile  func(string, int, os.FileMode) (archiveFile, error)
-	rename    func(string, string) error
-	removeAll func(string) error
-	stat      func(string) (os.FileInfo, error)
-}
-
-var defaultArchiveInstallOps = archiveInstallOps{
-	mkdirTemp: os.MkdirTemp,
-	mkdirAll:  os.MkdirAll,
-	openFile: func(name string, flag int, perm os.FileMode) (archiveFile, error) {
-		return os.OpenFile(name, flag, perm)
-	},
-	rename:    os.Rename,
-	removeAll: os.RemoveAll,
-	stat:      os.Stat,
-}
-
 func cleanArchivePath(name string) (string, error) {
 	clean := filepath.Clean(name)
-	if name == "" || clean == "." || filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+	if clean == "." || filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
 		return "", errors.Errorf("invalid archive path: %q", name)
 	}
 	return clean, nil
 }
 
-func writeArchiveFile(file archiveFile, reader io.Reader, expectedSize int64) error {
+func writeArchiveFile(file *os.File, reader io.Reader, expectedSize int64) error {
 	written, err := io.Copy(file, reader)
 	if err != nil {
 		file.Close()
@@ -201,7 +175,7 @@ func writeArchiveFile(file archiveFile, reader io.Reader, expectedSize int64) er
 	return nil
 }
 
-func extractArchiveToStage(archivePath string, stageRoot string, expectedRoot string, ops archiveInstallOps) error {
+func extractArchiveToStage(archivePath string, stageRoot string, expectedRoot string) error {
 	file, err := os.Open(archivePath)
 	if err != nil {
 		return errors.Wrap(err, "could not open downloaded file")
@@ -250,21 +224,21 @@ func extractArchiveToStage(archivePath string, stageRoot string, expectedRoot st
 
 		// if its a dir and it doesn't exist create it
 		case tar.TypeDir:
-			if _, err := ops.stat(target); err != nil {
+			if _, err := os.Stat(target); err != nil {
 				if !os.IsNotExist(err) {
 					return errors.Wrap(err, "could not inspect staged archive directory")
 				}
-				if err := ops.mkdirAll(target, os.FileMode(header.Mode).Perm()); err != nil {
+				if err := os.MkdirAll(target, 0o755); err != nil {
 					return errors.Wrap(err, "could not create staged archive directory")
 				}
 			}
 
 		// if it's a file create it
-		case tar.TypeReg, tar.TypeRegA:
-			if err := ops.mkdirAll(filepath.Dir(target), 0o755); err != nil {
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return errors.Wrap(err, "could not create staged archive parent directory")
 			}
-			stagedFile, err := ops.openFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(header.Mode).Perm())
+			stagedFile, err := os.OpenFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(header.Mode).Perm())
 			if err != nil {
 				return errors.Wrap(err, "could not open staged archive file")
 			}
@@ -286,9 +260,9 @@ func extractArchiveToStage(archivePath string, stageRoot string, expectedRoot st
 	return nil
 }
 
-func commitArchiveGroup(stageRoot string, basePath string, expectedRoot string, ops archiveInstallOps) (bool, error) {
+func commitArchiveGroup(stageRoot string, basePath string, expectedRoot string) (bool, error) {
 	stagedGroup := filepath.Join(stageRoot, expectedRoot)
-	stagedInfo, err := ops.stat(stagedGroup)
+	stagedInfo, err := os.Stat(stagedGroup)
 	if err != nil {
 		return false, errors.Wrap(err, "could not inspect staged archive group")
 	}
@@ -297,14 +271,14 @@ func commitArchiveGroup(stageRoot string, basePath string, expectedRoot string, 
 	}
 
 	liveGroup := filepath.Join(basePath, expectedRoot)
-	if err := ops.mkdirAll(filepath.Dir(liveGroup), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(liveGroup), 0o755); err != nil {
 		return false, errors.Wrap(err, "could not create live archive parent directory")
 	}
 
 	backupGroup := filepath.Join(stageRoot, "backup")
 	hadLiveGroup := false
-	if _, err := ops.stat(liveGroup); err == nil {
-		if err := ops.rename(liveGroup, backupGroup); err != nil {
+	if _, err := os.Stat(liveGroup); err == nil {
+		if err := os.Rename(liveGroup, backupGroup); err != nil {
 			return false, errors.Wrap(err, "could not move live archive group to backup")
 		}
 		hadLiveGroup = true
@@ -312,9 +286,9 @@ func commitArchiveGroup(stageRoot string, basePath string, expectedRoot string, 
 		return false, errors.Wrap(err, "could not inspect live archive group")
 	}
 
-	if err := ops.rename(stagedGroup, liveGroup); err != nil {
+	if err := os.Rename(stagedGroup, liveGroup); err != nil {
 		if hadLiveGroup {
-			if restoreErr := ops.rename(backupGroup, liveGroup); restoreErr != nil {
+			if restoreErr := os.Rename(backupGroup, liveGroup); restoreErr != nil {
 				return true, errors.Wrapf(err, "could not install staged archive group and could not restore backup at %q: %v", backupGroup, restoreErr)
 			}
 		}
@@ -323,7 +297,20 @@ func commitArchiveGroup(stageRoot string, basePath string, expectedRoot string, 
 	return false, nil
 }
 
-func installArchiveWithOps(archivePath string, basePath string, expectedRoot string, ops archiveInstallOps) error {
+func removeOrphanedStagingDirs(basePath string) {
+	matches, err := filepath.Glob(filepath.Join(basePath, ".mapd-install-*"))
+	if err != nil {
+		slog.Warn("could not scan for orphaned archive staging directories", "error", err)
+		return
+	}
+	for _, match := range matches {
+		if err := os.RemoveAll(match); err != nil {
+			slog.Warn("could not remove orphaned archive staging directory", "error", err, "directory", match)
+		}
+	}
+}
+
+func installArchive(archivePath string, basePath string, expectedRoot string) error {
 	cleanExpectedRoot, err := cleanArchivePath(expectedRoot)
 	if err != nil {
 		return err
@@ -332,7 +319,7 @@ func installArchiveWithOps(archivePath string, basePath string, expectedRoot str
 		return errors.Errorf("archive root is not canonical: %q", expectedRoot)
 	}
 
-	stageRoot, err := ops.mkdirTemp(basePath, ".mapd-install-")
+	stageRoot, err := os.MkdirTemp(basePath, ".mapd-install-")
 	if err != nil {
 		return errors.Wrap(err, "could not create archive staging directory")
 	}
@@ -341,20 +328,16 @@ func installArchiveWithOps(archivePath string, basePath string, expectedRoot str
 		if preserveStage {
 			return
 		}
-		if err := ops.removeAll(stageRoot); err != nil {
+		if err := os.RemoveAll(stageRoot); err != nil {
 			slog.Warn("could not remove archive staging directory", "error", err, "directory", stageRoot)
 		}
 	}()
 
-	if err := extractArchiveToStage(archivePath, stageRoot, expectedRoot, ops); err != nil {
+	if err := extractArchiveToStage(archivePath, stageRoot, expectedRoot); err != nil {
 		return err
 	}
-	preserveStage, err = commitArchiveGroup(stageRoot, basePath, expectedRoot, ops)
+	preserveStage, err = commitArchiveGroup(stageRoot, basePath, expectedRoot)
 	return err
-}
-
-func installArchive(archivePath string, basePath string, expectedRoot string) error {
-	return installArchiveWithOps(archivePath, basePath, expectedRoot, defaultArchiveInstallOps)
 }
 
 func adjustedBounds(bounds Bounds) (int, int, int, int) {
@@ -374,6 +357,8 @@ func adjustedBounds(bounds Bounds) (int, int, int, int) {
 
 func (d *download) downloadBounds(bounds Bounds, locationName string) (err error, cancel bool) {
 	slog.Info("Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
+
+	removeOrphanedStagingDirs(params.GetBaseOpPath())
 
 	// clip given bounds to file areas
 	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
