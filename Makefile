@@ -35,7 +35,7 @@ format-deps:
 
 GO_CAPNP_PATH ?= ../go-capnp/std
 
-capnp: cereal/car/car.capnp.go cereal/custom/custom.capnp.go cereal/legacy/legacy.capnp.go cereal/log/log.capnp.go cereal/offline/offline.capnp.go
+capnp: cereal/car/car.capnp.go cereal/custom/custom.capnp.go cereal/deprecated/deprecated.capnp.go cereal/log/log.capnp.go cereal/offline/offline.capnp.go
 
 cereal/car/car.capnp.go: cereal/car/car.capnp
 	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/car/car.capnp
@@ -43,8 +43,8 @@ cereal/car/car.capnp.go: cereal/car/car.capnp
 cereal/custom/custom.capnp.go: cereal/custom/custom.capnp
 	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/custom/custom.capnp
 
-cereal/legacy/legacy.capnp.go: cereal/legacy/legacy.capnp
-	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/legacy/legacy.capnp
+cereal/deprecated/deprecated.capnp.go: cereal/deprecated/deprecated.capnp
+	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/deprecated/deprecated.capnp
 
 cereal/log/log.capnp.go: cereal/log/log.capnp
 	capnp compile -I $(GO_CAPNP_PATH) -ogo cereal/log/log.capnp
