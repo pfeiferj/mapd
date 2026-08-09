@@ -35,7 +35,6 @@ func (s *State) Init() {
 	s.SpeedLimit.Init()
 }
 
-
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := min(s.Car.VCruise*ms.KPH_TO_MS, ms.MAX_OP_SPEED)
 

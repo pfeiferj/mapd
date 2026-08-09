@@ -44,10 +44,18 @@ instance (settings, map downloads).
 `main.go` is the entrypoint: it loads settings, then runs a fixed-rate loop
 (`ms.LOOP_DELAY`, 50ms) that each tick: publishes the current `State` and
 `ExtendedState`, reads inbound settings changes (from openpilot via `mapdIn`
-or from the local CLI), reads `carState`/`modelV2`/GPS from openpilot's bus,
-and — on a new GPS fix — re-resolves position against the loaded offline map
-tile, determines the current/next road ("way"), and recomputes curvature
-and target-velocity data for curve-speed control. The root package is split
+or from the local CLI), reads `carState`/`modelV2`/`selfdriveState`/GPS from
+openpilot's bus, and — on a new GPS fix — re-resolves position against the
+loaded offline map tile, determines the current/next road ("way"), and
+recomputes curvature and target-velocity data for curve-speed control.
+`selfdriveState` is read solely for openpilot's current longitudinal
+personality (relaxed/standard/aggressive), fed into
+`ms.Settings.SetPersonality()` so that the personality-scoped tuning knobs
+described under Settings below pick the right values. Each of the
+`carState`/`modelV2`/GPS/`selfdriveState` subscribers is opened with its
+shadow-mode flag read from `ms.Settings.SubscriberSettings` (see Settings)
+rather than hardcoded, since only one process may hold a non-shadow slot on
+a given service. The root package is split
 by concern across files rather than subpackages: `state.go` (aggregate
 `State` + `SuggestedSpeed()` arbitration), `car_state.go`, `way.go` (current
 way selection), `speed_limit.go`, `map_curve.go`, `vision_curve.go`,
@@ -70,6 +78,16 @@ capnp schemas live in `cereal/{car,custom,legacy,log,offline}/*.capnp`
 (mostly copies/subset of openpilot's own cereal schemas, per the license
 notes in `Readme.md`); each has a generated `*.capnp.go` — regenerate with
 `make capnp`, never edit by hand.
+
+`custom.capnp`'s `MapdIn`/`MapdInputType` is the inbound settings-change
+message: as of settings schema v2 most per-setting message types (e.g.
+`setSpeedLimitOffset`) are DEPRECATED in favor of three generic types —
+`setJsonPathBool`/`setJsonPathFloat`/`setJsonPathText` — which carry a
+dot-notation `jsonPath` field (documented per-setting in `docs/settings.md`)
+identifying where in the `MapdSettings` JSON shape to write the value. The
+deprecated types are still handled (see Settings below) so existing forks
+keep working, but new inputs should be added as json-path writes rather than
+new enum values.
 
 ### Offline map data (`maps/`)
 mapd does not use general-purpose OSM routing files; it uses a custom
@@ -106,6 +124,32 @@ mapd-owned config format). `settings/download.go` and
 to forks; forks override behavior by supplying their own JSON files as
 described in `docs/overriding-internal-defaults.md`, not by editing these
 committed defaults.
+
+`MapdSettings` (current schema `SETTINGS_VERSION = 2`) groups related
+fields into nested structs rather than one flat struct:
+`SpeedLimitSettings` (`speed_limit` in JSON), `LogSettings` (`logger`),
+`SubscriberSettings` (`subscriber` — the shadow-mode flags read by
+`main.go`/`cereal/gps.go`), and `Personalities` (`personalities`, one
+`PersonalitySettings` each for `relaxed`/`standard`/`aggressive` — jerk,
+accel, curve/speed-limit time offsets, and target lateral-accel knobs).
+Code that needs the active tuning (e.g. `speed_limit.go`, `map_curve.go`,
+`vision_curve.go`) calls `ms.Settings.CurrentPersonality()`, which resolves
+against the personality last pushed by `SetPersonality()` from
+openpilot's `selfdriveState` (see Process loop above) — don't read
+personality-scoped fields off `MapdSettings` directly.
+
+`settings/migrations.go`'s `Migrate(version, jsonString)` upgrades an
+older-versioned settings JSON blob (currently only v1→v2, via `v2()`) to
+the current `MapdSettings` shape; `Default()`/`Recommended()`/`Load()` each
+detect a `settings_version` mismatch (via `github.com/Jeffail/gabs/v2` for
+untyped JSON inspection) and run it through `Migrate` before unmarshalling.
+This means custom `defaults.json`/`recommended.json` overrides and
+previously-saved params from older mapd versions load correctly without a
+fork needing to rewrite them — but new migrations must still be added here
+whenever `MapdSettings`'s JSON shape changes. Inbound
+`setJsonPathBool`/`Float`/`Text` messages are applied by `setSetting()`,
+which marshals the current settings to JSON, patches the given dot-path
+with `gabs`, and reloads via `LoadChanges()`.
 
 ### CLI/TUI (`cli/`)
 Built on `urfave/cli/v3` for subcommand parsing (`cli.go`) and

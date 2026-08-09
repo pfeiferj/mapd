@@ -18,6 +18,13 @@ of different types to handle values for that action. If the setting requires a
 number then you would send the data in the float field, a boolean goes in the
 boolean field and a string goes in the str field.
 
+Most individual settings additionally have a dedicated type (e.g.
+setSpeedLimitOffset), but these are deprecated as of settings\_version 2 in
+favor of three generic types: setJsonPathBool, setJsonPathFloat, and
+setJsonPathText. For these, put the dot-notation path of the setting within
+the MapdSettings json (as documented per-setting in settings.md) into the
+jsonPath field, and the value in the matching bool/float/str field.
+
 ## Settings
 There are two options for configuring mapd settings:
   1. Mapd settings can be configured by updating the MapdSettings param and

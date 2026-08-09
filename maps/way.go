@@ -127,7 +127,7 @@ type Way struct {
 	conditionalSpeedRulesForward  u.Curry[[]ConditionalSpeedRule]
 	conditionalSpeedRulesBackward u.Curry[[]ConditionalSpeedRule]
 
-	id     					 u.Curry[int64]
+	id u.Curry[int64]
 }
 
 func (w *Way) IsForwardFrom(matchNode m.Position) bool {
@@ -494,7 +494,7 @@ func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
 	if len(nodes) == 0 {
 		return 0, nil
 	}
-	dist, _, err := w.DistanceToNode(pos, isForward, nodes[len(nodes) - 1])
+	dist, _, err := w.DistanceToNode(pos, isForward, nodes[len(nodes)-1])
 	return dist, err
 }
 

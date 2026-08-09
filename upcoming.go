@@ -54,7 +54,7 @@ func (u *Upcoming[T]) Update(state *State) {
 			cumulativeDistance -= state.DistanceSinceLastPosition
 			if u.Position.Equals(nextWay.StartPosition) {
 				u.Distance = min(u.Distance, cumulativeDistance)
-				if m.Abs(u.Distance - cumulativeDistance) > 100 {
+				if m.Abs(u.Distance-cumulativeDistance) > 100 {
 					u.Distance = cumulativeDistance
 				}
 			} else {

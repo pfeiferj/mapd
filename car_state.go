@@ -2,20 +2,21 @@ package main
 
 import (
 	"time"
+
 	"pfeifer.dev/mapd/cereal/car"
+	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
 	"pfeifer.dev/mapd/utils"
-	m "pfeifer.dev/mapd/math"
 )
 
 type CarState struct {
-	SetSpeed   utils.Float32Tracker
-	VEgo       float32
-	AEgo       float32
-	VCruise    float32
-	GasPressed bool
-	UpdateTime utils.UpdateTracker
-	SetSpeedChanging bool
+	SetSpeed          utils.Float32Tracker
+	VEgo              float32
+	AEgo              float32
+	VCruise           float32
+	GasPressed        bool
+	UpdateTime        utils.UpdateTracker
+	SetSpeedChanging  bool
 	EnableSpeedActive bool
 }
 

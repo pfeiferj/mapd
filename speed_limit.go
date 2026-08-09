@@ -28,7 +28,7 @@ func (s *SpeedLimitState) Init() {
 }
 
 func (s *SpeedLimitState) Update(currentWay CurrentWay, car CarState) {
-	if ms.Settings.PressGasToOverrideSpeedLimit && car.GasPressed && car.VEgo > s.AcceptedLimit {
+	if ms.Settings.SpeedLimitSettings.PressGasToOverrideSpeedLimit && car.GasPressed && car.VEgo > s.AcceptedLimit {
 		s.OverrideSpeed = car.VEgo
 	}
 	if s.OverrideSpeed < s.AcceptedLimit {
@@ -42,14 +42,14 @@ func (s *SpeedLimitState) Update(currentWay CurrentWay, car CarState) {
 }
 
 func (s *SpeedLimitState) UpdateLimitAcceptedState(car CarState) {
-	timeout := ms.Settings.AcceptSpeedLimitTimeout
+	timeout := ms.Settings.SpeedLimitSettings.AcceptSpeedLimitTimeout
 	if timeout > 0 && time.Since(s.Limit.UpdatedTime) > time.Duration(timeout)*time.Second {
 		return
 	}
-	if ms.Settings.PressGasToAcceptSpeedLimit && car.GasPressed {
+	if ms.Settings.SpeedLimitSettings.PressGasToAcceptSpeedLimit && car.GasPressed {
 		ms.Settings.AcceptSpeedLimit()
 	}
-	if ms.Settings.AdjustSetSpeedToAcceptSpeedLimit && car.SetSpeed.UpdatedTime.After(s.Limit.UpdatedTime) {
+	if ms.Settings.SpeedLimitSettings.AdjustSetSpeedToAcceptSpeedLimit && car.SetSpeed.UpdatedTime.After(s.Limit.UpdatedTime) {
 		if ms.Settings.SpeedLimitAccepted() && s.SetSpeedWhenAccepted != car.SetSpeed.Value {
 			ms.Settings.ResetSpeedLimitAccepted()
 		}
@@ -61,26 +61,27 @@ func (s *SpeedLimitState) UpdateLimitAcceptedState(car CarState) {
 }
 
 func (s *SpeedLimitState) UpdateAcceptedLimitValue(currentWay CurrentWay, car CarState) {
-		suggestedSpeedUpdated := s.Suggestion.Update(s.SuggestNewSpeedLimit(currentWay, car))
-		if suggestedSpeedUpdated {
-			ms.Settings.ResetSpeedLimitAccepted()
-			s.SetSpeedWhenAccepted = 0
+	suggestedSpeedUpdated := s.Suggestion.Update(s.SuggestNewSpeedLimit(currentWay, car))
+	if suggestedSpeedUpdated {
+		ms.Settings.ResetSpeedLimitAccepted()
+		s.SetSpeedWhenAccepted = 0
+	}
+	if ms.Settings.SpeedLimitAccepted() {
+		if s.AcceptedLimit != s.Suggestion.Value {
+			s.OverrideSpeed = 0
 		}
-		if ms.Settings.SpeedLimitAccepted() {
-			if s.AcceptedLimit != s.Suggestion.Value {
-				s.OverrideSpeed = 0
-			}
-			s.AcceptedLimit = s.Suggestion.Value
-		}
+		s.AcceptedLimit = s.Suggestion.Value
+	}
 }
+
 func (s *SpeedLimitState) SpeedLimitFinalSuggestion(enableSpeedActive bool, setSpeedChanging bool, vEgo float32) float32 {
 	slSuggestedSpeed := s.AcceptedLimit
-	if s.OverrideSpeed > 0  && s.OverrideSpeed > slSuggestedSpeed {
+	if s.OverrideSpeed > 0 && s.OverrideSpeed > slSuggestedSpeed {
 		slSuggestedSpeed = s.OverrideSpeed
 	}
 	if !ms.Settings.SpeedLimitUseEnableSpeed || enableSpeedActive {
 		return slSuggestedSpeed
-	} else if setSpeedChanging && ms.Settings.HoldSpeedLimitWhileChangingSetSpeed && vEgo-1 < s.AcceptedLimit {
+	} else if setSpeedChanging && ms.Settings.SpeedLimitSettings.HoldSpeedLimitWhileChangingSetSpeed && vEgo-1 < s.AcceptedLimit {
 		return slSuggestedSpeed
 	}
 	return 0
@@ -88,27 +89,32 @@ func (s *SpeedLimitState) SpeedLimitFinalSuggestion(enableSpeedActive bool, setS
 
 func (s *SpeedLimitState) SuggestNewSpeedLimit(currentWay CurrentWay, car CarState) float32 {
 	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed()))
-	if slSuggestedSpeed == 0 && ms.Settings.HoldLastSeenSpeedLimit {
+	if slSuggestedSpeed == 0 && ms.Settings.SpeedLimitSettings.HoldLastSeenSpeedLimit {
 		slSuggestedSpeed = float32(s.Limit.LastValue)
 	}
 	if slSuggestedSpeed > 0 {
-		slSuggestedSpeed += ms.Settings.SpeedLimitOffset
+		slSuggestedSpeed += ms.Settings.SpeedLimitSettings.SpeedLimitOffset
 	}
 	if s.NextLimit.Value > 0 {
-		offsetNextSpeedLimit := s.NextLimit.Value + ms.Settings.SpeedLimitOffset
+		offsetNextSpeedLimit := s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset
 		s.Limit.Update(ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed())))
 		nextIsLower := s.Limit.Value > s.NextLimit.Value
-		distanceToReachSpeed := m.CalculateJerkLimitedDistanceSimple(car.VEgo, car.AEgo, offsetNextSpeedLimit, ms.Settings.TargetSpeedAccel, ms.Settings.TargetSpeedJerk)
-		distanceToReachSpeed += ms.Settings.TargetSpeedTimeOffset * (s.NextLimit.Value + ms.Settings.SpeedLimitOffset)
+		personality := ms.Settings.CurrentPersonality()
+		distanceToReachSpeed := m.CalculateJerkLimitedDistanceSimple(car.VEgo, car.AEgo, offsetNextSpeedLimit, personality.TargetSpeedAccel, personality.TargetSpeedJerk)
+		if nextIsLower {
+			distanceToReachSpeed += personality.SpeedLimitDecreaseTargetSpeedTimeOffset * (s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset)
+		} else {
+			distanceToReachSpeed += personality.SpeedLimitIncreaseTargetSpeedTimeOffset * (s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset)
+		}
 		if s.NextLimit.TriggerDistance > distanceToReachSpeed {
 			distanceToReachSpeed = s.NextLimit.TriggerDistance
 		}
 		if distanceToReachSpeed > s.NextLimit.TriggerDistance {
 			s.NextLimit.TriggerDistance = distanceToReachSpeed + 10
 		}
-		if !nextIsLower && ms.Settings.SpeedUpForNextSpeedLimit && s.NextLimit.Distance < distanceToReachSpeed {
+		if !nextIsLower && personality.SpeedUpForNextSpeedLimit && s.NextLimit.Distance < distanceToReachSpeed {
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
-		} else if nextIsLower && ms.Settings.SlowDownForNextSpeedLimit && s.NextLimit.Distance < distanceToReachSpeed {
+		} else if nextIsLower && personality.SlowDownForNextSpeedLimit && s.NextLimit.Distance < distanceToReachSpeed {
 			slSuggestedSpeed = float32(offsetNextSpeedLimit)
 		}
 	}
