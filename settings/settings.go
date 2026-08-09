@@ -525,7 +525,7 @@ func (s *MapdSettings) setSetting(input custom.MapdIn) {
 	case custom.MapdInputType_setJsonPathFloat:
 		value = input.Float()
 	}
-	jsonParsed, err = jsonParsed.SetP(value, path)
+	_, err = jsonParsed.SetP(value, path)
 	if err != nil {
 		slog.Error("failed to set value at json path", "error", err)
 		return
