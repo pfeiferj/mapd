@@ -291,7 +291,7 @@ func GenerateOffline(s OfflineSettings) {
 			groupIndex := 0
 			sharedIndex := 0
 			for groupIndex < len(groupCandidates) || sharedIndex < len(sharedWays) {
-				wayIndex := 0
+				var wayIndex int
 				if sharedIndex >= len(sharedWays) || (groupIndex < len(groupCandidates) && groupCandidates[groupIndex] < sharedWays[sharedIndex]) {
 					wayIndex = groupCandidates[groupIndex]
 					groupIndex++
