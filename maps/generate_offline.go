@@ -198,6 +198,10 @@ func GenerateOffline(s OfflineSettings) {
 			scannedWays = append(scannedWays, tmpWay)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		slog.Error("could not scan map pbf file", "error", err)
+		panic("failed to scan maps, exiting")
+	}
 
 	slog.Info("Finding Bounds")
 	for _, area := range areas {
