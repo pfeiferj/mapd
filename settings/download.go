@@ -147,6 +147,216 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 	}
 }
 
+type archiveFile interface {
+	io.Writer
+	Sync() error
+	Close() error
+}
+
+type archiveInstallOps struct {
+	mkdirTemp func(string, string) (string, error)
+	mkdirAll  func(string, os.FileMode) error
+	openFile  func(string, int, os.FileMode) (archiveFile, error)
+	rename    func(string, string) error
+	removeAll func(string) error
+	stat      func(string) (os.FileInfo, error)
+}
+
+var defaultArchiveInstallOps = archiveInstallOps{
+	mkdirTemp: os.MkdirTemp,
+	mkdirAll:  os.MkdirAll,
+	openFile: func(name string, flag int, perm os.FileMode) (archiveFile, error) {
+		return os.OpenFile(name, flag, perm)
+	},
+	rename:    os.Rename,
+	removeAll: os.RemoveAll,
+	stat:      os.Stat,
+}
+
+func cleanArchivePath(name string) (string, error) {
+	clean := filepath.Clean(name)
+	if name == "" || clean == "." || filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+		return "", errors.Errorf("invalid archive path: %q", name)
+	}
+	return clean, nil
+}
+
+func writeArchiveFile(file archiveFile, reader io.Reader, expectedSize int64) error {
+	written, err := io.Copy(file, reader)
+	if err != nil {
+		file.Close()
+		return errors.Wrap(err, "could not write staged archive file")
+	}
+	if written != expectedSize {
+		file.Close()
+		return errors.Errorf("staged archive file size mismatch: wrote %d bytes, expected %d", written, expectedSize)
+	}
+	if err := file.Sync(); err != nil {
+		file.Close()
+		return errors.Wrap(err, "could not fsync staged archive file")
+	}
+	if err := file.Close(); err != nil {
+		return errors.Wrap(err, "could not close staged archive file")
+	}
+	return nil
+}
+
+func extractArchiveToStage(archivePath string, stageRoot string, expectedRoot string, ops archiveInstallOps) error {
+	file, err := os.Open(archivePath)
+	if err != nil {
+		return errors.Wrap(err, "could not open downloaded file")
+	}
+	defer file.Close()
+
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		return errors.Wrap(err, "could not parse gzip downloaded file")
+	}
+	defer reader.Close()
+
+	tr := tar.NewReader(reader)
+	seen := make(map[string]struct{})
+	regularFiles := 0
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Wrap(err, "could not read downloaded tar archive")
+		}
+
+		// if the header is nil, just skip it (not sure how this happens)
+		if header == nil {
+			continue
+		}
+
+		name, err := cleanArchivePath(header.Name)
+		if err != nil {
+			return err
+		}
+		if name != expectedRoot && !strings.HasPrefix(name, expectedRoot+string(os.PathSeparator)) {
+			return errors.Errorf("archive entry %q is outside expected root %q", header.Name, expectedRoot)
+		}
+		if _, exists := seen[name]; exists {
+			return errors.Errorf("duplicate archive entry: %q", header.Name)
+		}
+		seen[name] = struct{}{}
+
+		// the target location where the dir/file should be created
+		target := filepath.Join(stageRoot, name)
+		// check the file type
+		switch header.Typeflag {
+
+		// if its a dir and it doesn't exist create it
+		case tar.TypeDir:
+			if _, err := ops.stat(target); err != nil {
+				if !os.IsNotExist(err) {
+					return errors.Wrap(err, "could not inspect staged archive directory")
+				}
+				if err := ops.mkdirAll(target, os.FileMode(header.Mode).Perm()); err != nil {
+					return errors.Wrap(err, "could not create staged archive directory")
+				}
+			}
+
+		// if it's a file create it
+		case tar.TypeReg, tar.TypeRegA:
+			if err := ops.mkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return errors.Wrap(err, "could not create staged archive parent directory")
+			}
+			stagedFile, err := ops.openFile(target, os.O_CREATE|os.O_EXCL|os.O_WRONLY, os.FileMode(header.Mode).Perm())
+			if err != nil {
+				return errors.Wrap(err, "could not open staged archive file")
+			}
+			if err := writeArchiveFile(stagedFile, tr, header.Size); err != nil {
+				return err
+			}
+			regularFiles++
+		default:
+			return errors.Errorf("unsupported archive entry type %d for %q", header.Typeflag, header.Name)
+		}
+	}
+
+	if _, err := io.Copy(io.Discard, reader); err != nil {
+		return errors.Wrap(err, "could not validate gzip trailer")
+	}
+	if regularFiles == 0 {
+		return errors.New("downloaded archive contains no regular files")
+	}
+	return nil
+}
+
+func commitArchiveGroup(stageRoot string, basePath string, expectedRoot string, ops archiveInstallOps) (bool, error) {
+	stagedGroup := filepath.Join(stageRoot, expectedRoot)
+	stagedInfo, err := ops.stat(stagedGroup)
+	if err != nil {
+		return false, errors.Wrap(err, "could not inspect staged archive group")
+	}
+	if !stagedInfo.IsDir() {
+		return false, errors.Errorf("staged archive root is not a directory: %q", expectedRoot)
+	}
+
+	liveGroup := filepath.Join(basePath, expectedRoot)
+	if err := ops.mkdirAll(filepath.Dir(liveGroup), 0o755); err != nil {
+		return false, errors.Wrap(err, "could not create live archive parent directory")
+	}
+
+	backupGroup := filepath.Join(stageRoot, "backup")
+	hadLiveGroup := false
+	if _, err := ops.stat(liveGroup); err == nil {
+		if err := ops.rename(liveGroup, backupGroup); err != nil {
+			return false, errors.Wrap(err, "could not move live archive group to backup")
+		}
+		hadLiveGroup = true
+	} else if !os.IsNotExist(err) {
+		return false, errors.Wrap(err, "could not inspect live archive group")
+	}
+
+	if err := ops.rename(stagedGroup, liveGroup); err != nil {
+		if hadLiveGroup {
+			if restoreErr := ops.rename(backupGroup, liveGroup); restoreErr != nil {
+				return true, errors.Wrapf(err, "could not install staged archive group and could not restore backup at %q: %v", backupGroup, restoreErr)
+			}
+		}
+		return false, errors.Wrap(err, "could not install staged archive group")
+	}
+	return false, nil
+}
+
+func installArchiveWithOps(archivePath string, basePath string, expectedRoot string, ops archiveInstallOps) error {
+	cleanExpectedRoot, err := cleanArchivePath(expectedRoot)
+	if err != nil {
+		return err
+	}
+	if cleanExpectedRoot != expectedRoot {
+		return errors.Errorf("archive root is not canonical: %q", expectedRoot)
+	}
+
+	stageRoot, err := ops.mkdirTemp(basePath, ".mapd-install-")
+	if err != nil {
+		return errors.Wrap(err, "could not create archive staging directory")
+	}
+	preserveStage := false
+	defer func() {
+		if preserveStage {
+			return
+		}
+		if err := ops.removeAll(stageRoot); err != nil {
+			slog.Warn("could not remove archive staging directory", "error", err, "directory", stageRoot)
+		}
+	}()
+
+	if err := extractArchiveToStage(archivePath, stageRoot, expectedRoot, ops); err != nil {
+		return err
+	}
+	preserveStage, err = commitArchiveGroup(stageRoot, basePath, expectedRoot, ops)
+	return err
+}
+
+func installArchive(archivePath string, basePath string, expectedRoot string) error {
+	return installArchiveWithOps(archivePath, basePath, expectedRoot, defaultArchiveInstallOps)
+}
+
 func adjustedBounds(bounds Bounds) (int, int, int, int) {
 	minLat := int(math.Floor(bounds.MinLat/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
 	minLon := int(math.Floor(bounds.MinLon/float64(GROUP_AREA_BOX_DEGREES))) * GROUP_AREA_BOX_DEGREES
@@ -194,70 +404,15 @@ func (d *download) downloadBounds(bounds Bounds, locationName string) (err error
 				slog.Warn("failed to download file, continuing to next", "error", err, "url", url, "file", outputName)
 				continue
 			}
-			file, err := os.Open(outputName)
-			if err != nil {
-				slog.Warn("failed to open downloaded file", "error", err, "file", outputName)
+			installErr := installArchive(outputName, params.GetBaseOpPath(), strings.TrimSuffix(filename, ".tar.gz"))
+			if installErr != nil {
+				slog.Warn("failed to install downloaded archive", "error", installErr, "file", outputName)
 			}
-			reader, err := gzip.NewReader(file)
-			if err != nil {
-				slog.Warn("failed to parse gzip downloaded file", "error", err, "file", outputName)
-			}
-			tr := tar.NewReader(reader)
-			for {
-				header, err := tr.Next()
-				if err != nil {
-					break
-				}
-
-				// if the header is nil, just skip it (not sure how this happens)
-				if header == nil {
-					continue
-				}
-				// the target location where the dir/file should be created
-				target := filepath.Join(params.GetBaseOpPath(), header.Name)
-				// check the file type
-				switch header.Typeflag {
-
-				// if its a dir and it doesn't exist create it
-				case tar.TypeDir:
-					if _, err := os.Stat(target); err != nil {
-						err := os.MkdirAll(target, 0o755)
-						if err != nil {
-							slog.Warn("could not create directory from downloaded gzip", "error", err, "file", outputName, "directory", target)
-						}
-					}
-
-				// if it's a file create it
-				case tar.TypeReg:
-					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-					if err != nil {
-						slog.Warn("could not open file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
-					}
-
-					_, err = io.Copy(f, tr)
-					if err != nil {
-						slog.Warn("could not write data to file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
-					}
-
-					err = f.Sync()
-					if err != nil {
-						slog.Warn("could not fsync file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
-					}
-					f.Close()
-				}
-			}
-			err = reader.Close()
-			if err != nil {
-				slog.Warn("could not close gzip reader", "error", err)
-			}
-			err = file.Close()
-			if err != nil {
-				slog.Warn("could not close downloaded file", "error", err)
-			}
-
-			err = os.Remove(outputName)
-			if err != nil {
+			if err := os.Remove(outputName); err != nil {
 				slog.Warn("could not delete downloaded gzip file", "error", err)
+			}
+			if installErr != nil {
+				continue
 			}
 
 			d.progress.DownloadedFiles++
