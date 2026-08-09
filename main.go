@@ -14,21 +14,6 @@ import (
 
 const mapLoadRetryDelay = time.Second
 
-type mapLoadRetryState struct {
-	lastAttempt time.Time
-}
-
-func (s *mapLoadRetryState) shouldAttempt(loaded bool, box m.Box, position m.Position, now time.Time) bool {
-	if !box.PosInside(position) {
-		return true
-	}
-	return !loaded && now.Sub(s.lastAttempt) >= mapLoadRetryDelay
-}
-
-func (s *mapLoadRetryState) recordAttempt(now time.Time) {
-	s.lastAttempt = now
-}
-
 func main() {
 	ms.Settings.Default() // set defaults so settings not already in param are defaulted
 	settingsLoaded := ms.Settings.Load() // try loading settings before cli
@@ -41,7 +26,7 @@ func main() {
 
 	state := State{}
 	state.Init()
-	mapLoadRetry := mapLoadRetryState{}
+	var lastMapLoadAttempt time.Time
 
 	extendedState := ExtendedState{
 		Pub:   cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
@@ -111,17 +96,15 @@ func main() {
 			state.DistanceSinceLastPosition = 0
 			state.Position = m.PosFromLocation(location)
 			pos := m.PosFromLocation(location)
+			box := state.Data.Box()
 			mapLoadTime := time.Now()
-			if mapLoadRetry.shouldAttempt(state.Data.Loaded, state.Data.Box(), pos, mapLoadTime) {
+			if !box.PosInside(pos) || (!state.Data.Loaded && mapLoadTime.Sub(lastMapLoadAttempt) >= mapLoadRetryDelay) {
 				state.Data, err = maps.FindWaysAroundPosition(pos)
-				mapLoadRetry.recordAttempt(mapLoadTime)
+				lastMapLoadAttempt = mapLoadTime
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 					continue
 				}
-			}
-			if !state.Data.Loaded {
-				continue
 			}
 
 			state.CurrentWay, err = GetCurrentWay(state.CurrentWay, state.NextWays, &state.Data, location)
