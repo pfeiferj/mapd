@@ -65,7 +65,7 @@ func initialModel() uiModel {
 	}
 
 	listDelegate := list.NewDefaultDelegate()
-	pub := cereal.NewPublisher("mapdIn", cereal.MapdInCreator)
+	pub := cereal.NewPublisher("mapdCli", cereal.MapdInCreator)
 	sub := cereal.NewSubscriber("mapdOut", cereal.MapdOutReader, true, false)
 	extendedSub := cereal.NewSubscriber("mapdExtendedOut", cereal.MapdExtendedOutReader, true, false)
 	m := uiModel{list: list.New(items, listDelegate, 0, 0), settings: getSettingsModel(), pub: &pub, sub: &sub, extendedSub: &extendedSub, download: getDownloadModel()}
