@@ -109,7 +109,7 @@ func generateAreas() []Area {
 func GenerateOffline(s OfflineSettings) {
 	slog.Info("Generating Offline Map")
 	EnsureOfflineMapsDirectories(s)
-	file, err := os.Open("./map.osm.pbf")
+	file, err := os.Open(s.InputFile)
 	if err != nil {
 		slog.Error("could not open map pbf file", "error", err)
 		panic("failed to read maps, exiting")

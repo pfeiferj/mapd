@@ -14,6 +14,14 @@ Before loading custom default settings mapd will always load the
 built in default settings. This ensures that any values missing from the custom
 default settings will still have an appropriate default value set.
 
+Custom defaults.json and recommended.json files should include a
+`settings_version` field matching mapd's current settings schema (see
+settings.md for the version and the nested json shape it expects, e.g.
+`speed_limit`, `logger`, and `personalities` objects). If a custom file has an
+older `settings_version` mapd automatically migrates it to the current schema
+before applying it, so existing overrides do not need to be rewritten
+immediately, but new overrides should target the current schema directly.
+
 When mapd starts, it will always load the default settings before trying to load
 the saved values in the params. This ensures that any new values that were not
 previously saved will load with a default value. The same logic as above applies

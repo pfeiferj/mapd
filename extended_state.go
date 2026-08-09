@@ -25,9 +25,19 @@ func (s *ExtendedState) Send() error {
 		s.setDownloadProgress(out)
 		s.setSettings(out)
 		s.setPath(out)
+		s.setPosition(out)
 		return s.Pub.Send(msg)
 	}
 	return nil
+}
+
+func (s *ExtendedState) setPosition(out custom.MapdExtendedOut) {
+	position, err := out.NewPosition()
+	if err == nil {
+		position.SetLatitude(s.state.Position.Lat())
+		position.SetLongitude(s.state.Position.Lon())
+		out.SetPosition(position)
+	}
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
@@ -119,6 +129,7 @@ func (s *ExtendedState) setDownloadProgress(out custom.MapdExtendedOut) {
 		panic(err)
 	}
 	p.SetActive(s.DownloadProgress.Active)
+	p.SetCancelled(s.DownloadProgress.Canceled)
 	p.SetTotalFiles(uint32(s.DownloadProgress.TotalFiles))
 	p.SetDownloadedFiles(uint32(s.DownloadProgress.DownloadedFiles))
 	l, err := p.NewLocations(int32(len(s.DownloadProgress.LocationsToDownload)))

@@ -87,7 +87,7 @@ func Handle() {
 						Value: false,
 					},
 				},
-				Usage: "Triggers a generation of map data from 'map.osm.pbf'",
+				Usage: "Triggers a generation of map data from the pbf given by --input-file",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					offlineSettings := maps.OfflineSettings{
 						Box: m.Box{

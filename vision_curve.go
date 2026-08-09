@@ -34,16 +34,17 @@ func calcVisionCurveSpeed(model log.ModelDataV2, state *State) float32 {
 	}
 
 	for i := range zOrientRate.Len() {
-		predictedLatAccels[i] = zOrientRate.At(i) * xVelocity.At(i)
+		predictedLatAccels[i] = float32(math.Abs(float64(zOrientRate.At(i) * xVelocity.At(i))))
 		if predictedLatAccels[i] > maxLatA {
 			maxLatA = predictedLatAccels[i]
 		}
 	}
 
 	maxCurve := maxLatA / (vEgo * vEgo)
-	vTarget := float32(math.Sqrt(float64(ms.Settings.VisionCurveTargetLatA / maxCurve)))
-	if vTarget < ms.Settings.VisionCurveMinTargetV {
-		vTarget = ms.Settings.VisionCurveMinTargetV
+	personality := ms.Settings.CurrentPersonality()
+	vTarget := float32(math.Sqrt(float64(personality.VisionCurveTargetLatA / maxCurve)))
+	if vTarget < personality.VisionCurveMinTargetV {
+		vTarget = personality.VisionCurveMinTargetV
 	}
 
 	if vTarget < 0 {

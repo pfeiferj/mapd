@@ -35,7 +35,6 @@ func (s *State) Init() {
 	s.SpeedLimit.Init()
 }
 
-
 func (s *State) SuggestedSpeed() float32 {
 	suggestedSpeed := min(s.Car.VCruise*ms.KPH_TO_MS, ms.MAX_OP_SPEED)
 
@@ -99,7 +98,7 @@ func (s *State) Send() error {
 	output.SetAdvisorySpeed(float32(advisorySpeed))
 
 	output.SetNextAdvisorySpeed(s.NextAdvisorySpeed.Value)
-	output.SetNextHazardDistance(s.NextAdvisorySpeed.Distance)
+	output.SetNextAdvisorySpeedDistance(s.NextAdvisorySpeed.Distance)
 
 	oneWay := s.CurrentWay.Way.OneWay()
 	output.SetOneWay(oneWay)
@@ -119,6 +118,7 @@ func (s *State) Send() error {
 	output.SetDistanceFromWayCenter(float32(s.CurrentWay.OnWay.Distance.Distance))
 
 	output.SetWaySelectionType(s.CurrentWay.SelectionType)
+	output.SetSpeedLimitAccepted(ms.Settings.SpeedLimitAccepted())
 
 	return s.Publisher.Send(msg)
 }
