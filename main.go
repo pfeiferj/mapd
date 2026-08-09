@@ -12,6 +12,8 @@ import (
 	ms "pfeifer.dev/mapd/settings"
 )
 
+const mapLoadRetryDelay = time.Second
+
 func main() {
 	ms.Settings.Default()                // set defaults so settings not already in param are defaulted
 	settingsLoaded := ms.Settings.Load() // try loading settings before cli
@@ -24,6 +26,7 @@ func main() {
 
 	state := State{}
 	state.Init()
+	var lastMapLoadAttempt time.Time
 
 	extendedState := ExtendedState{
 		Pub:   cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
@@ -99,10 +102,12 @@ func main() {
 		if gpsSuccess {
 			state.DistanceSinceLastPosition = 0
 			state.Position = m.PosFromLocation(location)
-			box := state.Data.Box()
 			pos := m.PosFromLocation(location)
-			if len(state.Data.Ways()) == 0 || !box.PosInside(pos) {
+			box := state.Data.Box()
+			mapLoadTime := time.Now()
+			if !box.PosInside(pos) || (!state.Data.Loaded && mapLoadTime.Sub(lastMapLoadAttempt) >= mapLoadRetryDelay) {
 				state.Data, err = maps.FindWaysAroundPosition(pos)
+				lastMapLoadAttempt = mapLoadTime
 				if err != nil {
 					slog.Debug("", "error", errors.Wrap(err, "Could not find ways around location"))
 					continue
