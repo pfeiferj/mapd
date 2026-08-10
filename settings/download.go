@@ -113,6 +113,38 @@ func (p *DownloadProgress) addLocationDetails(path string) {
 	}
 }
 
+func (p DownloadProgress) clone() DownloadProgress {
+	clone := p
+	clone.LocationsToDownload = append([]string(nil), p.LocationsToDownload...)
+	clone.LocationDetails = make(map[string]*DownloadLocationDetail, len(p.LocationDetails))
+	for path, detail := range p.LocationDetails {
+		if detail == nil {
+			clone.LocationDetails[path] = nil
+			continue
+		}
+		detailCopy := *detail
+		clone.LocationDetails[path] = &detailCopy
+	}
+	return clone
+}
+
+func (d *download) publishProgress() {
+	progress := d.progress.clone()
+	select {
+	case d.progressChan <- progress:
+		return
+	default:
+	}
+	select {
+	case <-d.progressChan:
+	default:
+	}
+	select {
+	case d.progressChan <- progress:
+	default:
+	}
+}
+
 func Download(paths string, progressChan chan DownloadProgress, cancelChan chan bool) {
 	slog.Info("download", "paths", paths)
 	pathsSplit := strings.Split(paths, ",")
@@ -141,10 +173,7 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 		}
 	}
 	d.progress.Active = false
-	select { // nonblocking update of progress
-	case d.progressChan <- d.progress:
-	default:
-	}
+	d.publishProgress() // nonblocking update of progress
 }
 
 func adjustedBounds(bounds Bounds) (int, int, int, int) {
@@ -170,11 +199,8 @@ func (d *download) downloadBounds(bounds Bounds, locationName string) (err error
 	d.progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
 	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
 		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
-			select { // nonblocking update of progress
-			case d.progressChan <- d.progress:
-			default:
-			}
-			select { // cancel if sent message
+			d.publishProgress() // nonblocking update of progress
+			select {            // cancel if sent message
 			case cancel := <-d.cancelChan:
 				if cancel {
 					return nil, true
