@@ -10,13 +10,9 @@ type Curvature struct {
 }
 
 func CalculateCurvature(a Position, b Position, c Position) Curvature {
-	lengthA := a.DistanceTo(b)
-	lengthB := a.DistanceTo(c)
-	lengthC := b.DistanceTo(c)
-
-	sp := (lengthA + lengthB + lengthC) / 2
-
-	area := float32(m.Sqrt(float64(sp * (sp - lengthA) * (sp - lengthB) * (sp - lengthC))))
+	lengthA := a.distanceTo(b)
+	lengthB := a.distanceTo(c)
+	lengthC := b.distanceTo(c)
 
 	lengthProd := lengthA * lengthB * lengthC
 	if lengthProd == 0 {
@@ -24,14 +20,29 @@ func CalculateCurvature(a Position, b Position, c Position) Curvature {
 	}
 
 	res := Curvature{Pos: b}
-	res.Curvature = float64((4 * area) / lengthProd)
-	radius := 1.0 / res.Curvature
 
-	num := (m.Pow(radius, 2)*2 - m.Pow(float64(lengthB), 2))
-	den := (2 * m.Pow(radius, 2))
-	res.Angle = m.Acos(num / den)
+	x, y, z := lengthA, lengthB, lengthC
+	if x < y {
+		x, y = y, x
+	}
+	if x < z {
+		x, z = z, x
+	}
+	if y < z {
+		y, z = z, y
+	}
 
-	res.ArcLength = radius * res.Angle
+	areaProduct := (x + (y + z)) * (z - (x - y)) * (z + (x - y)) * (x + (y - z))
+	if areaProduct <= 0 {
+		res.ArcLength = lengthB
+		return res
+	}
+
+	area := 0.25 * m.Sqrt(areaProduct)
+	res.Curvature = 4 * area / lengthProd
+
+	res.Angle = 2 * m.Asin(m.Min(1, lengthB*res.Curvature/2))
+	res.ArcLength = res.Angle / res.Curvature
 
 	return res
 }
