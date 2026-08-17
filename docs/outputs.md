@@ -1,7 +1,9 @@
 # Outputs
 
 Mapd outputs data using two different cereal messages. MapdOut is the primary
-output of mapd and is output at a rate of 20 hz. MapdExtendedOut contains data
+output of mapd and is output at a rate of 20 hz. It repeats the latest fully
+calculated output while new map calculations are in progress, so its publish
+cadence does not indicate the calculation rate. MapdExtendedOut contains data
 that is needed in less realtime and thus is output at a rate of 1hz.
 
 ## MapdOut
