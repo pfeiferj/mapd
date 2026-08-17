@@ -56,7 +56,13 @@ func main() {
 	selfdriveState := cereal.NewSubscriber("selfdriveState", cereal.SelfdriveStateReader, true, ms.Settings.SubscriberSettings.ShadowSelfdriveState)
 	defer selfdriveState.Sub.Msgq.Close()
 
+	lastLoopTime := time.Now()
+
 	for {
+		lastLoopDuration := time.Since(lastLoopTime)
+		time.Sleep(max(ms.LOOP_DELAY - lastLoopDuration, 0))
+		lastLoopTime = time.Now()
+
 		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
 		if err != nil {
 			slog.Error("Failed to send update", "error", err)
@@ -65,7 +71,6 @@ func main() {
 		if err != nil {
 			slog.Error("Failed to send extended update", "error", err)
 		}
-		time.Sleep(ms.LOOP_DELAY)
 
 		// handle settings inputs from openpilot/cli
 		input, inputSuccess := sub.Read()
