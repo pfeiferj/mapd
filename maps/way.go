@@ -344,6 +344,12 @@ func (w *Way) Hazard() string {
 func (w *Way) OnWay(location log.GpsLocationData, distanceMultiplier float32) (OnWayResult, error) {
 	res := OnWayResult{}
 	pos := m.NewPosition(location.Latitude(), location.Longitude())
+	box := w.Box()
+	oversizedBox := box.Overlap(0.01)
+	if !oversizedBox.PosInside(pos) {
+		res.OnWay = false
+		return res, nil
+	}
 	d, err := w.DistanceFrom(pos)
 	res.Distance = d
 	if err != nil {

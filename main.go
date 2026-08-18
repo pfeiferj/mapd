@@ -101,7 +101,6 @@ func main() {
 		if err != nil {
 			slog.Error("Failed to send extended update", "error", err)
 		}
-		time.Sleep(ms.LOOP_DELAY)
 
 		// handle settings inputs from openpilot/cli
 		input, inputSuccess := sub.Read()
