@@ -2,14 +2,10 @@ package main
 
 import (
 	"log/slog"
-	"sync/atomic"
 	"time"
 
-	"capnproto.org/go/capnp/v3"
 	"github.com/pkg/errors"
 	"pfeifer.dev/mapd/cereal"
-	"pfeifer.dev/mapd/cereal/custom"
-	"pfeifer.dev/mapd/cereal/log"
 	"pfeifer.dev/mapd/cli"
 	"pfeifer.dev/mapd/maps"
 	m "pfeifer.dev/mapd/math"
@@ -17,30 +13,6 @@ import (
 )
 
 const mapLoadRetryDelay = time.Second
-
-func publishMapdOut(publisher *cereal.Publisher[custom.MapdOut], latest *atomic.Pointer[capnp.Message], stop <-chan struct{}, stopped chan<- struct{}) {
-	ticker := time.NewTicker(ms.LOOP_DELAY)
-	defer ticker.Stop()
-	defer close(stopped)
-
-	for {
-		message := latest.Load()
-		event, err := log.ReadRootEvent(message)
-		if err == nil {
-			event.SetLogMonoTime(cereal.GetTime())
-			err = publisher.Send(message)
-		}
-		if err != nil {
-			slog.Error("Failed to send update", "error", err)
-		}
-
-		select {
-		case <-ticker.C:
-		case <-stop:
-			return
-		}
-	}
-}
 
 func main() {
 	ms.Settings.Default()                // set defaults so settings not already in param are defaulted
@@ -64,6 +36,7 @@ func main() {
 
 	pub := cereal.NewPublisher("mapdOut", cereal.MapdOutCreator)
 	defer pub.Pub.Msgq.Close()
+	state.Publisher = &pub
 
 	sub := cereal.NewSubscriber("mapdIn", cereal.MapdInReader, false, false)
 	defer sub.Sub.Msgq.Close()
@@ -83,21 +56,18 @@ func main() {
 	selfdriveState := cereal.NewSubscriber("selfdriveState", cereal.SelfdriveStateReader, true, ms.Settings.SubscriberSettings.ShadowSelfdriveState)
 	defer selfdriveState.Sub.Msgq.Close()
 
-	latestMapdOut := atomic.Pointer[capnp.Message]{}
-	latestMapdOut.Store(state.buildMapdOut(&pub))
-	stopMapdOut := make(chan struct{})
-	mapdOutStopped := make(chan struct{})
-	go publishMapdOut(&pub, &latestMapdOut, stopMapdOut, mapdOutStopped)
-	defer func() {
-		close(stopMapdOut)
-		<-mapdOutStopped
-	}()
+	lastLoopTime := time.Now()
 
 	for {
-		// Build before handoff because State contains unsynchronized lazy getters.
-		latestMapdOut.Store(state.buildMapdOut(&pub))
+		lastLoopDuration := time.Since(lastLoopTime)
+		time.Sleep(max(ms.LOOP_DELAY - lastLoopDuration, 0))
+		lastLoopTime = time.Now()
 
-		err := extendedState.Send() // this send is internally rate limited to 1 hz
+		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
+		if err != nil {
+			slog.Error("Failed to send update", "error", err)
+		}
+		err = extendedState.Send() // this send is internally rate limited to 1 hz
 		if err != nil {
 			slog.Error("Failed to send extended update", "error", err)
 		}
@@ -166,5 +136,6 @@ func main() {
 			state.TargetVelocities = GetTargetVelocities(state.Curvatures, state.TargetVelocities)
 		}
 
+		// send at beginning of next loop
 	}
 }

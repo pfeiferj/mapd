@@ -1,7 +1,6 @@
 package main
 
 import (
-	"capnproto.org/go/capnp/v3"
 	"pfeifer.dev/mapd/cereal"
 	"pfeifer.dev/mapd/cereal/car"
 	"pfeifer.dev/mapd/cereal/custom"
@@ -11,6 +10,7 @@ import (
 )
 
 type State struct {
+	Publisher                 *cereal.Publisher[custom.MapdOut]
 	Data                      maps.Offline
 	Car                       CarState
 	CurrentWay                CurrentWay
@@ -65,8 +65,8 @@ func (s *State) UpdateCarState(carData car.CarState) {
 	s.SpeedLimit.Update(s.CurrentWay, s.Car)
 }
 
-func (s *State) buildMapdOut(publisher *cereal.Publisher[custom.MapdOut]) *capnp.Message {
-	msg, output := publisher.NewMessage(true)
+func (s *State) Send() error {
+	msg, output := s.Publisher.NewMessage(true)
 	id := s.CurrentWay.Way.Id()
 	output.SetWayId(id)
 
@@ -120,5 +120,5 @@ func (s *State) buildMapdOut(publisher *cereal.Publisher[custom.MapdOut]) *capnp
 	output.SetWaySelectionType(s.CurrentWay.SelectionType)
 	output.SetSpeedLimitAccepted(ms.Settings.SpeedLimitAccepted())
 
-	return msg
+	return s.Publisher.Send(msg)
 }
