@@ -120,5 +120,6 @@ func (s *State) Send() error {
 	output.SetWaySelectionType(s.CurrentWay.SelectionType)
 	output.SetSpeedLimitAccepted(ms.Settings.SpeedLimitAccepted())
 
-	return s.Publisher.Send(msg)
+	s.Publisher.Publish(msg)
+	return nil
 }

@@ -26,7 +26,8 @@ func (s *ExtendedState) Send() error {
 		s.setSettings(out)
 		s.setPath(out)
 		s.setPosition(out)
-		return s.Pub.Send(msg)
+		s.Pub.Publish(msg)
+		return nil
 	}
 	return nil
 }

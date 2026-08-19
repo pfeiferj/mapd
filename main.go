@@ -32,9 +32,13 @@ func main() {
 		Pub:   cereal.NewPublisher("mapdExtendedOut", cereal.MapdExtendedOutCreator),
 		state: &state,
 	}
+	extendedState.Pub.StartAutoPublish(time.Second)
+	defer extendedState.Pub.Stop()
 	defer extendedState.Pub.Pub.Msgq.Close()
 
 	pub := cereal.NewPublisher("mapdOut", cereal.MapdOutCreator)
+	pub.StartAutoPublish(ms.LOOP_DELAY)
+	defer pub.Stop()
 	defer pub.Pub.Msgq.Close()
 	state.Publisher = &pub
 
@@ -60,14 +64,17 @@ func main() {
 
 	for {
 		lastLoopDuration := time.Since(lastLoopTime)
-		time.Sleep(max(ms.LOOP_DELAY - lastLoopDuration, 0))
+		time.Sleep(max(ms.LOOP_DELAY-lastLoopDuration, 0))
 		lastLoopTime = time.Now()
 
-		err := state.Send() // send beginning of each loop to ensure it happens at the correct rate
+		// Publish() only queues the latest state; the publisher's own
+		// auto-publish loop owns the actual on-wire send rate, resending
+		// the last message with a fresh timestamp if this loop stalls.
+		err := state.Send()
 		if err != nil {
 			slog.Error("Failed to send update", "error", err)
 		}
-		err = extendedState.Send() // this send is internally rate limited to 1 hz
+		err = extendedState.Send() // rebuilt at most once per second; publisher handles the send cadence
 		if err != nil {
 			slog.Error("Failed to send extended update", "error", err)
 		}
