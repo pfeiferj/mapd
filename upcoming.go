@@ -42,7 +42,7 @@ func (u *Upcoming[T]) Update(state *State) {
 
 	cumulativeDistance := float32(0.0)
 
-	if len(state.CurrentWay.Way.Nodes()) > 0 {
+	if state.CurrentWay.Way.Nodes.Len() > 0 {
 		distToEnd, err := state.CurrentWay.Way.DistanceToEnd(state.Position, state.CurrentWay.OnWay.IsForward)
 		if err == nil {
 			cumulativeDistance = distToEnd

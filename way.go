@@ -98,7 +98,7 @@ func selectBestWayAdvanced(possibleWays []maps.Way, location log.GpsLocationData
 
 		score -= onWay.Distance.Distance * 0.1
 
-		if len(currentWay.Nodes()) > 0 {
+		if currentWay.Nodes.Len() > 0 {
 			currentName := currentWay.WayName()
 			currentRef := currentWay.WayRef()
 			wayName := way.WayName()
@@ -123,8 +123,7 @@ func selectBestWayAdvanced(possibleWays []maps.Way, location log.GpsLocationData
 
 func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline *maps.Offline, location log.GpsLocationData) (CurrentWay, error) {
 	distanceFromCurrentWay := currentWay.OnWay.Distance.Distance
-	nodes := currentWay.Way.Nodes()
-	if len(nodes) > 1 {
+	if currentWay.Way.Nodes.Len() > 1 {
 		onWay, err := currentWay.Way.OnWay(location, currentWay.Way.DistanceMultiplier())
 		newStableDistance := onWay.Distance.Distance
 		distanceFromCurrentWay = newStableDistance
@@ -150,7 +149,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 	}
 
 	for _, nextWay := range nextWays {
-		if len(nextWay.Way.Nodes()) == 0 {
+		if nextWay.Way.Nodes.Len() == 0 {
 			continue
 		}
 		onWay, err := nextWay.Way.OnWay(location, nextWay.Way.DistanceMultiplier())
@@ -176,7 +175,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 	possibleWays, err := getPossibleWays(offline, location)
 	if err == nil && len(possibleWays) > 0 {
 		selectedWay := selectBestWayAdvanced(possibleWays, location, currentWay.Way)
-		if len(selectedWay.Nodes()) > 0 {
+		if selectedWay.Nodes.Len() > 0 {
 			selectedOnWay, err := selectedWay.OnWay(location, selectedWay.DistanceMultiplier())
 			if err == nil && selectedOnWay.OnWay {
 				start, end := selectedWay.GetStartEnd(selectedOnWay.IsForward)
@@ -198,7 +197,7 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 		}
 	}
 
-	if len(currentWay.Way.Nodes()) > 0 {
+	if currentWay.Way.Nodes.Len() > 0 {
 		onWay, err := currentWay.Way.OnWay(location, 2)
 		if err == nil && onWay.OnWay {
 			start, end := currentWay.Way.GetStartEnd(onWay.IsForward)
@@ -224,10 +223,9 @@ func GetCurrentWay(currentWay CurrentWay, nextWays []maps.NextWayResult, offline
 
 func getPossibleWays(offlineMaps *maps.Offline, location log.GpsLocationData) ([]maps.Way, error) {
 	possibleWays := []maps.Way{}
-	ways := offlineMaps.Ways()
 
-	for i := range len(ways) {
-		way := ways[i]
+	for i := range offlineMaps.Ways.Len() {
+		way := offlineMaps.Ways.At(i)
 		onWay, err := way.OnWay(location, 2)
 		if err != nil {
 			slog.Debug("failed to check if on way", "error", err)

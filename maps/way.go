@@ -114,7 +114,8 @@ type Way struct {
 	wayRef           u.Curry[string]
 	maxSpeed         u.Curry[float64]
 	box              u.Curry[m.Box]
-	nodes            u.Curry[[]m.Position]
+	Nodes            u.CurryList[m.Position]
+	nodesRaw         offline.Coordinates_List
 	lanes            u.Curry[int]
 	advisorySpeed    u.Curry[float64]
 	hazard           u.Curry[string]
@@ -130,16 +131,25 @@ type Way struct {
 	id u.Curry[int64]
 }
 
+func NewWay(way offline.Way) Way {
+	nodes, _ := way.Nodes()
+	w := Way{
+		Way: way,
+	}
+	w.nodesRaw = nodes
+	w.Nodes.Init(w._nodeAt, nodes.Len())
+	return w
+}
+
 func (w *Way) IsForwardFrom(matchNode m.Position) bool {
-	if len(w.Nodes()) == 0 {
+	if w.Nodes.Len() == 0 {
 		return true
 	}
-	nodes := w.Nodes()
-	if len(nodes) < 2 {
+	if w.Nodes.Len() < 2 {
 		return true
 	}
 
-	lastNode := nodes[len(nodes)-1]
+	lastNode := w.Nodes.At(w.Nodes.Len()-1)
 	return !lastNode.Equals(matchNode)
 }
 
@@ -150,21 +160,9 @@ func IsForward(lineStart m.Position, lineEnd m.Position, bearing float64) bool {
 	return math.Cos(bearingDelta) >= 0
 }
 
-func (w *Way) _nodes() []m.Position {
-	nodes, err := w.Way.Nodes()
-	if err != nil {
-		return []m.Position{}
-	}
-	res := make([]m.Position, nodes.Len())
-	for i := range nodes.Len() {
-		node := nodes.At(i)
-		res[i] = m.NewPosition(node.Latitude(), node.Longitude())
-	}
-	return res
-}
-
-func (w *Way) Nodes() []m.Position {
-	return w.nodes.Value(w._nodes)
+func (w *Way) _nodeAt(index int) m.Position {
+	n := w.nodesRaw.At(index)
+	return m.NewPosition(n.Latitude(), n.Longitude())
 }
 
 func (w *Way) _oneWay() bool {
@@ -396,16 +394,15 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 	var minNodeStart m.Position
 	var minNodeEnd m.Position
 	minDistance := float32(math.MaxFloat32)
-	nodes := w.Nodes()
-	if len(nodes) < 2 {
+	if w.Nodes.Len() < 2 {
 		return res, errors.New("not enough nodes to determine distance")
 	}
 
 	minLinePosition := m.LinePosition{}
 	minIdx := 0
-	for i := 0; i < len(nodes)-1; i++ {
-		nodeStart := nodes[i]
-		nodeEnd := nodes[i+1]
+	for i := 0; i < w.Nodes.Len()-1; i++ {
+		nodeStart := w.Nodes.At(i)
+		nodeEnd := w.Nodes.At(i+1)
 		line := m.Line{Start: nodeStart, End: nodeEnd}
 		linePosition := line.NearestPosition(pos)
 		distance := pos.DistanceTo(linePosition.Pos)
@@ -420,8 +417,8 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 	}
 	onWayDistance := minNodeStart.DistanceTo(minLinePosition.Pos)
 	for i := range minIdx {
-		nodeStart := nodes[i]
-		nodeEnd := nodes[i+1]
+		nodeStart := w.Nodes.At(i)
+		nodeEnd := w.Nodes.At(i+1)
 		onWayDistance += nodeStart.DistanceTo(nodeEnd)
 	}
 
@@ -433,28 +430,26 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 }
 
 func (w *Way) GetStartEnd(isForward bool) (m.Position, m.Position) {
-	nodes := w.Nodes()
-	if len(nodes) == 0 {
+	if w.Nodes.Len() == 0 {
 		return m.Position{}, m.Position{}
 	}
 
-	if len(nodes) == 1 {
-		return nodes[0], nodes[0]
+	if w.Nodes.Len() == 1 {
+		return w.Nodes.At(0), w.Nodes.At(0)
 	}
 
 	if isForward {
-		return nodes[0], nodes[len(nodes)-1]
+		return w.Nodes.At(0), w.Nodes.At(w.Nodes.Len() - 1)
 	}
-	return nodes[len(nodes)-1], nodes[0]
+	return w.Nodes.At(w.Nodes.Len() - 1), w.Nodes.At(0)
 }
 
 func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, error) {
 	matchingWays := []Way{}
-	ways := offlineMaps.Ways()
 
-	for i := range len(ways) {
-		way := ways[i]
-		if len(way.Nodes()) == 0 {
+	for i := range offlineMaps.Ways.Len() {
+		way := offlineMaps.Ways.At(i)
+		if way.Nodes.Len() == 0 {
 			continue
 		}
 
@@ -463,13 +458,12 @@ func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, e
 			continue
 		}
 
-		wNodes := way.Nodes()
-		if len(wNodes) < 2 {
+		if way.Nodes.Len() < 2 {
 			continue
 		}
 
-		fNode := wNodes[0]
-		lNode := wNodes[len(wNodes)-1]
+		fNode := way.Nodes.At(0)
+		lNode := way.Nodes.At(way.Nodes.Len() - 1)
 		if fNode.Equals(matchNode) || lNode.Equals(matchNode) {
 			matchingWays = append(matchingWays, way)
 		}
@@ -479,16 +473,15 @@ func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, e
 }
 
 func (w *Way) isValidConnection(matchNode, bearingNode m.Position, maxCurvature float64) bool {
-	nodes := w.Nodes()
-	if len(nodes) < 2 {
+	if w.Nodes.Len() < 2 {
 		return false
 	}
 
 	var nextBearingNode m.Position
-	if matchNode.Equals(nodes[0]) {
-		nextBearingNode = nodes[1]
+	if matchNode.Equals(w.Nodes.At(0)) {
+		nextBearingNode = w.Nodes.At(1)
 	} else {
-		nextBearingNode = nodes[len(nodes)-2]
+		nextBearingNode = w.Nodes.At(w.Nodes.Len() - 2)
 	}
 
 	curv := m.CalculateCurvature(bearingNode, matchNode, nextBearingNode)
@@ -496,11 +489,10 @@ func (w *Way) isValidConnection(matchNode, bearingNode m.Position, maxCurvature 
 }
 
 func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
-	nodes := w.Nodes()
-	if len(nodes) == 0 {
+	if w.Nodes.Len() == 0 {
 		return 0, nil
 	}
-	dist, _, err := w.DistanceToNode(pos, isForward, nodes[len(nodes)-1])
+	dist, _, err := w.DistanceToNode(pos, isForward, w.Nodes.At(w.Nodes.Len()-1))
 	return dist, err
 }
 
@@ -511,15 +503,14 @@ func (w *Way) DistanceToNode(pos m.Position, isForward bool, finalNode m.Positio
 	}
 	dist := float32(0.0)
 	stopFiltering := false
-	nodes := w.Nodes()
 	lastPos := distanceResult.LinePosition.Pos
 	found := false
-	for i := range nodes {
+	for i := range w.Nodes.Len() {
 		index := i
 		if !isForward {
-			index = len(nodes) - 1 - i
+			index = w.Nodes.Len() - 1 - i
 		}
-		node := nodes[index]
+		node := w.Nodes.At(index)
 		if (node.Equals(distanceResult.LineStart) || node.Equals(distanceResult.LineEnd)) && !stopFiltering {
 			stopFiltering = true
 			continue
@@ -539,16 +530,14 @@ func (w *Way) DistanceToNode(pos m.Position, isForward bool, finalNode m.Positio
 }
 
 func (w *Way) _distance() float32 {
-	nodes := w.Nodes()
-
-	if len(nodes) < 2 {
+	if w.Nodes.Len() < 2 {
 		return 0
 	}
 
 	totalDistance := float32(0.0)
-	for i := range len(nodes) - 1 {
-		nodeStart := nodes[i]
-		nodeEnd := nodes[i+1]
+	for i := range w.Nodes.Len() - 1 {
+		nodeStart := w.Nodes.At(i)
+		nodeEnd := w.Nodes.At(i + 1)
 		distance := nodeStart.DistanceTo(nodeEnd)
 		totalDistance += distance
 	}
@@ -756,22 +745,21 @@ func (w *Way) DistanceMultiplier() float32 {
 }
 
 func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, error) {
-	nodes := w.Nodes()
-	if len(nodes) == 0 {
+	if w.Nodes.Len() == 0 {
 		return NextWayResult{}, nil
 	}
 
 	var matchNode m.Position
 	var matchBearingNode m.Position
 	if isForward {
-		matchNode = nodes[len(nodes)-1]
-		if len(nodes) > 1 {
-			matchBearingNode = nodes[len(nodes)-2]
+		matchNode = w.Nodes.At(w.Nodes.Len() - 1)
+		if w.Nodes.Len() > 1 {
+			matchBearingNode = w.Nodes.At(w.Nodes.Len() - 2)
 		}
 	} else {
-		matchNode = nodes[0]
-		if len(nodes) > 1 {
-			matchBearingNode = nodes[1]
+		matchNode = w.Nodes.At(0)
+		if w.Nodes.Len() > 1 {
+			matchBearingNode = w.Nodes.At(1)
 		}
 	}
 
@@ -828,7 +816,7 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 		for _, mWay := range matchingWays {
 			mName := mWay.WayName()
 			if mName == name {
-				if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
+				if w.Nodes.Len() > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 					candidates = append(candidates, mWay)
 				}
 			}
@@ -853,7 +841,7 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 		for _, mWay := range matchingWays {
 			mRef := mWay.WayRef()
 			if mRef == ref {
-				if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
+				if w.Nodes.Len() > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 					candidates = append(candidates, mWay)
 				}
 			}
@@ -885,7 +873,7 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 				}
 			}
 			if hasMatch {
-				if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
+				if w.Nodes.Len() > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 					candidates = append(candidates, mWay)
 				}
 			}
@@ -906,7 +894,7 @@ func (w *Way) NextWay(offlineMaps *Offline, isForward bool) (NextWayResult, erro
 
 	validWays := []Way{}
 	for _, mWay := range matchingWays {
-		if len(nodes) > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
+		if w.Nodes.Len() > 1 && mWay.isValidConnection(matchNode, matchBearingNode, curvatureThreshold) {
 			validWays = append(validWays, mWay)
 		}
 	}

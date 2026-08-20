@@ -42,12 +42,12 @@ func (s *ExtendedState) setPosition(out custom.MapdExtendedOut) {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
-	nodes := s.state.CurrentWay.Way.Nodes()
+	nodes := s.state.CurrentWay.Way.Nodes.Slice()
 	num_points := len(nodes)
 	all_nodes := [][]m.Position{nodes}
 	all_nodes_direction := []bool{s.state.CurrentWay.OnWay.IsForward}
 	for _, nextWay := range s.state.NextWays {
-		nwNodes := nextWay.Way.Nodes()
+		nwNodes := nextWay.Way.Nodes.Slice()
 		if len(nwNodes) > 0 {
 			num_points += len(nwNodes) - 1
 		}

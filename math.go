@@ -10,14 +10,14 @@ import (
 )
 
 func GetStateCurvatures(state *State) ([]m.Curvature, error) {
-	nodes := state.CurrentWay.Way.Nodes()
+	nodes := state.CurrentWay.Way.Nodes.Slice()
 	num_points := len(nodes)
 	all_nodes := [][]m.Position{nodes}
 	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
 	all_nodes_is_merge_or_split := []bool{false}
 	lastWay := state.CurrentWay.Way
 	for _, nextWay := range state.NextWays {
-		nwNodes := nextWay.Way.Nodes()
+		nwNodes := nextWay.Way.Nodes.Slice()
 		if len(nwNodes) > 0 {
 			num_points += len(nwNodes) - 1
 		}
