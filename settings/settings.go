@@ -19,7 +19,6 @@ const SETTINGS_VERSION = 2 // Used for migrations
 var Settings = MapdSettings{
 	SettingsVersion:  SETTINGS_VERSION,
 	downloadProgress: make(chan DownloadProgress, 1),
-	cancelDownload:   make(chan bool, 1),
 }
 
 type SpeedLimitPriority string
@@ -301,6 +300,9 @@ func (s *MapdSettings) GetDownloadProgress() (progress DownloadProgress, success
 	select {
 	case progress = <-s.downloadProgress:
 		s.downloadActive = progress.Active
+		if !progress.Active {
+			s.cancelDownload = nil
+		}
 		return progress, true
 	default:
 	}
@@ -327,9 +329,11 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 	case custom.MapdInputType_loadRecommendedSettings:
 		s.Recommended()
 	case custom.MapdInputType_cancelDownload:
-		select {
-		case s.cancelDownload <- true:
-		default:
+		if s.downloadActive {
+			select {
+			case s.cancelDownload <- true:
+			default:
+			}
 		}
 	case custom.MapdInputType_download:
 		path, err := input.Str()
@@ -338,6 +342,8 @@ func (s *MapdSettings) Handle(input custom.MapdIn) {
 			return
 		}
 		if !s.downloadActive {
+			s.downloadActive = true
+			s.cancelDownload = make(chan bool, 1)
 			go Download(path, s.downloadProgress, s.cancelDownload)
 		}
 	case custom.MapdInputType_acceptSpeedLimit:
