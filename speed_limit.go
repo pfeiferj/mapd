@@ -88,17 +88,18 @@ func (s *SpeedLimitState) SpeedLimitFinalSuggestion(enableSpeedActive bool, setS
 }
 
 func (s *SpeedLimitState) SuggestNewSpeedLimit(currentWay CurrentWay, car CarState) float32 {
-	slSuggestedSpeed := ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed()))
-	if slSuggestedSpeed == 0 && ms.Settings.SpeedLimitSettings.HoldLastSeenSpeedLimit {
-		slSuggestedSpeed = float32(s.Limit.LastValue)
+	s.Limit.Update(ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed())))
+	currentLimit := s.Limit.Value
+	if currentLimit == 0 && ms.Settings.SpeedLimitSettings.HoldLastSeenSpeedLimit {
+		currentLimit = s.Limit.LastValue
 	}
+	slSuggestedSpeed := currentLimit
 	if slSuggestedSpeed > 0 {
 		slSuggestedSpeed += ms.Settings.SpeedLimitSettings.SpeedLimitOffset
 	}
 	if s.NextLimit.Value > 0 {
 		offsetNextSpeedLimit := s.NextLimit.Value + ms.Settings.SpeedLimitSettings.SpeedLimitOffset
-		s.Limit.Update(ms.Settings.PrioritySpeedLimit(float32(currentWay.EffectiveMaxSpeed())))
-		nextIsLower := s.Limit.Value > s.NextLimit.Value
+		nextIsLower := currentLimit > s.NextLimit.Value
 		personality := ms.Settings.CurrentPersonality()
 		distanceToReachSpeed := m.CalculateJerkLimitedDistanceSimple(car.VEgo, car.AEgo, offsetNextSpeedLimit, personality.TargetSpeedAccel, personality.TargetSpeedJerk)
 		if nextIsLower {
