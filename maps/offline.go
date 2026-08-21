@@ -28,7 +28,13 @@ func ReadOffline(data []uint8) Offline {
 		}
 		// allow us to read as much as we want
 		msg.ResetReadLimit(math.MaxUint64)
-		return Offline{offline: offlineMaps, Loaded: true}
+		ways, err := offlineMaps.Ways()
+		if err != nil {
+			slog.Warn("Could not read ways from offline maps", "error", err)
+		}
+		o := Offline{offline: offlineMaps, waysRaw: ways, Loaded: true}
+		o.Ways.Init(o._wayAt, ways.Len())
+		return o
 	}
 	return Offline{Loaded: false}
 }
@@ -38,7 +44,8 @@ type Offline struct {
 	offline    offline.Offline
 	box        u.Curry[m.Box]
 	overlapBox u.Curry[m.Box]
-	ways       u.Curry[[]Way]
+	Ways       u.CurryList[Way]
+	waysRaw    offline.Way_List
 	overlap    u.Curry[float64]
 }
 
@@ -70,18 +77,6 @@ func (o *Offline) Overlap() float64 {
 	return o.overlap.Value(o._overlap)
 }
 
-func (o *Offline) _ways() []Way {
-	ways, err := o.offline.Ways()
-	if err != nil {
-		slog.Warn("Could not read ways from offline maps", "error", err)
-	}
-	res := make([]Way, ways.Len())
-	for i := range ways.Len() {
-		res[i].Way = ways.At(i)
-	}
-	return res
-}
-
-func (o *Offline) Ways() []Way {
-	return o.ways.Value(o._ways)
+func (o *Offline) _wayAt(index int) Way {
+	return NewWay(o.waysRaw.At(index))
 }

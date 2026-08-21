@@ -94,6 +94,8 @@ struct MapdExtendedOut @0xa30662f84033036c {
   settings @1 :Text;
   path @2 :List(MapdPathPoint);
   position @3 :MapdPosition;
+  loopRateAverage @4 :Float32;
+  loopRateMin @5 :Float32;
 }
 
 enum MapdInputType {

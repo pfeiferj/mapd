@@ -9,11 +9,13 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 type ExtendedState struct {
 	DownloadProgress ms.DownloadProgress
 	Pub              cereal.Publisher[custom.MapdExtendedOut]
+	LoopRate         utils.LoopRateTracker
 	lastSend         time.Time
 	state            *State
 }
@@ -26,7 +28,9 @@ func (s *ExtendedState) Send() error {
 		s.setSettings(out)
 		s.setPath(out)
 		s.setPosition(out)
-		return s.Pub.Send(msg)
+		s.setLoopRate(out)
+		s.Pub.Publish(msg)
+		return nil
 	}
 	return nil
 }
@@ -41,12 +45,12 @@ func (s *ExtendedState) setPosition(out custom.MapdExtendedOut) {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
-	nodes := s.state.CurrentWay.Way.Nodes()
+	nodes := s.state.CurrentWay.Way.Nodes.Slice()
 	num_points := len(nodes)
 	all_nodes := [][]m.Position{nodes}
 	all_nodes_direction := []bool{s.state.CurrentWay.OnWay.IsForward}
 	for _, nextWay := range s.state.NextWays {
-		nwNodes := nextWay.Way.Nodes()
+		nwNodes := nextWay.Way.Nodes.Slice()
 		if len(nwNodes) > 0 {
 			num_points += len(nwNodes) - 1
 		}
@@ -110,6 +114,11 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 			}
 		}
 	}
+}
+
+func (s *ExtendedState) setLoopRate(out custom.MapdExtendedOut) {
+	out.SetLoopRateAverage(float32(s.LoopRate.AverageRate()))
+	out.SetLoopRateMin(float32(s.LoopRate.MinRate()))
 }
 
 func (s *ExtendedState) setSettings(out custom.MapdExtendedOut) {
