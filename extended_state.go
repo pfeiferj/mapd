@@ -9,11 +9,13 @@ import (
 	"pfeifer.dev/mapd/cereal/custom"
 	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
+	"pfeifer.dev/mapd/utils"
 )
 
 type ExtendedState struct {
 	DownloadProgress ms.DownloadProgress
 	Pub              cereal.Publisher[custom.MapdExtendedOut]
+	LoopRate         utils.LoopRateTracker
 	lastSend         time.Time
 	state            *State
 }
@@ -26,6 +28,7 @@ func (s *ExtendedState) Send() error {
 		s.setSettings(out)
 		s.setPath(out)
 		s.setPosition(out)
+		s.setLoopRate(out)
 		s.Pub.Publish(msg)
 		return nil
 	}
@@ -111,6 +114,11 @@ func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
 			}
 		}
 	}
+}
+
+func (s *ExtendedState) setLoopRate(out custom.MapdExtendedOut) {
+	out.SetLoopRateAverage(float32(s.LoopRate.AverageRate()))
+	out.SetLoopRateMin(float32(s.LoopRate.MinRate()))
 }
 
 func (s *ExtendedState) setSettings(out custom.MapdExtendedOut) {

@@ -129,3 +129,8 @@ The current position mapd is using.
 * latitude: latitude of the position.
 * longitude: longitude of the position.
 
+### loopRateAverage / loopRateMin
+The average and minimum main loop update rate, in Hz, over the last 20 main
+loop cycles. loopRateAverage is the mean rate across those cycles;
+loopRateMin is the rate implied by the single slowest cycle in the window.
+

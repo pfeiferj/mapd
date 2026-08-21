@@ -65,7 +65,9 @@ func main() {
 	for {
 		lastLoopDuration := time.Since(lastLoopTime)
 		time.Sleep(max(ms.LOOP_DELAY-lastLoopDuration, 0))
-		lastLoopTime = time.Now()
+		now := time.Now()
+		extendedState.LoopRate.Add(now.Sub(lastLoopTime))
+		lastLoopTime = now
 
 		// Publish() only queues the latest state; the publisher's own
 		// auto-publish loop owns the actual on-wire send rate, resending
