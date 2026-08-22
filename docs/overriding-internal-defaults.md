@@ -38,8 +38,9 @@ values are always loaded upon starting mapd.
 
 ## Download Menu
 The download menu file is used for two purposes. When triggering a download, the
-area names given to mapd are used to locate the appropriate bounding box from
-the download menu file. The download menu file is also used to create a dynamic
+area names given to mapd locate an entry in the download menu. Its non-empty
+`archive_ranges` select the archives when provided; otherwise its `bounding_box`
+is used. The download menu file is also used to create a dynamic
 menu in the mapd cli for selecting areas to download. This means that additional
 areas not provided by mapd can be added as options for downloads by copying the
 download\_menu.json to /data/openpilot/mapd\_download\_menu.json and then adding
@@ -52,7 +53,7 @@ any desired areas to the file. The structure is as follows:
   "definitions": {
     "area_menu": {
       "type": "object",
-      "additionalProperties": {"$ref": "#/definitions/area"},
+      "additionalProperties": {"$ref": "#/definitions/area"}
     },
     "area": {
       "type": "object",
@@ -83,6 +84,20 @@ any desired areas to the file. The structure is as follows:
             "max_lat"
           ]
         },
+        "archive_ranges": {
+          "description": "Rows of [minimum latitude, inclusive minimum longitude, exclusive maximum longitude] for 2-degree latitude bands.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "multipleOf": 2
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        },
         "submenu": {
           "type": "string"
         }
@@ -95,6 +110,13 @@ any desired areas to the file. The structure is as follows:
   }
 }
 ```
+
+`archive_ranges` is optional, but takes precedence over `bounding_box` when
+non-empty. Remove it to restore bounding-box selection. The default ranges can
+be checked or regenerated with `uv run scripts/update_download_regions.py` and
+`uv run scripts/update_download_regions.py --write`, respectively.
+Pass `--menu PATH` to process another menu; the updater regenerates whichever of
+the `nation` and `us_state` sections are present and leaves other sections unchanged.
 
 Note the optional submenu value in an area. The submenu value allows for
 chaining of the menus when requesting a download, so the submenu value should
