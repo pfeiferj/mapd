@@ -10,12 +10,26 @@ import (
 	"pfeifer.dev/mapd/maps"
 	m "pfeifer.dev/mapd/math"
 	"pfeifer.dev/mapd/params"
+	"pfeifer.dev/mapd/settings"
 )
 
 func Handle() {
 	shouldExit := true
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
+			{
+				Name:  "generate-download-menu",
+				Usage: "Add archive selections to a download menu using local Natural Earth GeoJSON",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "menu", Value: "settings/download_menu.json"},
+					&cli.StringFlag{Name: "countries", Required: true},
+					&cli.StringFlag{Name: "states", Required: true},
+					&cli.StringFlag{Name: "output", Required: true},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return settings.GenerateDownloadMenu(cmd.String("menu"), cmd.String("countries"), cmd.String("states"), cmd.String("output"))
+				},
+			},
 			{
 				Name:    "interactive",
 				Aliases: []string{"i"},
