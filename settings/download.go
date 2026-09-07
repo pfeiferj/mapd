@@ -163,8 +163,24 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 		}
 	}
 	d.progress.Active = false
-	select { // nonblocking update of progress
-	case d.progressChan <- d.progress:
+	d.publishProgress()
+}
+
+func (d *download) publishProgress() {
+	progress := d.progress
+	progress.LocationsToDownload = append([]string(nil), d.progress.LocationsToDownload...)
+	progress.LocationDetails = make(map[string]*DownloadLocationDetail, len(d.progress.LocationDetails))
+	for path, detail := range d.progress.LocationDetails {
+		locationDetail := *detail
+		progress.LocationDetails[path] = &locationDetail
+	}
+
+	select { // discard queued progress
+	case <-d.progressChan:
+	default:
+	}
+	select {
+	case d.progressChan <- progress:
 	default:
 	}
 }
@@ -191,10 +207,7 @@ func (d *download) downloadLocation(location LocationData, locationName string) 
 	for _, row := range location.downloadRows() {
 		i := row[0]
 		for j := row[1]; j < row[2]; j += GROUP_AREA_BOX_DEGREES {
-			select { // nonblocking update of progress
-			case d.progressChan <- d.progress:
-			default:
-			}
+			d.publishProgress()
 			select { // cancel if sent message
 			case cancel := <-d.cancelChan:
 				if cancel {
