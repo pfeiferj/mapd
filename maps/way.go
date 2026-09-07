@@ -150,7 +150,11 @@ func (w *Way) IsForwardFrom(matchNode m.Position) bool {
 	}
 
 	lastNode := w.Nodes.At(w.Nodes.Len()-1)
-	return !lastNode.Equals(matchNode)
+	if lastNode.Equals(matchNode) {
+		// A closed one-way can be entered at its repeated endpoint in stored order.
+		return w.OneWay() && matchNode.Equals(w.Nodes.At(0))
+	}
+	return true
 }
 
 func IsForward(lineStart m.Position, lineEnd m.Position, bearing float64) bool {
