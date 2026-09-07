@@ -10,28 +10,38 @@ type Curvature struct {
 }
 
 func CalculateCurvature(a Position, b Position, c Position) Curvature {
-	lengthA := a.DistanceTo(b)
-	lengthB := a.DistanceTo(c)
-	lengthC := b.DistanceTo(c)
-
-	sp := (lengthA + lengthB + lengthC) / 2
-
-	area := float32(m.Sqrt(float64(sp * (sp - lengthA) * (sp - lengthB) * (sp - lengthC))))
-
-	lengthProd := lengthA * lengthB * lengthC
-	if lengthProd == 0 {
+	distanceAB := a.distanceTo(b)
+	distanceAC := a.distanceTo(c)
+	distanceBC := b.distanceTo(c)
+	distanceProduct := distanceAB * distanceAC * distanceBC
+	if distanceProduct == 0 {
 		return Curvature{Pos: b}
 	}
 
+	longestSide, middleSide, shortestSide := distanceAB, distanceAC, distanceBC
+	if longestSide < middleSide {
+		longestSide, middleSide = middleSide, longestSide
+	}
+	if longestSide < shortestSide {
+		longestSide, shortestSide = shortestSide, longestSide
+	}
+	if middleSide < shortestSide {
+		middleSide, shortestSide = shortestSide, middleSide
+	}
+
+	// Sorted-side Heron arithmetic reduces cancellation for nearly straight roads.
+	areaProduct := (longestSide + (middleSide + shortestSide)) *
+		(shortestSide - (longestSide - middleSide)) *
+		(shortestSide + (longestSide - middleSide)) *
+		(longestSide + (middleSide - shortestSide))
 	res := Curvature{Pos: b}
-	res.Curvature = float64((4 * area) / lengthProd)
-	radius := 1.0 / res.Curvature
+	res.Curvature = m.Sqrt(max(0, areaProduct)) / distanceProduct
+	if res.Curvature == 0 {
+		res.ArcLength = distanceAC
+		return res
+	}
 
-	num := (m.Pow(radius, 2)*2 - m.Pow(float64(lengthB), 2))
-	den := (2 * m.Pow(radius, 2))
-	res.Angle = m.Acos(num / den)
-
-	res.ArcLength = radius * res.Angle
-
+	res.Angle = 2 * m.Asin(min(1, distanceAC*res.Curvature/2))
+	res.ArcLength = res.Angle / res.Curvature
 	return res
 }
