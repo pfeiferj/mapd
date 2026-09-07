@@ -115,6 +115,11 @@ func PutParam(path string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not create temp param file")
 	}
+	defer func() {
+		if file != nil {
+			file.Close()
+		}
+	}()
 	tmpName := file.Name()
 	defer os.Remove(tmpName)
 
@@ -127,8 +132,13 @@ func PutParam(path string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not fsync temp param file")
 	}
+	err = file.Close()
+	file = nil
+	if err != nil {
+		return errors.Wrap(err, "could not close temp param file")
+	}
 
-	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
+	fileLock := flock.New(filepath.Join(lock_dir, ".lock"), flock.SetPermissions(0o775))
 
 	retries := 0
 	for {
@@ -140,12 +150,6 @@ func PutParam(path string, data []byte) error {
 			break
 		}
 		retries += 1
-		if retries > 30 {
-			// try to force the lock to be removed
-			if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
-				slog.Debug("failed to force delete params lock", "error", err)
-			}
-		}
 		if retries > 50 {
 			return errors.New("could not obtain lock")
 		}
@@ -155,11 +159,6 @@ func PutParam(path string, data []byte) error {
 	defer func() {
 		if err := fileLock.Unlock(); err != nil {
 			slog.Error("could not unlock params directory", "error", err)
-		}
-	}()
-	defer func() {
-		if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
-			slog.Error("could not remove params lock file", "error", err)
 		}
 	}()
 
@@ -172,10 +171,13 @@ func PutParam(path string, data []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open params directory")
 	}
-
 	err = directory.Sync()
+	closeErr := directory.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not fsync params directory")
+	}
+	if closeErr != nil {
+		return errors.Wrap(closeErr, "could not close params directory")
 	}
 
 	return nil
@@ -184,7 +186,7 @@ func PutParam(path string, data []byte) error {
 func RemoveParam(path string) error {
 	dir := filepath.Dir(path)
 	lock_dir := filepath.Dir(dir)
-	fileLock := flock.New(filepath.Join(lock_dir, ".lock"))
+	fileLock := flock.New(filepath.Join(lock_dir, ".lock"), flock.SetPermissions(0o775))
 
 	retries := 0
 	for {
@@ -196,12 +198,6 @@ func RemoveParam(path string) error {
 			break
 		}
 		retries += 1
-		if retries > 30 {
-			// try to force the lock to be removed
-			if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
-				slog.Debug("failed to force delete params lock", "error", err)
-			}
-		}
 		if retries > 50 {
 			return errors.New("could not obtain lock")
 		}
@@ -213,11 +209,6 @@ func RemoveParam(path string) error {
 			slog.Error("could not unlock params directory", "error", err)
 		}
 	}()
-	defer func() {
-		if err := os.Remove(filepath.Join(lock_dir, ".lock")); err != nil {
-			slog.Error("could not remove params lock file", "error", err)
-		}
-	}()
 
 	os.Remove(path)
 
@@ -225,10 +216,13 @@ func RemoveParam(path string) error {
 	if err != nil {
 		return errors.Wrap(err, "could not open params directory")
 	}
-
 	err = directory.Sync()
+	closeErr := directory.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not fsync params directory")
+	}
+	if closeErr != nil {
+		return errors.Wrap(closeErr, "could not close params directory")
 	}
 
 	return nil
