@@ -241,6 +241,16 @@ func (w *Way) MaxSpeedBackward() float64 {
 	return w.maxSpeedBackward.Value(w._maxSpeedBackward)
 }
 
+func (w *Way) MaxSpeedForDirection(isForward bool) float64 {
+	maxSpeed := w.MaxSpeed()
+	if isForward && w.MaxSpeedForward() > 0 {
+		maxSpeed = w.MaxSpeedForward()
+	} else if !isForward && w.MaxSpeedBackward() > 0 {
+		maxSpeed = w.MaxSpeedBackward()
+	}
+	return maxSpeed
+}
+
 func (w *Way) _maxSpeedConditional() string {
 	msc, err := w.Way.MaxSpeedConditional()
 	if err != nil {

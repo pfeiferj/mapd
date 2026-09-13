@@ -39,13 +39,7 @@ type CurrentWay struct {
 }
 
 func (w *CurrentWay) _maxSpeed() float64 {
-	maxSpeed := w.Way.MaxSpeed()
-	if w.OnWay.IsForward && w.Way.MaxSpeedForward() > 0 {
-		maxSpeed = w.Way.MaxSpeedForward()
-	} else if !w.OnWay.IsForward && w.Way.MaxSpeedBackward() > 0 {
-		maxSpeed = w.Way.MaxSpeedBackward()
-	}
-	return maxSpeed
+	return w.Way.MaxSpeedForDirection(w.OnWay.IsForward)
 }
 
 func (w *CurrentWay) MaxSpeed() float64 {
