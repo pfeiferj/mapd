@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/gofrs/flock v0.13.0
+	github.com/paulmach/orb v0.1.3
 	github.com/paulmach/osm v0.8.0
 	github.com/pfeiferj/gomsgq v0.1.11
 	github.com/pkg/errors v0.9.1
@@ -33,7 +34,6 @@ require (
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
-	github.com/paulmach/orb v0.1.3 // indirect
 	github.com/paulmach/protoscan v0.2.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect

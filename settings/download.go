@@ -18,9 +18,29 @@ import (
 )
 
 type LocationData struct {
-	BoundingBox Bounds `json:"bounding_box"`
-	FullName    string `json:"full_name"`
-	Submenu     string `json:"submenu"`
+	BoundingBox  Bounds       `json:"bounding_box"`
+	FullName     string       `json:"full_name"`
+	Submenu      string       `json:"submenu,omitempty"`
+	DownloadRows DownloadRows `json:"download_rows,omitempty"`
+}
+
+type DownloadRows [][3]int
+
+func (rows *DownloadRows) UnmarshalJSON(data []byte) error {
+	// Pointers distinguish a missing/null coordinate from the valid coordinate zero.
+	var decoded [][]*int
+	*rows = nil
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return nil // Invalid optional selections retain the bounding-box fallback.
+	}
+	for _, row := range decoded {
+		if len(row) != 3 || row[0] == nil || row[1] == nil || row[2] == nil {
+			*rows = nil
+			return nil
+		}
+		*rows = append(*rows, [3]int{*row[0], *row[1], *row[2]})
+	}
+	return nil
 }
 
 type DownloadMenu map[string]map[string]LocationData
@@ -107,19 +127,14 @@ type download struct {
 	cancelChan   chan bool
 }
 
-func (p *DownloadProgress) addLocationDetails(path string) {
-	p.LocationDetails[path] = &DownloadLocationDetail{
-		TotalFiles: countFilesForBounds(getBoundsForPath(path)),
-	}
-}
-
 func Download(paths string, progressChan chan DownloadProgress, cancelChan chan bool) {
 	slog.Info("download", "paths", paths)
 	pathsSplit := strings.Split(paths, ",")
+	menu := GetDownloadMenu()
+	locations := make([]LocationData, len(pathsSplit))
 	d := download{
 		progress: DownloadProgress{
 			LocationsToDownload: pathsSplit,
-			TotalFiles:          countTotalFiles(pathsSplit),
 			LocationDetails:     make(map[string]*DownloadLocationDetail),
 			Active:              true,
 		},
@@ -127,11 +142,18 @@ func Download(paths string, progressChan chan DownloadProgress, cancelChan chan 
 		cancelChan:   cancelChan,
 	}
 
-	for _, p := range pathsSplit {
-		d.progress.addLocationDetails(p)
-		location := getDataForPath(p)
+	for i, path := range pathsSplit {
+		locations[i] = menu.getDataForPath(path)
+		total := locations[i].countFiles()
+		d.progress.TotalFiles += total
+		d.progress.LocationDetails[path] = &DownloadLocationDetail{TotalFiles: total}
+	}
+
+	for i, p := range pathsSplit {
+		location := locations[i]
+		d.progress.LocationDetails[p].DownloadedFiles = 0
 		slog.Info("downloading nation", "nation", location.FullName)
-		err, canceled := d.downloadBounds(location.BoundingBox, p)
+		err, canceled := d.downloadLocation(location, p)
 		if err != nil {
 			slog.Warn("failed to download nation", "error", err, "nation", location.FullName)
 		}
@@ -178,14 +200,13 @@ func adjustedBounds(bounds Bounds) (int, int, int, int) {
 	return minLat, minLon, maxLat, maxLon
 }
 
-func (d *download) downloadBounds(bounds Bounds, locationName string) (err error, cancel bool) {
+func (d *download) downloadLocation(location LocationData, locationName string) (err error, cancel bool) {
+	bounds := location.BoundingBox
 	slog.Info("Downloading Bounds", "min_lat", bounds.MinLat, "min_lon", bounds.MinLon, "max_lat", bounds.MaxLat, "max_lon", bounds.MaxLon)
 
-	// clip given bounds to file areas
-	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
-	d.progress.LocationDetails[locationName].TotalFiles = countFilesForBounds(bounds)
-	for i := minLat; i < maxLat; i += GROUP_AREA_BOX_DEGREES {
-		for j := minLon; j < maxLon; j += GROUP_AREA_BOX_DEGREES {
+	for _, row := range location.downloadRows() {
+		i := row[0]
+		for j := row[1]; j < row[2]; j += GROUP_AREA_BOX_DEGREES {
 			d.publishProgress()
 			select { // cancel if sent message
 			case cancel := <-d.cancelChan:
@@ -286,18 +307,48 @@ func (d *download) downloadBounds(bounds Bounds, locationName string) (err error
 	return nil, false
 }
 
-func countFilesForBounds(bounds Bounds) int {
-	minLat, minLon, maxLat, maxLon := adjustedBounds(bounds)
-	return ((maxLat - minLat) / GROUP_AREA_BOX_DEGREES) * ((maxLon - minLon) / GROUP_AREA_BOX_DEGREES)
+// Each row is [latitude, first longitude, exclusive last longitude] on the archive grid.
+func (location LocationData) downloadRows() [][3]int {
+	minLat, minLon, maxLat, maxLon := adjustedBounds(location.BoundingBox)
+	valid := len(location.DownloadRows) > 0
+	for index, row := range location.DownloadRows {
+		if row[0] < minLat || row[0] >= maxLat || row[1] < minLon || row[2] > maxLon || row[1] >= row[2] ||
+			row[0]%GROUP_AREA_BOX_DEGREES != 0 || row[1]%GROUP_AREA_BOX_DEGREES != 0 || row[2]%GROUP_AREA_BOX_DEGREES != 0 {
+			valid = false
+			break
+		}
+		if index > 0 {
+			previous := location.DownloadRows[index-1]
+			if row[0] < previous[0] || (row[0] == previous[0] && row[1] < previous[2]) {
+				valid = false
+				break
+			}
+		}
+	}
+	if valid {
+		return location.DownloadRows
+	}
+	var rows [][3]int
+	for latitude := minLat; latitude < maxLat; latitude += GROUP_AREA_BOX_DEGREES {
+		rows = append(rows, [3]int{latitude, minLon, maxLon})
+	}
+	return rows
 }
 
-func getDataForPath(path string) LocationData {
+func (location LocationData) countFiles() int {
+	total := 0
+	for _, row := range location.downloadRows() {
+		total += (row[2] - row[1]) / GROUP_AREA_BOX_DEGREES
+	}
+	return total
+}
+
+func (menu DownloadMenu) getDataForPath(path string) LocationData {
 	parts := strings.Split(path, ".")
 	if len(parts) < 2 {
 		slog.Warn("ignoring invalid download path", "path", path)
 		return LocationData{}
 	}
-	menu := GetDownloadMenu()
 	box := menu[parts[0]][parts[1]]
 	if len(parts) > 2 {
 		for i := range len(parts) - 2 {
@@ -305,18 +356,4 @@ func getDataForPath(path string) LocationData {
 		}
 	}
 	return box
-}
-
-func getBoundsForPath(path string) Bounds {
-	return getDataForPath(path).BoundingBox
-}
-
-func countTotalFiles(paths []string) int {
-	totalFiles := 0
-
-	for _, p := range paths {
-		totalFiles += countFilesForBounds(getBoundsForPath(p))
-	}
-
-	return totalFiles
 }
