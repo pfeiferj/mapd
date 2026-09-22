@@ -66,37 +66,224 @@ func GetDownloadMenu() (menu DownloadMenu) {
 	return
 }
 
-func DownloadFile(url string, filepath string) (err error) {
+// DownloadFile fetches url into destPath.
+//
+// It writes to destPath+".part" and only renames into place once the transfer has been verified,
+// so an interrupted download (process killed, power cut, connection dropped) can never leave a
+// TRUNCATED file sitting at the real path looking like a complete one. That failure mode is not
+// hypothetical: a device that lost power mid-download was later unable to read its own map tiles
+// ("could not unmarshal offline data: unexpected EOF") and silently re-downloaded ~286MB over
+// cellular to repair itself.
+//
+// The transfer is also checked against Content-Length when the server provides one. This is
+// defence-in-depth rather than the primary guard: Go's HTTP client already surfaces a body that
+// ends short of a declared length as io.ErrUnexpectedEOF, so removing this check does not by itself
+// let a truncated download through (verified by mutation). It costs nothing and covers the case
+// where a future transport or a proxy is less strict.
+func DownloadFile(url string, destPath string) (err error) {
 	slog.Info("Downloading", "url", url)
-	// Create the file
-	out, err := os.Create(filepath)
+
+	partPath := destPath + ".part"
+	// Remove any leftover .part from a previous interrupted attempt before starting.
+	_ = os.Remove(partPath)
+
+	out, err := os.Create(partPath)
 	if err != nil {
 		return errors.Wrap(err, "could not create file for download")
 	}
-	defer out.Close()
+	// On any failure below, drop the partial file rather than leaving it to be mistaken for good
+	// data later. Named return + defer so every early return is covered.
+	defer func() {
+		out.Close()
+		if err != nil {
+			_ = os.Remove(partPath)
+		}
+	}()
 
-	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
 		return errors.Wrap(err, "could not download the file data")
 	}
 	defer resp.Body.Close()
 
-	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("download received bad status: %s", resp.Status)
 	}
 
-	// Writer the body to file
-	_, err = io.Copy(out, resp.Body)
+	written, err := io.Copy(out, resp.Body)
 	if err != nil {
 		return errors.Wrap(err, "could not write download data to file")
 	}
-	err = out.Sync()
-	if err != nil {
+	// ContentLength is -1 when the server doesn't declare one (chunked); only assert when known.
+	if resp.ContentLength >= 0 && written != resp.ContentLength {
+		return errors.Errorf("truncated download: got %d bytes, expected %d", written, resp.ContentLength)
+	}
+	if err = out.Sync(); err != nil {
 		return errors.Wrap(err, "could not fsync downloaded file")
 	}
+	if err = out.Close(); err != nil {
+		return errors.Wrap(err, "could not close downloaded file")
+	}
 
+	// Atomic publish: either the complete file appears at destPath, or nothing does.
+	if err = os.Rename(partPath, destPath); err != nil {
+		return errors.Wrap(err, "could not move downloaded file into place")
+	}
+	return nil
+}
+
+// ValidateArchive reads the whole gzip+tar stream and discards it, purely to prove the archive is
+// intact BEFORE any live map tile is touched.
+//
+// This is the load-bearing check. gzip carries a CRC32 and length trailer that is only verified once
+// the stream is read to the end, so a truncated archive is indistinguishable from a good one until
+// something reads all of it. Extracting first and discovering the problem afterwards is exactly how
+// half-written tiles reach disk.
+func ValidateArchive(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return errors.Wrap(err, "could not open archive for validation")
+	}
+	defer file.Close()
+
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		return errors.Wrap(err, "could not parse archive gzip header")
+	}
+	defer reader.Close()
+
+	tr := tar.NewReader(reader)
+	entries := 0
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break // clean end of archive
+		}
+		if err != nil {
+			return errors.Wrap(err, "archive is corrupt or truncated")
+		}
+		if header == nil {
+			continue
+		}
+		// Read the entry body so gzip's CRC/length trailer is actually checked.
+		if _, err := io.Copy(io.Discard, tr); err != nil {
+			return errors.Wrap(err, "archive entry is corrupt or truncated")
+		}
+		entries++
+	}
+	if entries == 0 {
+		return errors.Errorf("archive contains no files")
+	}
+
+	// Drain whatever is left of the GZIP stream. This is not redundant: tar.Next returns io.EOF at
+	// the tar end-of-archive marker, which sits BEFORE gzip's 8-byte CRC32+ISIZE trailer, so
+	// stopping at the tar level never checks the trailer at all. A small tail truncation -- the
+	// last few bytes lost as a connection dies -- otherwise validates clean. Reading to the end of
+	// the gzip stream is what actually verifies the checksum and the uncompressed length.
+	if _, err := io.Copy(io.Discard, reader); err != nil {
+		return errors.Wrap(err, "archive gzip stream is corrupt or truncated")
+	}
+	return nil
+}
+
+// safeJoin resolves a tar entry name under base, refusing anything that would escape it.
+// Standard tar-slip guard: an entry named "../../etc/whatever" must never be written.
+func safeJoin(base string, name string) (string, error) {
+	target := filepath.Join(base, name)
+	cleanBase := filepath.Clean(base) + string(os.PathSeparator)
+	if !strings.HasPrefix(filepath.Clean(target)+string(os.PathSeparator), cleanBase) {
+		return "", errors.Errorf("archive entry escapes destination: %s", name)
+	}
+	return target, nil
+}
+
+// writeFileAtomic writes r to target via target+".part" then renames, so a crash mid-extract leaves
+// a stray .part rather than a half-written map tile at a live path.
+//
+// It also fixes a subtler bug in the original extractor, which opened targets with
+// os.O_CREATE|os.O_RDWR and NO os.O_TRUNC: writing a SHORTER file over a longer existing one left
+// the tail of the old file attached, producing a corrupt hybrid that survived re-downloading.
+// The RENAME is what fixes that -- it replaces the file wholesale, so length cannot carry over.
+// O_TRUNC below is belt-and-braces for the .part itself.
+func writeFileAtomic(target string, mode os.FileMode, r io.Reader) (err error) {
+	partPath := target + ".part"
+	_ = os.Remove(partPath)
+	f, err := os.OpenFile(partPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
+	if err != nil {
+		return errors.Wrap(err, "could not open extract target")
+	}
+	defer func() {
+		f.Close()
+		if err != nil {
+			_ = os.Remove(partPath)
+		}
+	}()
+	if _, err = io.Copy(f, r); err != nil {
+		return errors.Wrap(err, "could not write extract target")
+	}
+	if err = f.Sync(); err != nil {
+		return errors.Wrap(err, "could not fsync extract target")
+	}
+	if err = f.Close(); err != nil {
+		return errors.Wrap(err, "could not close extract target")
+	}
+	return errors.Wrap(os.Rename(partPath, target), "could not move extracted file into place")
+}
+
+// extractArchive unpacks a VALIDATED archive into the base path.
+//
+// Unlike the original inline extractor this returns an error instead of logging and pressing on:
+// every one of those old warn-and-continue paths (open failed, gzip parse failed, copy failed) left
+// a partially-written file at a LIVE tile path and still counted the tile as successfully
+// downloaded. Each regular file is written atomically, so an interrupted extract leaves a stray
+// .part rather than a corrupt tile.
+func extractArchive(archivePath string) error {
+	file, err := os.Open(archivePath)
+	if err != nil {
+		return errors.Wrap(err, "could not open archive")
+	}
+	defer file.Close()
+
+	reader, err := gzip.NewReader(file)
+	if err != nil {
+		return errors.Wrap(err, "could not parse archive gzip")
+	}
+	defer reader.Close()
+
+	base := params.GetBaseOpPath()
+	tr := tar.NewReader(reader)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return errors.Wrap(err, "could not read archive entry")
+		}
+		if header == nil {
+			continue
+		}
+		target, err := safeJoin(base, header.Name)
+		if err != nil {
+			return err
+		}
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if _, statErr := os.Stat(target); statErr != nil {
+				if err := os.MkdirAll(target, 0o755); err != nil {
+					return errors.Wrap(err, "could not create directory from archive")
+				}
+			}
+		case tar.TypeReg:
+			// The parent dir may not exist if the archive omits explicit dir entries.
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return errors.Wrap(err, "could not create parent directory for archive entry")
+			}
+			if err := writeFileAtomic(target, os.FileMode(header.Mode), tr); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -228,69 +415,29 @@ func (d *download) downloadLocation(location LocationData, locationName string) 
 				slog.Warn("failed to download file, continuing to next", "error", err, "url", url, "file", outputName)
 				continue
 			}
-			file, err := os.Open(outputName)
-			if err != nil {
-				slog.Warn("failed to open downloaded file", "error", err, "file", outputName)
-			}
-			reader, err := gzip.NewReader(file)
-			if err != nil {
-				slog.Warn("failed to parse gzip downloaded file", "error", err, "file", outputName)
-			}
-			tr := tar.NewReader(reader)
-			for {
-				header, err := tr.Next()
-				if err != nil {
-					break
+
+			// VALIDATE BEFORE EXTRACTING. The archive is read end-to-end (which is what actually
+			// verifies gzip's CRC/length trailer) before a single live tile is touched. A truncated
+			// or corrupt download is discarded here instead of being half-written over good map
+			// data -- the failure that left this device unable to read its own tiles.
+			if err = ValidateArchive(outputName); err != nil {
+				slog.Warn("downloaded archive failed validation, discarding", "error", err, "url", url, "file", outputName)
+				if rmErr := os.Remove(outputName); rmErr != nil {
+					slog.Warn("could not delete invalid archive", "error", rmErr, "file", outputName)
 				}
+				continue
+			}
 
-				// if the header is nil, just skip it (not sure how this happens)
-				if header == nil {
-					continue
+			if err = extractArchive(outputName); err != nil {
+				// Do NOT count this tile as downloaded -- it isn't.
+				slog.Warn("failed to extract archive", "error", err, "file", outputName)
+				if rmErr := os.Remove(outputName); rmErr != nil {
+					slog.Warn("could not delete archive", "error", rmErr, "file", outputName)
 				}
-				// the target location where the dir/file should be created
-				target := filepath.Join(params.GetBaseOpPath(), header.Name)
-				// check the file type
-				switch header.Typeflag {
-
-				// if its a dir and it doesn't exist create it
-				case tar.TypeDir:
-					if _, err := os.Stat(target); err != nil {
-						err := os.MkdirAll(target, 0o755)
-						if err != nil {
-							slog.Warn("could not create directory from downloaded gzip", "error", err, "file", outputName, "directory", target)
-						}
-					}
-
-				// if it's a file create it
-				case tar.TypeReg:
-					f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-					if err != nil {
-						slog.Warn("could not open file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
-					}
-
-					_, err = io.Copy(f, tr)
-					if err != nil {
-						slog.Warn("could not write data to file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
-					}
-
-					err = f.Sync()
-					if err != nil {
-						slog.Warn("could not fsync file target from downloaded gzip", "error", err, "file", outputName, "targetFile", target)
-					}
-					f.Close()
-				}
-			}
-			err = reader.Close()
-			if err != nil {
-				slog.Warn("could not close gzip reader", "error", err)
-			}
-			err = file.Close()
-			if err != nil {
-				slog.Warn("could not close downloaded file", "error", err)
+				continue
 			}
 
-			err = os.Remove(outputName)
-			if err != nil {
+			if err = os.Remove(outputName); err != nil {
 				slog.Warn("could not delete downloaded gzip file", "error", err)
 			}
 
