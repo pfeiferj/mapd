@@ -44,6 +44,9 @@ type TmpWay struct {
 	MaxSpeedConditional         string
 	MaxSpeedForwardConditional  string
 	MaxSpeedBackwardConditional string
+
+	HovLanes   string
+	HovMinimum string
 }
 
 type Area struct {
@@ -167,6 +170,9 @@ func GenerateOffline(s OfflineSettings) {
 				MaxSpeedConditional:         tags["maxspeed:conditional"],
 				MaxSpeedForwardConditional:  tags["maxspeed:forward:conditional"],
 				MaxSpeedBackwardConditional: tags["maxspeed:backward:conditional"],
+
+				HovLanes:   tags["hov:lanes"],
+				HovMinimum: tags["hov:minimum"],
 			}
 			index++
 
@@ -304,6 +310,16 @@ func GenerateOffline(s OfflineSettings) {
 			err = w.SetMaxSpeedBackwardConditional(way.MaxSpeedBackwardConditional)
 			if err != nil {
 				slog.Error("could not set way backward conditional max speed", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
+			err = w.SetHovLanes(way.HovLanes)
+			if err != nil {
+				slog.Error("could not set way hov lanes", "error", err)
+				panic("unexpected capnp error, exiting")
+			}
+			err = w.SetHovMinimum(way.HovMinimum)
+			if err != nil {
+				slog.Error("could not set way hov minimum", "error", err)
 				panic("unexpected capnp error, exiting")
 			}
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)

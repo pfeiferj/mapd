@@ -43,6 +43,8 @@ struct Way {
   maxSpeedConditional @16 :Text;
   maxSpeedForwardConditional @17 :Text;
   maxSpeedBackwardConditional @18 :Text;
+  hovLanes @19 :Text;
+  hovMinimum @20 :Text;
 }
 
 struct Coordinates {
