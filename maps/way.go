@@ -122,6 +122,8 @@ type Way struct {
 	maxSpeedForward  u.Curry[float64]
 	maxSpeedBackward u.Curry[float64]
 
+	hovLanes                      u.Curry[string]
+	hovMinimum                    u.Curry[string]
 	maxSpeedConditional           u.Curry[string]
 	maxSpeedForwardConditional    u.Curry[string]
 	maxSpeedBackwardConditional   u.Curry[string]
@@ -249,6 +251,35 @@ func (w *Way) MaxSpeedForDirection(isForward bool) float64 {
 		maxSpeed = w.MaxSpeedBackward()
 	}
 	return maxSpeed
+}
+
+// The raw hov:lanes tag, passed through untouched. Whether an HOV lane may be
+// used depends on occupancy, tolling and local rules that mapd does not model,
+// so consumers evaluate the tag themselves -- the same reasoning as
+// maxSpeedConditional. Empty when the way has no tag, or when the loaded tiles
+// predate the field.
+func (w *Way) _hovLanes() string {
+	hl, err := w.Way.HovLanes()
+	if err != nil {
+		hl = ""
+	}
+	return hl
+}
+
+func (w *Way) HovLanes() string {
+	return w.hovLanes.Value(w._hovLanes)
+}
+
+func (w *Way) _hovMinimum() string {
+	hm, err := w.Way.HovMinimum()
+	if err != nil {
+		hm = ""
+	}
+	return hm
+}
+
+func (w *Way) HovMinimum() string {
+	return w.hovMinimum.Value(w._hovMinimum)
 }
 
 func (w *Way) _maxSpeedConditional() string {

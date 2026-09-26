@@ -34,6 +34,17 @@ we are currently on (direction of travel taken into account, like speedLimit).
 Always output when the tag is present so forks can evaluate conditions mapd
 does not handle itself (weather, vehicle class, ...). Empty when the way has no
 conditional tag or the loaded map tiles predate this field.
+* **hovLanes**: The raw hov:lanes tag text for the way we are currently on.
+Passed through untouched, like conditionalSpeedLimit, because whether an HOV
+lane may be used depends on occupancy, tolling and local rules that mapd does
+not model. The value is one entry per lane, ordered left to right in the
+direction of travel, e.g. "designated|||" on a four lane way means the leftmost
+lane is HOV. Empty when the way has no tag or the loaded map tiles predate this
+field. Note that where an HOV lane is mapped as its own separate carriageway
+rather than a lane of the main one, the matched way carries no hov:lanes tag and
+this is empty -- that is the common pattern in California.
+* **hovMinimum**: The raw hov:minimum tag text for the way we are currently on,
+the occupancy an HOV lane requires. Empty under the same conditions as hovLanes.
 * **nextSpeedLimit**: The next speed limit change that we see on the predicted path. This value also takes direction of travel into consideration.
 * **nextSpeedLimitDistance**: The approximate distance to the next speed limit
 change that we see on the predicted path.

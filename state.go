@@ -83,6 +83,9 @@ func (s *State) Send() error {
 
 	output.SetConditionalSpeedLimit(s.CurrentWay.ConditionalMaxSpeedRaw())
 
+	output.SetHovLanes(s.CurrentWay.Way.HovLanes())
+	output.SetHovMinimum(s.CurrentWay.Way.HovMinimum())
+
 	output.SetSpeedLimitSuggestedSpeed(s.SpeedLimit.Suggestion.Value)
 
 	output.SetNextSpeedLimit(s.SpeedLimit.NextLimit.Value)
