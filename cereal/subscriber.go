@@ -43,7 +43,7 @@ func (s *Subscriber[T]) Read() (obj T, success bool) {
 
 func NewSubscriber[T any](name string, reader Reader[T], conflate bool, shadow bool) (subscriber Subscriber[T]) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init(name, settings.GetSegmentSize(name))
+	err := msgq.Init(name, settings.GetSegmentSize(name), maxReaders())
 	if err != nil {
 		panic(err)
 	}
