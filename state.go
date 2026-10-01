@@ -69,6 +69,7 @@ func (s *State) Send() error {
 	msg, output := s.Publisher.NewMessage(true)
 	id := s.CurrentWay.Way.Id()
 	output.SetWayId(id)
+	output.SetIsForward(s.CurrentWay.OnWay.IsForward)
 
 	name := s.CurrentWay.Way.WayName()
 	output.SetWayName(name)

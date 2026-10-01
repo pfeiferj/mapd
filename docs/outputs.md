@@ -34,6 +34,8 @@ we are currently on (direction of travel taken into account, like speedLimit).
 Always output when the tag is present so forks can evaluate conditions mapd
 does not handle itself (weather, vehicle class, ...). Empty when the way has no
 conditional tag or the loaded map tiles predate this field.
+* **isForward**: Whether travel follows the stored node order of the way we are
+currently on.
 * **nextSpeedLimit**: The next speed limit change that we see on the predicted path. This value also takes direction of travel into consideration.
 * **nextSpeedLimitDistance**: The approximate distance to the next speed limit
 change that we see on the predicted path.
