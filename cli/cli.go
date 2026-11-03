@@ -16,6 +16,8 @@ import (
 func Handle() {
 	shouldExit := true
 	cmd := &cli.Command{
+		Flags:  []cli.Flag{msgqQueueSizeFlag()},
+		Before: configureMsgqQueueSize,
 		Commands: []*cli.Command{
 			{
 				Name:  "generate-download-menu",

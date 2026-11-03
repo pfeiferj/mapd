@@ -1,5 +1,6 @@
 {
   "settings_version": 2,
+  "msgq_queue_size": 0,
   "vision_curve_speed_control_enabled": true,
   "map_curve_speed_control_enabled": true,
   "speed_limit_control_enabled": true,
