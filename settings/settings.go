@@ -17,8 +17,9 @@ import (
 const SETTINGS_VERSION = 2 // Used for migrations
 
 var Settings = MapdSettings{
-	SettingsVersion:  SETTINGS_VERSION,
-	downloadProgress: make(chan DownloadProgress, 1),
+	SettingsVersion:    SETTINGS_VERSION,
+	downloadProgress:   make(chan DownloadProgress, 1),
+	currentPersonality: log.LongitudinalPersonality_standard,
 }
 
 type SpeedLimitPriority string
