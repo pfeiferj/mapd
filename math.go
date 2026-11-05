@@ -3,60 +3,47 @@ package main
 import (
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/pkg/errors"
+	"pfeifer.dev/mapd/maps"
 	m "pfeifer.dev/mapd/math"
 	ms "pfeifer.dev/mapd/settings"
 )
 
-func GetStateCurvatures(state *State) ([]m.Curvature, error) {
-	nodes := state.CurrentWay.Way.Nodes.Slice()
-	num_points := len(nodes)
-	all_nodes := [][]m.Position{nodes}
-	all_nodes_direction := []bool{state.CurrentWay.OnWay.IsForward}
-	all_nodes_is_merge_or_split := []bool{false}
-	lastWay := state.CurrentWay.Way
+// the current way's nodes followed by each next way's, in the direction of
+// travel, with each junction node listed once
+func GetStatePath(state *State) []m.Position {
+	positions := wayNodesInTravelOrder(&state.CurrentWay.Way, state.CurrentWay.OnWay.IsForward)
 	for _, nextWay := range state.NextWays {
-		nwNodes := nextWay.Way.Nodes.Slice()
-		if len(nwNodes) > 0 {
-			num_points += len(nwNodes) - 1
+		nodes := wayNodesInTravelOrder(&nextWay.Way, nextWay.IsForward)
+		if len(nodes) > 0 {
+			positions = append(positions, nodes[1:]...)
 		}
-		all_nodes = append(all_nodes, nwNodes)
-		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
-		all_nodes_is_merge_or_split = append(all_nodes_is_merge_or_split, lastWay.Lanes() < nextWay.Way.Lanes() || (lastWay.Lanes() > nextWay.Way.Lanes() && !lastWay.OneWay() && nextWay.Way.OneWay()))
-		lastWay = nextWay.Way
 	}
+	return positions
+}
 
-	positions := make([]m.Position, num_points)
+func wayNodesInTravelOrder(way *maps.Way, isForward bool) []m.Position {
+	nodes := way.Nodes.Slice()
+	if !isForward {
+		slices.Reverse(nodes)
+	}
+	return nodes
+}
+
+func GetStateCurvatures(state *State) ([]m.Curvature, error) {
+	positions := GetStatePath(state)
 
 	merge_or_split_nodes := []int{}
-	all_nodes_idx := 0
-	nodes_idx := 0
-	for i := 0; i < num_points; i++ {
-		var index int
-		forward := all_nodes_direction[all_nodes_idx]
-		if forward {
-			index = nodes_idx
-			if all_nodes_idx > 0 {
-				index += 1
-			}
-		} else {
-			index = len(all_nodes[all_nodes_idx]) - nodes_idx - 1
-			if all_nodes_idx > 0 {
-				index -= 1
-			}
+	junction_idx := state.CurrentWay.Way.Nodes.Len() - 1
+	lastWay := state.CurrentWay.Way
+	for _, nextWay := range state.NextWays {
+		if lastWay.Lanes() < nextWay.Way.Lanes() || (lastWay.Lanes() > nextWay.Way.Lanes() && !lastWay.OneWay() && nextWay.Way.OneWay()) {
+			merge_or_split_nodes = append(merge_or_split_nodes, junction_idx)
 		}
-		node := all_nodes[all_nodes_idx][index]
-		positions[i] = node
-
-		nodes_idx += 1
-		if nodes_idx == len(all_nodes[all_nodes_idx]) || (nodes_idx == len(all_nodes[all_nodes_idx])-1 && all_nodes_idx > 0) {
-			all_nodes_idx += 1
-			nodes_idx = 0
-			if all_nodes_idx < len(all_nodes_is_merge_or_split) && all_nodes_is_merge_or_split[all_nodes_idx] {
-				merge_or_split_nodes = append(merge_or_split_nodes, i)
-			}
-		}
+		junction_idx += nextWay.Way.Nodes.Len() - 1
+		lastWay = nextWay.Way
 	}
 
 	curvatures, err := GetCurvatures(positions)
