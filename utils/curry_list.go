@@ -7,11 +7,14 @@ type CurryList[T any] struct {
 }
 
 func (c *CurryList[T]) At(index int) T {
-	if c.set[index] {
-		return c.val[index]
+	return *c.AtPtr(index)
+}
+
+func (c *CurryList[T]) AtPtr(index int) *T {
+	if !c.set[index] {
+		c.Set(c.getter(index), index)
 	}
-	c.Set(c.getter(index), index)
-	return c.val[index]
+	return &c.val[index]
 }
 
 func (c *CurryList[T]) Set(val T, index int) {

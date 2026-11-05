@@ -462,7 +462,7 @@ func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, e
 	matchingWays := []Way{}
 
 	for i := range offlineMaps.Ways.Len() {
-		way := offlineMaps.Ways.At(i)
+		way := offlineMaps.Ways.AtPtr(i)
 		if way.Nodes.Len() == 0 {
 			continue
 		}
@@ -479,7 +479,7 @@ func (w *Way) MatchingWays(offlineMaps *Offline, matchNode m.Position) ([]Way, e
 		fNode := way.Nodes.At(0)
 		lNode := way.Nodes.At(way.Nodes.Len() - 1)
 		if fNode.Equals(matchNode) || lNode.Equals(matchNode) {
-			matchingWays = append(matchingWays, way)
+			matchingWays = append(matchingWays, *way)
 		}
 	}
 
