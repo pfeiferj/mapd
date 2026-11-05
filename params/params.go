@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -110,7 +109,6 @@ func GetParam(path string) ([]byte, error) {
 
 func PutParam(path string, data []byte) error {
 	dir := filepath.Dir(path)
-	lock_dir := filepath.Dir(dir)
 	file, err := os.CreateTemp(dir, ".tmp_value_"+filepath.Base(path))
 	if err != nil {
 		return errors.Wrap(err, "could not create temp param file")
@@ -138,80 +136,49 @@ func PutParam(path string, data []byte) error {
 		return errors.Wrap(err, "could not close temp param file")
 	}
 
-	fileLock := flock.New(filepath.Join(lock_dir, ".lock"), flock.SetPermissions(0o775))
-
-	retries := 0
-	for {
-		locked, err := fileLock.TryLock()
-		if err != nil {
-			return errors.Wrap(err, "could not try locking param directory")
-		}
-		if locked {
-			break
-		}
-		retries += 1
-		if retries > 50 {
-			return errors.New("could not obtain lock")
-		}
-		// if we didn't obtain the lock let's try again after a short delay
-		time.Sleep(1 * time.Millisecond)
+	unlock, err := lockParams(dir)
+	if err != nil {
+		return err
 	}
-	defer func() {
-		if err := fileLock.Unlock(); err != nil {
-			slog.Error("could not unlock params directory", "error", err)
-		}
-	}()
+	defer unlock()
 
 	err = os.Rename(tmpName, path)
 	if err != nil {
 		return errors.Wrap(err, "could not move temp param file to persistent location")
 	}
 
-	directory, err := os.Open(dir)
-	if err != nil {
-		return errors.Wrap(err, "could not open params directory")
-	}
-	err = directory.Sync()
-	closeErr := directory.Close()
-	if err != nil {
-		return errors.Wrap(err, "could not fsync params directory")
-	}
-	if closeErr != nil {
-		return errors.Wrap(closeErr, "could not close params directory")
-	}
-
-	return nil
+	return syncDirectory(dir)
 }
 
 func RemoveParam(path string) error {
 	dir := filepath.Dir(path)
-	lock_dir := filepath.Dir(dir)
-	fileLock := flock.New(filepath.Join(lock_dir, ".lock"), flock.SetPermissions(0o775))
-
-	retries := 0
-	for {
-		locked, err := fileLock.TryLock()
-		if err != nil {
-			return errors.Wrap(err, "could not try locking params directory")
-		}
-		if locked {
-			break
-		}
-		retries += 1
-		if retries > 50 {
-			return errors.New("could not obtain lock")
-		}
-		// if we didn't obtain the lock let's try again after a short delay
-		time.Sleep(1 * time.Millisecond)
+	unlock, err := lockParams(dir)
+	if err != nil {
+		return err
 	}
-	defer func() {
-		if err := fileLock.Unlock(); err != nil {
-			slog.Error("could not unlock params directory", "error", err)
-		}
-	}()
+	defer unlock()
 
 	os.Remove(path)
 
+	return syncDirectory(dir)
+}
+
+func lockParams(dir string) (func(), error) {
+	fileLock := flock.New(filepath.Join(filepath.Dir(dir), ".lock"), flock.SetPermissions(0o775))
+	err := fileLock.Lock()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not lock params directory")
+	}
+
+	unlock := func() {
+		if err := fileLock.Unlock(); err != nil {
+			slog.Error("could not unlock params directory", "error", err)
+		}
+	}
+	return unlock, nil
+}
+
+func syncDirectory(dir string) error {
 	directory, err := os.Open(dir)
 	if err != nil {
 		return errors.Wrap(err, "could not open params directory")
