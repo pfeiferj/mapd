@@ -567,24 +567,24 @@ type settingsModel struct {
 	returnAfterInput    settingsState
 }
 
-func (m *settingsModel) restoreAfterInput() {
-	switch m.returnAfterInput {
+func (m *settingsModel) showMenu(state settingsState) {
+	m.state = state
+	switch state {
+	case showPersonalitiesMenu:
+		m.list.Title = "Personalities"
+		m.list.SetItems(personalitiesList)
 	case showPersonalitySettings:
-		m.state = showPersonalitySettings
-		m.list.SetItems(getPersonalitySettingsList(m.selectedPersonality))
 		m.list.Title = strings.ToUpper(m.selectedPersonality[:1]) + m.selectedPersonality[1:] + " Personality Settings"
-		m.list.ResetSelected()
+		m.list.SetItems(getPersonalitySettingsList(m.selectedPersonality))
 	case showSubscribersMenu:
-		m.state = showSubscribersMenu
-		m.list.SetItems(subscribersList)
 		m.list.Title = "Subscribers"
-		m.list.ResetSelected()
+		m.list.SetItems(subscribersList)
 	default:
 		m.state = showSettingsMenu
-		m.list.SetItems(settingsList)
-		m.list.ResetSelected()
 		m.list.Title = "Mapd Settings"
+		m.list.SetItems(settingsList)
 	}
+	m.list.ResetSelected()
 }
 
 func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd) {
@@ -623,25 +623,11 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 			case saveSettings:
 				m.saveSettings(mm)
 			case defaultSettings:
-				msg, input := mm.pub.NewMessage(true)
-
-				input.SetType(custom.MapdInputType_loadDefaultSettings)
-
-				err := mm.pub.Send(msg)
-				if err != nil {
-					panic(err)
-				}
+				sendInput(mm, custom.MapdInputType_loadDefaultSettings)
 
 				m.saveSettings(mm)
 			case recommendedSettings:
-				msg, input := mm.pub.NewMessage(true)
-
-				input.SetType(custom.MapdInputType_loadRecommendedSettings)
-
-				err := mm.pub.Send(msg)
-				if err != nil {
-					panic(err)
-				}
+				sendInput(mm, custom.MapdInputType_loadRecommendedSettings)
 
 				m.saveSettings(mm)
 			case unitsInput:
@@ -649,24 +635,11 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 				m.list.SetItems(unitsList)
 				m.list.Title = "Select Units"
 				m.list.ResetSelected()
-			case showPersonalitiesMenu:
-				m.list.Title = "Personalities"
-				m.list.SetItems(personalitiesList)
-				m.list.ResetSelected()
 			case showPersonalitySettings:
-				personality := strings.ToLower(it.title)
-				m.selectedPersonality = personality
-				m.list.Title = it.title + " Personality Settings"
-				m.list.SetItems(getPersonalitySettingsList(personality))
-				m.list.ResetSelected()
-			case showSubscribersMenu:
-				m.list.Title = "Subscribers"
-				m.list.SetItems(subscribersList)
-				m.list.ResetSelected()
-			case showSettingsMenu:
-				m.list.Title = "Mapd Settings"
-				m.list.SetItems(settingsList)
-				m.list.ResetSelected()
+				m.selectedPersonality = strings.ToLower(it.title)
+				m.showMenu(m.state)
+			case showPersonalitiesMenu, showSubscribersMenu, showSettingsMenu:
+				m.showMenu(m.state)
 			}
 			return m, nil
 		} else if msg.Type == tea.KeyEnter && m.state == unitsInput && m.list.FilterState() != list.Filtering {
@@ -743,7 +716,7 @@ func (m settingsModel) Update(msg tea.Msg, mm *uiModel) (settingsModel, tea.Cmd)
 			if err != nil {
 				panic(err)
 			}
-			m.restoreAfterInput()
+			m.showMenu(m.returnAfterInput)
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -776,9 +749,13 @@ func (m *settingsModel) saveSettings(mm *uiModel) {
 	m.state = showSettingsMenu
 	mm.state = showMenu
 
+	sendInput(mm, custom.MapdInputType_saveSettings)
+}
+
+func sendInput(mm *uiModel, inputType custom.MapdInputType) {
 	msg, input := mm.pub.NewMessage(true)
 
-	input.SetType(custom.MapdInputType_saveSettings)
+	input.SetType(inputType)
 
 	err := mm.pub.Send(msg)
 	if err != nil {
