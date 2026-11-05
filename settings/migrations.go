@@ -43,16 +43,17 @@ func v2(v1Settings V1Settings) MapdSettings {
 	}
 
 	v2Settings := MapdSettings{
-		SettingsVersion:                  2,
-		VisionCurveSpeedControlEnabled:   v1Settings.VisionCurveSpeedControlEnabled,
-		MapCurveSpeedControlEnabled:      v1Settings.MapCurveSpeedControlEnabled,
-		SpeedLimitControlEnabled:         v1Settings.SpeedLimitControlEnabled,
-		ExternalSpeedLimitControlEnabled: v1Settings.ExternalSpeedLimitControlEnabled,
-		VisionCurveUseEnableSpeed:        v1Settings.VisionCurveUseEnableSpeed,
-		SpeedLimitUseEnableSpeed:         v1Settings.SpeedLimitUseEnableSpeed,
-		MapCurveUseEnableSpeed:           v1Settings.MapCurveUseEnableSpeed,
-		EnableSpeed:                      v1Settings.EnableSpeed,
-		DefaultLaneWidth:                 v1Settings.DefaultLaneWidth,
+		SettingsVersion:                     2,
+		VisionCurveSpeedControlEnabled:      v1Settings.VisionCurveSpeedControlEnabled,
+		MapCurveSpeedControlEnabled:         v1Settings.MapCurveSpeedControlEnabled,
+		SpeedLimitControlEnabled:            v1Settings.SpeedLimitControlEnabled,
+		ExternalSpeedLimitControlEnabled:    v1Settings.ExternalSpeedLimitControlEnabled,
+		ConditionalSpeedLimitControlEnabled: v1Settings.ConditionalSpeedLimitControlEnabled,
+		VisionCurveUseEnableSpeed:           v1Settings.VisionCurveUseEnableSpeed,
+		SpeedLimitUseEnableSpeed:            v1Settings.SpeedLimitUseEnableSpeed,
+		MapCurveUseEnableSpeed:              v1Settings.MapCurveUseEnableSpeed,
+		EnableSpeed:                         v1Settings.EnableSpeed,
+		DefaultLaneWidth:                    v1Settings.DefaultLaneWidth,
 		SubscriberSettings: SubscriberSettings{
 			ShadowCarState:            true,
 			ShadowModelV2:             false,
@@ -95,6 +96,7 @@ type V1Settings struct {
 	MapCurveSpeedControlEnabled         bool    `json:"map_curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool    `json:"speed_limit_control_enabled"`
 	ExternalSpeedLimitControlEnabled    bool    `json:"external_speed_limit_control_enabled"`
+	ConditionalSpeedLimitControlEnabled bool    `json:"conditional_speed_limit_control_enabled"`
 	SpeedLimitPriority                  string  `json:"speed_limit_priority"`
 	VisionCurveUseEnableSpeed           bool    `json:"vision_curve_use_enable_speed"`
 	SpeedLimitUseEnableSpeed            bool    `json:"speed_limit_use_enable_speed"`
