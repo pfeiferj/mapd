@@ -3,6 +3,7 @@ package maps
 import (
 	"math"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -312,6 +313,19 @@ func (w *Way) ConditionalSpeedRules(isForward bool) []ConditionalSpeedRule {
 		return w.conditionalSpeedRulesForward.Value(w._conditionalSpeedRulesForward)
 	}
 	return w.conditionalSpeedRulesBackward.Value(w._conditionalSpeedRulesBackward)
+}
+
+// MaxSpeedForDirection with an applying conditional speed limit folded in when
+// conditional speed limit control is enabled. Not memoized because the
+// applying rule changes with the time of day.
+func (w *Way) EffectiveMaxSpeed(isForward bool) float64 {
+	if ms.Settings.ConditionalSpeedLimitControlEnabled {
+		rules := w.ConditionalSpeedRules(isForward)
+		if conditional := ConditionalSpeedAt(rules, time.Now()); conditional > 0 {
+			return conditional
+		}
+	}
+	return w.MaxSpeedForDirection(isForward)
 }
 
 func (w *Way) _box() m.Box {

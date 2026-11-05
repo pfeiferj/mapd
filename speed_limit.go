@@ -149,13 +149,7 @@ func ParseMaxSpeed(maxspeed string) float64 {
 }
 
 func checkWayForSpeedLimitChange(state *State, parent *Upcoming[float32], way maps.NextWayResult) (valid bool, val float32) {
-	nextMaxSpeed := way.Way.MaxSpeedForDirection(way.IsForward)
-	if ms.Settings.ConditionalSpeedLimitControlEnabled {
-		rules := way.Way.ConditionalSpeedRules(way.IsForward)
-		if conditional := maps.ConditionalSpeedAt(rules, time.Now()); conditional > 0 {
-			nextMaxSpeed = conditional
-		}
-	}
+	nextMaxSpeed := way.Way.EffectiveMaxSpeed(way.IsForward)
 
 	if nextMaxSpeed != state.CurrentWay.EffectiveMaxSpeed() && nextMaxSpeed > 0 {
 		return true, float32(nextMaxSpeed)
