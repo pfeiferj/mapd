@@ -115,7 +115,6 @@ type Way struct {
 	maxSpeed         u.Curry[float64]
 	box              u.Curry[m.Box]
 	Nodes            u.CurryList[m.Position]
-	nodesRaw         offline.Coordinates_List
 	lanes            u.Curry[int]
 	advisorySpeed    u.Curry[float64]
 	hazard           u.Curry[string]
@@ -136,8 +135,10 @@ func NewWay(way offline.Way) Way {
 	w := Way{
 		Way: way,
 	}
-	w.nodesRaw = nodes
-	w.Nodes.Init(w._nodeAt, nodes.Len())
+	w.Nodes.Init(func(index int) m.Position {
+		node := nodes.At(index)
+		return m.NewPosition(node.Latitude(), node.Longitude())
+	}, nodes.Len())
 	return w
 }
 
@@ -162,11 +163,6 @@ func IsForward(lineStart m.Position, lineEnd m.Position, bearing float64) bool {
 	wayBearing := vec.Bearing()
 	bearingDelta := math.Abs(bearing*ms.TO_RADIANS - wayBearing)
 	return math.Cos(bearingDelta) >= 0
-}
-
-func (w *Way) _nodeAt(index int) m.Position {
-	n := w.nodesRaw.At(index)
-	return m.NewPosition(n.Latitude(), n.Longitude())
 }
 
 func (w *Way) _oneWay() bool {
