@@ -31,6 +31,7 @@ const (
 )
 
 type MapdSettings struct {
+	msgqQueueSizeOverride               *int64
 	downloadProgress                    chan DownloadProgress
 	cancelDownload                      chan bool
 	downloadActive                      bool
@@ -38,6 +39,7 @@ type MapdSettings struct {
 	speedLimitAccepted                  bool
 	currentPersonality                  log.LongitudinalPersonality
 	SettingsVersion                     float32            `json:"settings_version"`
+	MsgqQueueSize                       int64              `json:"msgq_queue_size"`
 	VisionCurveSpeedControlEnabled      bool               `json:"vision_curve_speed_control_enabled"`
 	MapCurveSpeedControlEnabled         bool               `json:"map_curve_speed_control_enabled"`
 	SpeedLimitControlEnabled            bool               `json:"speed_limit_control_enabled"`

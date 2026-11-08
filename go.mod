@@ -11,7 +11,7 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/paulmach/orb v0.1.3
 	github.com/paulmach/osm v0.8.0
-	github.com/pfeiferj/gomsgq v0.1.11
+	github.com/pfeiferj/gomsgq v0.1.12
 	github.com/pkg/errors v0.9.1
 	github.com/urfave/cli/v3 v3.5.0
 )

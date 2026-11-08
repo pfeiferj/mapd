@@ -125,7 +125,7 @@ func (p *Publisher[T]) autoPublishLoop(rate time.Duration) {
 
 func NewPublisher[T any](name string, creator MessageCreator[T]) (publisher Publisher[T]) {
 	msgq := gomsgq.Msgq{}
-	err := msgq.Init(name, settings.GetSegmentSize(name))
+	err := msgq.Init(name, settings.GetSegmentSize(name), maxReaders())
 	if err != nil {
 		panic(err)
 	}

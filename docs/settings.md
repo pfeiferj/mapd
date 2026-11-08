@@ -41,6 +41,41 @@ current schema on load; this should not normally be set directly.
 | --------- | ----------- |
 | Param Key | settings\_version |
 
+### Msgq Queue Size
+The msgq queue's reader capacity (not its segment size in bytes). It must match
+openpilot's `NUM_READERS` value. Both default and recommended settings use `0`
+for auto-detection; positive integers force that capacity. Negative values and
+non-integers are invalid.
+
+| Item         | Description |
+| ------------ | ----------- |
+| MapdIn Type  | setJsonPathFloat (jsonPath: msgq_queue_size) |
+| MapdIn Field | float (whole numbers only) |
+| Param Key    | msgq_queue_size |
+| Default      | 0 (auto-detect) |
+
+The command-line flag `--msgq-queue-size` overrides the environment variable
+`MAPD_MSGQ_QUEUE_SIZE`, which overrides this setting. An explicitly supplied `0`
+at either override selects auto-detection even if the lower-priority setting
+specifies a positive size. CLI/environment overrides are process-local and do
+not change the saved setting. They also apply to `mapd interactive`.
+
+```sh
+mapd --msgq-queue-size 31
+MAPD_MSGQ_QUEUE_SIZE=31 mapd
+mapd --msgq-queue-size 31 interactive
+```
+
+Auto-detection reads `NUM_READERS` from
+`/data/openpilot/msgq_repo/msgq/msgq.h`, falling back to `15` if the header
+cannot be read or a valid positive value cannot be parsed. The capacity is
+chosen when a publisher/subscriber is created; save settings changes and
+restart mapd (and any interactive clients) to apply them to existing queues.
+All processes sharing a queue must use the same capacity.
+
+This is an additive v2 setting: existing saved settings without the key keep
+the default of `0` and require no migration.
+
 ### Speed Limit Control Enabled
 When enabled mapd will use the speed limit to determine a suggested speed
 

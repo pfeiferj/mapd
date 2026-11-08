@@ -36,6 +36,14 @@ existing values when the recommended settings are loaded. If those values are
 never set this implies that they will use the default values as the default
 values are always loaded upon starting mapd.
 
+## Msgq Reader Capacity
+The `msgq_queue_size` setting defaults to `0` (auto-detect openpilot's
+`NUM_READERS`). Set it to a positive integer in `MapdSettings` or a custom
+settings file to force a specific capacity. `MAPD_MSGQ_QUEUE_SIZE` overrides
+the setting, and `--msgq-queue-size` overrides both. Explicit `0` overrides
+select auto-detection. These overrides do not change persisted settings.
+See [Msgq Queue Size](settings.md#msgq-queue-size) for details and examples.
+
 ## Download Menu
 The download menu file is used for two purposes. When triggering a download, the
 area names given to mapd are used to locate the appropriate bounding box from
