@@ -88,7 +88,7 @@ func GenerateDownloadMenu(menuFile, countriesFile, statesFile, outputFile string
 		for code, location := range locations {
 			location.DownloadRows = nil
 			// These source boundaries omit territory covered by the existing menu entries.
-			if group == "nation" && (code == "MA" || code == "SO" || code == "UA") {
+			if group == "nation" && (code == "AQ" || code == "MA" || code == "SO" || code == "UA") {
 				locations[code] = location
 				continue
 			}
@@ -100,7 +100,7 @@ func GenerateDownloadMenu(menuFile, countriesFile, statesFile, outputFile string
 						Min: orb.Point{float64(longitude), float64(row[0])},
 						Max: orb.Point{float64(longitude + GROUP_AREA_BOX_DEGREES), float64(row[0] + GROUP_AREA_BOX_DEGREES)},
 					}
-					cell = cell.Pad(0.05) // allow for coarse coastlines near archive edges
+					cell = cell.Pad(0.3) // allow for coarse coastlines and small islands missing from the source
 					for _, ring := range rings {
 						if !cell.Intersects(ring.Bound()) || len(clip.Ring(cell, ring.Clone())) == 0 {
 							continue

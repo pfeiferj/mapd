@@ -155,10 +155,13 @@ hashes are `239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255`
 
 Generation keeps archives intersecting outer polygon rings, including islands,
 within each existing bounding box's archive grid. Intersection checks allow a
-0.05-degree margin for coarse coastlines near archive edges. This retained two
-coastal cells found by comparison with an independent Canada boundary; it is
-not a universal boundary-accuracy guarantee. Holes and degenerate clipping
-results can conservatively retain extra archives. Morocco, Somalia, and Ukraine retain their full bounding boxes
-because the source's territory assignments would narrow the existing entries.
+0.3-degree margin for coarse coastlines and small islands missing from the
+source, such as Pulau Simuk in Indonesia. The margin comes from comparing the
+removed archives with OpenStreetMap roads near the outlines, and it isn't a
+universal boundary-accuracy guarantee. Holes and degenerate clipping results can
+conservatively retain extra archives. Antarctica, Morocco, Somalia, and Ukraine
+retain their full bounding boxes because the source leaves out the ice shelves
+Antarctica's roads cross, and its territory assignments would narrow the other
+three entries.
 These are coarse download selections, not authoritative administrative borders;
 maintain custom regions through the existing menu override.
