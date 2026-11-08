@@ -413,7 +413,6 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 	}
 
 	minLinePosition := m.LinePosition{}
-	minIdx := 0
 	for i := 0; i < w.Nodes.Len()-1; i++ {
 		nodeStart := w.Nodes.At(i)
 		nodeEnd := w.Nodes.At(i+1)
@@ -426,14 +425,7 @@ func (w *Way) DistanceFrom(pos m.Position) (DistanceResult, error) {
 			minNodeStart = nodeStart
 			minNodeEnd = nodeEnd
 			minLinePosition = linePosition
-			minIdx = i
 		}
-	}
-	onWayDistance := minNodeStart.DistanceTo(minLinePosition.Pos)
-	for i := range minIdx {
-		nodeStart := w.Nodes.At(i)
-		nodeEnd := w.Nodes.At(i+1)
-		onWayDistance += nodeStart.DistanceTo(nodeEnd)
 	}
 
 	res.Distance = minDistance
