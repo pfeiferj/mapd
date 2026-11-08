@@ -105,6 +105,12 @@ func areaBox(latitudeIndex int, longitudeIndex int) m.Box {
 	}
 }
 
+func areaIndexRange(minimum float64, maximum float64, origin float64, areaCount int) (int, int) {
+	first := int(math.Floor((minimum-origin)/ms.AREA_BOX_DEGREES)) - 1
+	last := int(math.Floor((maximum-origin)/ms.AREA_BOX_DEGREES)) + 1
+	return max(first, 0), min(last, areaCount-1)
+}
+
 // Generates bounding boxes for storing ways
 func generateAreas() []Area {
 	areas := make([]Area, latitudeAreas*longitudeAreas)
@@ -224,7 +230,25 @@ func GenerateOffline(s OfflineSettings) {
 	}
 
 	slog.Info("Finding Bounds")
-	for _, area := range areas {
+	overlap := math.Abs(s.Overlap)
+	areaWays := make([][]int, len(areas))
+
+	for wayIndex, way := range scannedWays {
+		firstLatitude, lastLatitude := areaIndexRange(way.Box.MinPos.Lat()-overlap, way.Box.MaxPos.Lat()+overlap, -90, latitudeAreas)
+		firstLongitude, lastLongitude := areaIndexRange(way.Box.MinPos.Lon()-overlap, way.Box.MaxPos.Lon()+overlap, -180, longitudeAreas)
+
+		for i := firstLatitude; i <= lastLatitude; i++ {
+			for j := firstLongitude; j <= lastLongitude; j++ {
+				areaIndex := i*longitudeAreas + j
+
+				if way.Box.Overlapping(areas[areaIndex].OverlapBox(s.Overlap)) {
+					areaWays[areaIndex] = append(areaWays[areaIndex], wayIndex)
+				}
+			}
+		}
+	}
+
+	for areaIndex, area := range areas {
 		overlapBox := s.Box.Overlap(s.Overlap)
 		if !overlapBox.Contains(area.Box) {
 			continue
@@ -247,12 +271,8 @@ func GenerateOffline(s OfflineSettings) {
 			panic("unexpected capnp error, exiting")
 		}
 
-		for _, way := range scannedWays {
-
-			overlaps := way.Box.Overlapping(area.OverlapBox(s.Overlap))
-			if overlaps {
-				area.Ways = append(area.Ways, way)
-			}
+		for _, wayIndex := range areaWays[areaIndex] {
+			area.Ways = append(area.Ways, scannedWays[wayIndex])
 		}
 
 		slog.Info("Writing Area")
