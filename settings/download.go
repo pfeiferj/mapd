@@ -190,8 +190,8 @@ func ValidateArchive(path string) error {
 // Standard tar-slip guard: an entry named "../../etc/whatever" must never be written.
 func safeJoin(base string, name string) (string, error) {
 	target := filepath.Join(base, name)
-	cleanBase := filepath.Clean(base) + string(os.PathSeparator)
-	if !strings.HasPrefix(filepath.Clean(target)+string(os.PathSeparator), cleanBase) {
+	relativeTarget, err := filepath.Rel(base, target)
+	if err != nil || !filepath.IsLocal(relativeTarget) {
 		return "", errors.Errorf("archive entry escapes destination: %s", name)
 	}
 	return target, nil
