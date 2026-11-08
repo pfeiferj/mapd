@@ -51,13 +51,6 @@ type Area struct {
 	Ways []TmpWay
 }
 
-func (a *Area) OverlapBox(overlap float64) m.Box {
-	return m.Box{
-		MinPos: m.NewPosition(a.Box.MinPos.Lat()-overlap, a.Box.MinPos.Lon()-overlap),
-		MaxPos: m.NewPosition(a.Box.MaxPos.Lat()+overlap, a.Box.MaxPos.Lon()+overlap),
-	}
-}
-
 type OfflineSettings struct {
 	Box                m.Box
 	OutputDirectory    string
@@ -76,19 +69,15 @@ func EnsureOfflineMapsDirectories(s OfflineSettings) {
 	}
 }
 
-// Creates a file for a specific bounding box
-func GenerateBoundsFileName(a Area, s OfflineSettings) string {
+func GenerateBoundsDirName(a Area, s OfflineSettings) string {
 	p := a.Box.GroupPos()
-	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, int(p.Lat()), int(p.Lon()))
-	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, a.Box.MinPos.Lat(), a.Box.MinPos.Lon(), a.Box.MaxPos.Lat(), a.Box.MaxPos.Lon())
+	return fmt.Sprintf("%s/%d/%d", s.OutputDirectory, int(p.Lat()), int(p.Lon()))
 }
 
 // Creates a file for a specific bounding box
-func CreateBoundsDir(a Area, s OfflineSettings) error {
-	p := a.Box.GroupPos()
-	dir := fmt.Sprintf("%s/%d/%d", s.OutputDirectory, int(p.Lat()), int(p.Lon()))
-	err := os.MkdirAll(dir, 0o775)
-	return errors.Wrap(err, "could not create bounds directory")
+func GenerateBoundsFileName(a Area, s OfflineSettings) string {
+	dir := GenerateBoundsDirName(a, s)
+	return fmt.Sprintf("%s/%f_%f_%f_%f", dir, a.Box.MinPos.Lat(), a.Box.MinPos.Lon(), a.Box.MaxPos.Lat(), a.Box.MaxPos.Lon())
 }
 
 const (
@@ -122,14 +111,18 @@ func generateAreas() []Area {
 	return areas
 }
 
+func panicOnError(err error, message string) {
+	if err != nil {
+		slog.Error(message, "error", err)
+		panic("failed to generate offline maps, exiting")
+	}
+}
+
 func GenerateOffline(s OfflineSettings) {
 	slog.Info("Generating Offline Map")
 	EnsureOfflineMapsDirectories(s)
 	file, err := os.Open(s.InputFile)
-	if err != nil {
-		slog.Error("could not open map pbf file", "error", err)
-		panic("failed to read maps, exiting")
-	}
+	panicOnError(err, "could not open map pbf file")
 	defer file.Close()
 
 	// The third parameter is the number of parallel decoders to use.
@@ -224,10 +217,7 @@ func GenerateOffline(s OfflineSettings) {
 			scannedWays = append(scannedWays, tmpWay)
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		slog.Error("could not scan map pbf file", "error", err)
-		panic("failed to scan maps, exiting")
-	}
+	panicOnError(scanner.Err(), "could not scan map pbf file")
 
 	slog.Info("Finding Bounds")
 	overlap := math.Abs(s.Overlap)
@@ -241,7 +231,7 @@ func GenerateOffline(s OfflineSettings) {
 			for j := firstLongitude; j <= lastLongitude; j++ {
 				areaIndex := i*longitudeAreas + j
 
-				if way.Box.Overlapping(areas[areaIndex].OverlapBox(s.Overlap)) {
+				if way.Box.Overlapping(areas[areaIndex].Box.Overlap(s.Overlap)) {
 					areaWays[areaIndex] = append(areaWays[areaIndex], wayIndex)
 				}
 			}
@@ -261,15 +251,9 @@ func GenerateOffline(s OfflineSettings) {
 
 		arena := capnp.MultiSegment(nil)
 		msg, seg, err := capnp.NewMessage(arena)
-		if err != nil {
-			slog.Error("could not create capnp arena for offline data", "error", err)
-			panic("unexpected capnp error, exiting")
-		}
+		panicOnError(err, "could not create capnp arena for offline data")
 		rootOffline, err := offline.NewRootOffline(seg)
-		if err != nil {
-			slog.Error("could not create capnp root for offline data", "error", err)
-			panic("unexpected capnp error, exiting")
-		}
+		panicOnError(err, "could not create capnp root for offline data")
 
 		for _, wayIndex := range areaWays[areaIndex] {
 			area.Ways = append(area.Ways, scannedWays[wayIndex])
@@ -277,10 +261,7 @@ func GenerateOffline(s OfflineSettings) {
 
 		slog.Info("Writing Area")
 		ways, err := rootOffline.NewWays(int32(len(area.Ways)))
-		if err != nil {
-			slog.Error("could not create ways in offline data", "error", err)
-			panic("unexpected capnp error, exiting")
-		}
+		panicOnError(err, "could not create ways in offline data")
 		rootOffline.SetMinLat(area.Box.MinPos.Lat())
 		rootOffline.SetMinLon(area.Box.MinPos.Lon())
 		rootOffline.SetMaxLat(area.Box.MaxPos.Lat())
@@ -293,48 +274,21 @@ func GenerateOffline(s OfflineSettings) {
 			w.SetMinLon(way.Box.MinPos.Lon())
 			w.SetMaxLat(way.Box.MaxPos.Lat())
 			w.SetMaxLon(way.Box.MaxPos.Lon())
-			err := w.SetName(way.Name)
-			if err != nil {
-				slog.Error("could not set way name", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
-			err = w.SetRef(way.Ref)
-			if err != nil {
-				slog.Error("could not set way ref", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
-			err = w.SetHazard(way.Hazard)
-			if err != nil {
-				slog.Error("could not set way hazard", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
+			panicOnError(w.SetName(way.Name), "could not set way name")
+			panicOnError(w.SetRef(way.Ref), "could not set way ref")
+			panicOnError(w.SetHazard(way.Hazard), "could not set way hazard")
 			w.SetMaxSpeed(way.MaxSpeed)
 			w.SetMaxSpeedForward(way.MaxSpeedForward)
 			w.SetMaxSpeedBackward(way.MaxSpeedBackward)
-			err = w.SetMaxSpeedConditional(way.MaxSpeedConditional)
-			if err != nil {
-				slog.Error("could not set way conditional max speed", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
-			err = w.SetMaxSpeedForwardConditional(way.MaxSpeedForwardConditional)
-			if err != nil {
-				slog.Error("could not set way forward conditional max speed", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
-			err = w.SetMaxSpeedBackwardConditional(way.MaxSpeedBackwardConditional)
-			if err != nil {
-				slog.Error("could not set way backward conditional max speed", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
+			panicOnError(w.SetMaxSpeedConditional(way.MaxSpeedConditional), "could not set way conditional max speed")
+			panicOnError(w.SetMaxSpeedForwardConditional(way.MaxSpeedForwardConditional), "could not set way forward conditional max speed")
+			panicOnError(w.SetMaxSpeedBackwardConditional(way.MaxSpeedBackwardConditional), "could not set way backward conditional max speed")
 			w.SetAdvisorySpeed(way.MaxSpeedAdvisory)
 			w.SetLanes(way.Lanes)
 			w.SetOneWay(way.OneWay)
 			w.SetHighwayClass(way.HighwayClass)
 			nodes, err := w.NewNodes(int32(len(way.Nodes)))
-			if err != nil {
-				slog.Error("could not create way nodes", "error", err)
-				panic("unexpected capnp error, exiting")
-			}
+			panicOnError(err, "could not create way nodes")
 			for j, node := range way.Nodes {
 				n := nodes.At(j)
 				n.SetLatitude(node.Latitude)
@@ -343,36 +297,14 @@ func GenerateOffline(s OfflineSettings) {
 		}
 
 		data, err := msg.MarshalPacked()
-		if err != nil {
-			slog.Error("could not marshal offline data", "error", err)
-			panic("unexpected capnp error, exiting")
-		}
-		err = CreateBoundsDir(area, s)
-		if err != nil {
-			slog.Error("could not create bounds directory", "error", err)
-			panic("unexpected file error, exiting")
-		}
-		err = os.WriteFile(GenerateBoundsFileName(area, s), data, 0o644)
-		if err != nil {
-			slog.Error("could not write offline data to file", "error", err)
-			panic("unexpected file error, exiting")
-		}
+		panicOnError(err, "could not marshal offline data")
+		panicOnError(os.MkdirAll(GenerateBoundsDirName(area, s), 0o775), "could not create bounds directory")
+		panicOnError(os.WriteFile(GenerateBoundsFileName(area, s), data, 0o644), "could not write offline data to file")
 	}
 	f, err := os.Open(s.OutputDirectory)
-	if err != nil {
-		slog.Error("could not open bounds directory", "error", err)
-		panic("unexpected file error, exiting")
-	}
-	err = f.Sync()
-	if err != nil {
-		slog.Error("could not fsync bounds directory", "error", err)
-		panic("unexpected file error, exiting")
-	}
-	err = f.Close()
-	if err != nil {
-		slog.Error("could not close bounds directory", "error", err)
-		panic("unexpected file error, exiting")
-	}
+	panicOnError(err, "could not open bounds directory")
+	panicOnError(f.Sync(), "could not fsync bounds directory")
+	panicOnError(f.Close(), "could not close bounds directory")
 
 	slog.Info("Done Generating Offline Map")
 }
