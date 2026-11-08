@@ -227,4 +227,5 @@ struct MapdOut @0xa4f1eb3323f5f582 {
   highwayClass @24 :HighwayClass;
   wayId @25 :Int64;
   conditionalSpeedLimit @26 :Text;
+  isForward @27 :Bool;
 }
