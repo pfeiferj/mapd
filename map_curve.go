@@ -14,7 +14,6 @@ func UpdateCurveSpeed(s *State) {
 	}
 
 	distances := make([]float32, len(s.TargetVelocities))
-	match_idx := -1
 	for i, tv := range s.TargetVelocities {
 		d, found := nodeDistances[tv.Pos]
 		if !found {
@@ -22,18 +21,25 @@ func UpdateCurveSpeed(s *State) {
 		}
 
 		distances[i] = d
+	}
 
-		// find index of the most recent node we have driven past based on which node was used to calculate if we are on the way
-		if tv.Pos.Equals(s.CurrentWay.Distance.LineStart) && match_idx == -1 {
-			match_idx = i + 1
-		}
-		if tv.Pos.Equals(s.CurrentWay.Distance.LineEnd) && match_idx == -1 {
-			match_idx = i + 1
+	nodes := s.CurrentWay.Way.Nodes
+	match_idx := 0
+
+	// find index of the most recent node we have driven past based on which node was used to calculate if we are on the way
+	for i := 0; i < nodes.Len()-1; i++ {
+		nodeStart := nodes.At(i)
+		nodeEnd := nodes.At(i + 1)
+		if nodeStart.Equals(s.CurrentWay.Distance.LineStart) && nodeEnd.Equals(s.CurrentWay.Distance.LineEnd) {
+			passed_idx := i
+			if !s.CurrentWay.OnWay.IsForward {
+				passed_idx = nodes.Len() - 2 - i
+			}
+			match_idx = min(max(passed_idx-1, 0), len(s.TargetVelocities))
+			break
 		}
 	}
-	if match_idx == -1 {
-		match_idx = 0
-	}
+
 	forwardSize := len(s.TargetVelocities) - match_idx
 	forwardPoints := make([]*Velocity, forwardSize)
 	forwardDistances := make([]float32, forwardSize)
