@@ -45,50 +45,17 @@ func (s *ExtendedState) setPosition(out custom.MapdExtendedOut) {
 }
 
 func (s *ExtendedState) setPath(out custom.MapdExtendedOut) {
-	nodes := s.state.CurrentWay.Way.Nodes.Slice()
-	num_points := len(nodes)
-	all_nodes := [][]m.Position{nodes}
-	all_nodes_direction := []bool{s.state.CurrentWay.OnWay.IsForward}
-	for _, nextWay := range s.state.NextWays {
-		nwNodes := nextWay.Way.Nodes.Slice()
-		if len(nwNodes) > 0 {
-			num_points += len(nwNodes) - 1
-		}
-		all_nodes = append(all_nodes, nwNodes)
-		all_nodes_direction = append(all_nodes_direction, nextWay.IsForward)
-	}
-
-	path, err := out.NewPath(int32(num_points))
+	positions := GetStatePath(s.state)
+	path, err := out.NewPath(int32(len(positions)))
 	if err != nil {
 		slog.Warn("failed to create path in extended state")
 		return
 	}
 
-	all_nodes_idx := 0
-	nodes_idx := 0
-	for i := 0; i < num_points; i++ {
-		var index int
-		forward := all_nodes_direction[all_nodes_idx]
-		if forward {
-			index = nodes_idx
-			if all_nodes_idx > 0 {
-				index += 1
-			}
-		} else {
-			index = len(all_nodes[all_nodes_idx]) - nodes_idx - 1
-			if all_nodes_idx > 0 {
-				index -= 1
-			}
-		}
-		node := all_nodes[all_nodes_idx][index]
+	for i, position := range positions {
 		point := path.At(i)
-		point.SetLatitude(node.Lat())
-		point.SetLongitude(node.Lon())
-		nodes_idx += 1
-		if nodes_idx == len(all_nodes[all_nodes_idx]) || (nodes_idx == len(all_nodes[all_nodes_idx])-1 && all_nodes_idx > 0) {
-			all_nodes_idx += 1
-			nodes_idx = 0
-		}
+		point.SetLatitude(position.Lat())
+		point.SetLongitude(position.Lon())
 	}
 	point_idx := 0
 	for _, curvature := range s.state.Curvatures {
