@@ -513,14 +513,32 @@ func (w *Way) DistanceToEnd(pos m.Position, isForward bool) (float32, error) {
 }
 
 func (w *Way) DistanceToNode(pos m.Position, isForward bool, finalNode m.Position) (float32, bool, error) {
+	found := false
+	dist, err := w.walkNodesFrom(pos, isForward, func(node m.Position, distance float32) bool {
+		found = node.Equals(finalNode)
+		return found
+	})
+	return dist, found, err
+}
+
+func (w *Way) NodeDistances(pos m.Position, isForward bool, startDistance float32, distances map[m.Position]float32) (float32, error) {
+	return w.walkNodesFrom(pos, isForward, func(node m.Position, distance float32) bool {
+		_, seen := distances[node]
+		if !seen {
+			distances[node] = startDistance + distance
+		}
+		return false
+	})
+}
+
+func (w *Way) walkNodesFrom(pos m.Position, isForward bool, visit func(node m.Position, distance float32) bool) (float32, error) {
 	distanceResult, err := w.DistanceFrom(pos)
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 	dist := float32(0.0)
 	stopFiltering := false
 	lastPos := distanceResult.LinePosition.Pos
-	found := false
 	for i := range w.Nodes.Len() {
 		index := i
 		if !isForward {
@@ -537,12 +555,11 @@ func (w *Way) DistanceToNode(pos m.Position, isForward bool, finalNode m.Positio
 
 		dist += lastPos.DistanceTo(node)
 		lastPos = node
-		if lastPos.Equals(finalNode) {
-			found = true
+		if visit(node, dist) {
 			break
 		}
 	}
-	return dist, found, nil
+	return dist, nil
 }
 
 func (w *Way) _distance() float32 {
