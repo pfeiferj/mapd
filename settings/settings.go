@@ -116,24 +116,10 @@ func (s *MapdSettings) Default() {
 			slog.Warn("failed to read custom default settings", "error", err)
 		}
 
-		parsed, err := gabs.ParseJSON(defaults)
+		defaults, err = migrateSettings(defaults)
 		if err != nil {
 			slog.Warn("failed to parse custom default settings", "error", err)
-		}
-
-		settingsVersion := parsed.S("settings_version").Data()
-		if settingsVersion == nil {
-			settingsVersion = uint64(0)
-		}
-
-		if settingsVersion != SETTINGS_VERSION {
-			slog.Info("default file settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
-			migratedSettings := Migrate(uint64(settingsVersion.(uint64)), defaults)
-			defaults, err = json.Marshal(migratedSettings)
-			if err != nil {
-				slog.Warn("failed to marshal migrated default settings", "error", err)
-				return
-			}
+			return
 		}
 
 		err = json.Unmarshal(defaults, s)
@@ -151,24 +137,10 @@ func (s *MapdSettings) Recommended() {
 			slog.Warn("failed to read custom recommended settings", "error", err)
 		}
 
-		parsed, err := gabs.ParseJSON(recommended)
+		recommended, err = migrateSettings(recommended)
 		if err != nil {
 			slog.Warn("failed to parse custom recommended settings", "error", err)
-		}
-
-		settingsVersion := parsed.S("settings_version").Data()
-		if settingsVersion == nil {
-			settingsVersion = uint64(0)
-		}
-
-		if settingsVersion != SETTINGS_VERSION {
-			slog.Info("default file settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
-			migratedSettings := Migrate(uint64(settingsVersion.(uint64)), recommended)
-			recommended, err = json.Marshal(migratedSettings)
-			if err != nil {
-				slog.Warn("failed to marshal migrated recommended settings", "error", err)
-				return
-			}
+			return
 		}
 
 		err = json.Unmarshal(recommended, s)
@@ -191,26 +163,12 @@ func (s *MapdSettings) Load() (success bool) {
 		return false
 	}
 
-	parsed, err := gabs.ParseJSON(data)
+	data, err = migrateSettings(data)
 	if err != nil {
 		slog.Warn("failed to parse MAPD_SETTINGS json", "error", err)
 		return false
 	}
 
-	settingsVersion := parsed.S("settings_version").Data()
-	if settingsVersion == nil {
-		settingsVersion = float64(0)
-	}
-
-	if settingsVersion.(float64) != float64(SETTINGS_VERSION) {
-		slog.Info("settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
-		migratedSettings := Migrate(uint64(settingsVersion.(float64)), data)
-		data, err = json.Marshal(migratedSettings)
-		if err != nil {
-			slog.Warn("failed to marshal migrated settings", "error", err)
-			return false
-		}
-	}
 	err = json.Unmarshal(data, s)
 	if err != nil {
 		slog.Warn("failed to parse MAPD_SETTINGS param", "error", err)

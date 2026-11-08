@@ -3,7 +3,24 @@ package settings
 import (
 	"encoding/json"
 	"log/slog"
+
+	"github.com/Jeffail/gabs/v2"
 )
+
+func migrateSettings(data []byte) ([]byte, error) {
+	parsed, err := gabs.ParseJSON(data)
+	if err != nil {
+		return nil, err
+	}
+
+	settingsVersion, versioned := parsed.S("settings_version").Data().(float64)
+	if !versioned || settingsVersion == SETTINGS_VERSION {
+		return data, nil
+	}
+
+	slog.Info("settings version mismatch, running migrations", "expected_version", SETTINGS_VERSION, "settings_version", settingsVersion)
+	return json.Marshal(Migrate(uint64(settingsVersion), data))
+}
 
 func Migrate(version uint64, jsonString []byte) MapdSettings {
 	var migratedSettings any
