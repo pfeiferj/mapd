@@ -156,8 +156,8 @@ func GenerateOffline(s OfflineSettings) {
 				Ref:              tags["ref"],
 				Hazard:           tags["hazard"],
 				MaxSpeed:         parseWayMaxSpeed(tags),
-				MaxSpeedForward:  ParseMaxSpeed(tags["maxspeed:forward"]),
-				MaxSpeedBackward: ParseMaxSpeed(tags["maxspeed:backward"]),
+				MaxSpeedForward:  parseOfflineMaxSpeed(tags["maxspeed:forward"]),
+				MaxSpeedBackward: parseOfflineMaxSpeed(tags["maxspeed:backward"]),
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
 				Id:               int64(way.ID),
@@ -361,11 +361,19 @@ func parseWayMaxSpeed(tags map[string]string) float64 {
 		if mph, ok := implicitWayMaxSpeedMPH[value]; ok {
 			return mphToMPS * mph
 		}
-		if speed := ParseMaxSpeed(value); speed > 0 {
+		if speed := parseOfflineMaxSpeed(value); speed > 0 {
 			return speed
 		}
 	}
 	return 0
+}
+
+func parseOfflineMaxSpeed(value string) float64 {
+	if strings.TrimSpace(value) == "none" {
+		// Use openpilot's cruise set-speed ceiling as a normal numeric limit.
+		value = "145"
+	}
+	return ParseMaxSpeed(value)
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {

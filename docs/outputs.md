@@ -28,7 +28,8 @@ currently on. It takes into account direction of travel, so if there is forward
 or backwards max speed tag on osm this value will automatically use it based on
 the direction of travel. When conditional speed limit control is enabled and a
 parseable day/time condition from the way's maxspeed:conditional tag currently
-applies, this value reflects the conditional limit instead.
+applies, this value reflects the conditional limit instead. Offline tiles
+encode explicit `none` speed limits as 145 km/h, reported here in m/s.
 * **conditionalSpeedLimit**: The raw maxspeed:conditional tag text for the way
 we are currently on (direction of travel taken into account, like speedLimit).
 Always output when the tag is present so forks can evaluate conditions mapd

@@ -40,6 +40,17 @@ func TestParseMaxSpeedZone(t *testing.T) {
 	}
 }
 
+func TestParseOfflineMaxSpeedNone(t *testing.T) {
+	if got, want := parseOfflineMaxSpeed("none"), ParseMaxSpeed("145"); got != want {
+		t.Errorf("parseOfflineMaxSpeed(none) = %v m/s; want %v m/s", got, want)
+	}
+	for _, value := range []string{"", "-1", "none mph", "DE:zone:none"} {
+		if got := parseOfflineMaxSpeed(value); got != 0 {
+			t.Errorf("parseOfflineMaxSpeed(%q) = %v; want 0", value, got)
+		}
+	}
+}
+
 func TestParseWayMaxSpeed(t *testing.T) {
 	for _, tc := range []struct {
 		name, maxspeed, source, speedType, want string
@@ -70,6 +81,8 @@ func TestParseWayMaxSpeed(t *testing.T) {
 		{"city limit without number", "AT:city_limit", "AT:urban", "", "50"},
 		{"variable motorway limits fall through", "FR:motorway", "TR:motorway", "130", "130"},
 		{"no usable speed", "DE:living_street", "sign", "DE:motorway", ""},
+		{"explicit none stops fallback", "none", "50", "DE:rural", "145"},
+		{"fallback can be explicit none", "", "none", "DE:rural", "145"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tags := map[string]string{
