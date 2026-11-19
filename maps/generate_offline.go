@@ -155,9 +155,9 @@ func GenerateOffline(s OfflineSettings) {
 				Name:             tags["name"],
 				Ref:              tags["ref"],
 				Hazard:           tags["hazard"],
-				MaxSpeed:         ParseMaxSpeed(tags["maxspeed"]),
-				MaxSpeedForward:  ParseMaxSpeed(tags["maxspeed:forward"]),
-				MaxSpeedBackward: ParseMaxSpeed(tags["maxspeed:backward"]),
+				MaxSpeed:         parseWayMaxSpeed(tags),
+				MaxSpeedForward:  parseOfflineMaxSpeed(tags["maxspeed:forward"]),
+				MaxSpeedBackward: parseOfflineMaxSpeed(tags["maxspeed:backward"]),
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
 				Lanes:            uint8(lanes),
 				Id:               int64(way.ID),
@@ -347,7 +347,46 @@ func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 	return o, errors.Wrap(err, "could not read current offline data file")
 }
 
+const (
+	kphToMPS = 0.277778
+	mphToMPS = 0.44704
+)
+
+func parseWayMaxSpeed(tags map[string]string) float64 {
+	for _, key := range [...]string{"maxspeed", "source:maxspeed", "maxspeed:type"} {
+		value := tags[key]
+		if kph, ok := implicitWayMaxSpeedKPH[value]; ok {
+			return kphToMPS * kph
+		}
+		if mph, ok := implicitWayMaxSpeedMPH[value]; ok {
+			return mphToMPS * mph
+		}
+		if speed := parseOfflineMaxSpeed(value); speed > 0 {
+			return speed
+		}
+	}
+	return 0
+}
+
+func parseOfflineMaxSpeed(value string) float64 {
+	if strings.TrimSpace(value) == "none" {
+		// Use openpilot's cruise set-speed ceiling as a normal numeric limit.
+		value = "145"
+	}
+	return ParseMaxSpeed(value)
+}
+
 func ParseMaxSpeed(maxspeed string) float64 {
+	if country, taggedSpeed, ok := strings.Cut(maxspeed, ":"); ok && len(country) == 2 &&
+		country[0] >= 'A' && country[0] <= 'Z' && country[1] >= 'A' && country[1] <= 'Z' {
+		for _, prefix := range [...]string{"zone", "shared_zone", "city_limit"} {
+			if speed, ok := strings.CutPrefix(taggedSpeed, prefix); ok {
+				maxspeed = strings.TrimPrefix(speed, ":")
+				break
+			}
+		}
+	}
+
 	splitSpeed := strings.Split(maxspeed, " ")
 	if len(splitSpeed) == 0 {
 		return 0
@@ -359,13 +398,13 @@ func ParseMaxSpeed(maxspeed string) float64 {
 	}
 
 	if len(splitSpeed) == 1 {
-		return 0.277778 * float64(numeric)
+		return kphToMPS * float64(numeric)
 	}
 
 	if splitSpeed[1] == "kph" || splitSpeed[1] == "km/h" || splitSpeed[1] == "kmh" {
-		return 0.277778 * float64(numeric)
+		return kphToMPS * float64(numeric)
 	} else if splitSpeed[1] == "mph" {
-		return 0.44704 * float64(numeric)
+		return mphToMPS * float64(numeric)
 	} else if splitSpeed[1] == "knots" {
 		return 0.514444 * float64(numeric)
 	}
