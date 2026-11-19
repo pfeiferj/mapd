@@ -155,7 +155,7 @@ func GenerateOffline(s OfflineSettings) {
 				Name:             tags["name"],
 				Ref:              tags["ref"],
 				Hazard:           tags["hazard"],
-				MaxSpeed:         ParseMaxSpeed(tags["maxspeed"]),
+				MaxSpeed:         parseWayMaxSpeed(tags),
 				MaxSpeedForward:  ParseMaxSpeed(tags["maxspeed:forward"]),
 				MaxSpeedBackward: ParseMaxSpeed(tags["maxspeed:backward"]),
 				MaxSpeedAdvisory: ParseMaxSpeed(tags["maxspeed:advisory"]),
@@ -345,6 +345,15 @@ func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 		o.box.Set(area.Box)
 	}
 	return o, errors.Wrap(err, "could not read current offline data file")
+}
+
+func parseWayMaxSpeed(tags map[string]string) float64 {
+	for _, key := range [...]string{"maxspeed", "source:maxspeed", "maxspeed:type"} {
+		if speed := ParseMaxSpeed(tags[key]); speed > 0 {
+			return speed
+		}
+	}
+	return 0
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {

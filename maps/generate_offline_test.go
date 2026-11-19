@@ -34,3 +34,27 @@ func TestParseMaxSpeedZone(t *testing.T) {
 		})
 	}
 }
+
+func TestParseWayMaxSpeed(t *testing.T) {
+	for _, tc := range []struct {
+		name, maxspeed, source, speedType, want string
+	}{
+		{"prefer maxspeed", "50", "DE:zone30 mph", "DE:zone:20", "50"},
+		{"prefer source over type", "DE:urban", "DE:zone30 mph", "DE:zone:20", "30 mph"},
+		{"missing maxspeed", "", "DE:zone30", "", "30"},
+		{"unparseable source", "DE:urban", "sign", "DE:zone:20", "20"},
+		{"only type", "", "", "DE:zone:20", "20"},
+		{"no usable speed", "", "sign", "DE:urban", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tags := map[string]string{
+				"maxspeed":        tc.maxspeed,
+				"source:maxspeed": tc.source,
+				"maxspeed:type":   tc.speedType,
+			}
+			if got, want := parseWayMaxSpeed(tags), ParseMaxSpeed(tc.want); got != want {
+				t.Errorf("parseWayMaxSpeed(%v) = %v m/s; want %v m/s", tags, got, want)
+			}
+		})
+	}
+}
