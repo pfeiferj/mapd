@@ -347,9 +347,21 @@ func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 	return o, errors.Wrap(err, "could not read current offline data file")
 }
 
+const (
+	kphToMPS = 0.277778
+	mphToMPS = 0.44704
+)
+
 func parseWayMaxSpeed(tags map[string]string) float64 {
 	for _, key := range [...]string{"maxspeed", "source:maxspeed", "maxspeed:type"} {
-		if speed := ParseMaxSpeed(tags[key]); speed > 0 {
+		value := tags[key]
+		if kph, ok := implicitWayMaxSpeedKPH[value]; ok {
+			return kphToMPS * kph
+		}
+		if mph, ok := implicitWayMaxSpeedMPH[value]; ok {
+			return mphToMPS * mph
+		}
+		if speed := ParseMaxSpeed(value); speed > 0 {
 			return speed
 		}
 	}
@@ -357,9 +369,14 @@ func parseWayMaxSpeed(tags map[string]string) float64 {
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {
-	if country, zoneSpeed, ok := strings.Cut(maxspeed, ":zone"); ok && len(country) == 2 &&
+	if country, taggedSpeed, ok := strings.Cut(maxspeed, ":"); ok && len(country) == 2 &&
 		country[0] >= 'A' && country[0] <= 'Z' && country[1] >= 'A' && country[1] <= 'Z' {
-		maxspeed = strings.TrimPrefix(zoneSpeed, ":")
+		for _, prefix := range [...]string{"zone", "shared_zone", "city_limit"} {
+			if speed, ok := strings.CutPrefix(taggedSpeed, prefix); ok {
+				maxspeed = strings.TrimPrefix(speed, ":")
+				break
+			}
+		}
 	}
 
 	splitSpeed := strings.Split(maxspeed, " ")
@@ -373,13 +390,13 @@ func ParseMaxSpeed(maxspeed string) float64 {
 	}
 
 	if len(splitSpeed) == 1 {
-		return 0.277778 * float64(numeric)
+		return kphToMPS * float64(numeric)
 	}
 
 	if splitSpeed[1] == "kph" || splitSpeed[1] == "km/h" || splitSpeed[1] == "kmh" {
-		return 0.277778 * float64(numeric)
+		return kphToMPS * float64(numeric)
 	} else if splitSpeed[1] == "mph" {
-		return 0.44704 * float64(numeric)
+		return mphToMPS * float64(numeric)
 	} else if splitSpeed[1] == "knots" {
 		return 0.514444 * float64(numeric)
 	}
