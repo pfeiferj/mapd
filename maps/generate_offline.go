@@ -348,6 +348,11 @@ func FindWaysAroundPosition(pos m.Position) (Offline, error) {
 }
 
 func ParseMaxSpeed(maxspeed string) float64 {
+	if country, zoneSpeed, ok := strings.Cut(maxspeed, ":zone"); ok && len(country) == 2 &&
+		country[0] >= 'A' && country[0] <= 'Z' && country[1] >= 'A' && country[1] <= 'Z' {
+		maxspeed = strings.TrimPrefix(zoneSpeed, ":")
+	}
+
 	splitSpeed := strings.Split(maxspeed, " ")
 	if len(splitSpeed) == 0 {
 		return 0
